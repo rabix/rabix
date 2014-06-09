@@ -1,0 +1,41 @@
+{
+    "$$type": "app/pipeline",
+    "steps": [
+        {
+            "inputs": {
+                "read": "read", 
+                "reference": "reference"
+            }, 
+            "app": "BwaMem", 
+            "id": "BwaMem_1", 
+            "parameters": {}, 
+            "outputs": {
+                "aligned": "alignment"
+            }
+        }, 
+        {
+            "inputs": {
+                "read": "BwaMem_1.aligned", 
+                "reference": "reference"
+            }, 
+            "app": "FreeBayes", 
+            "id": "FreeBayes_1", 
+            "parameters": {}, 
+            "outputs": {
+                "vcf": "vcf"
+            }
+        }
+    ], 
+    "apps": {
+        "FreeBayes": {
+            "url": "FreeBayes.json",
+            "$$type": "ref/app/tool/docker",
+            "checksum": ""
+        }, 
+        "BwaMem": {
+            "url": "BwaMem.json",
+            "$$type": "ref/app/tool/docker",
+            "checksum": ""
+        }
+    }
+}

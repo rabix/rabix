@@ -1,0 +1,4 @@
+{
+    "$$type": "app/mock/python",
+    "importable": "rabix.runtime.tests.mock_apps.generator"
+}

@@ -1,0 +1,1 @@
+python -m rabix.runtime.cli run pipeline_test_bwa_freebayes.json --reference http://hgdownload.cse.ucsc.edu/goldenPath/hg19/chromosomes/chrY.fa.gz --read test-files/example_human_Illumina.pe_1.fastq --read test-files/example_human_Illumina.pe_2.fastq

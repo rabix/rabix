@@ -1,0 +1,40 @@
+{
+    "$$type": "app/pipeline",
+    "apps": {
+        "generator": {
+            "$$type": "ref/app/mock/python",
+            "url": "file://generator.mock.json"
+        },
+        "incrementor": {
+            "$$type": "app/mock/python",
+            "importable": "rabix.runtime.tests.mock_apps.incrementor"
+        },
+        "two_step_increment": {
+            "$$type": "app/mock/python",
+            "importable": "rabix.runtime.tests.mock_apps.two_step_increment"
+        }
+    },
+    "steps": [
+        {
+            "id": "gen1",
+            "app": "generator"
+        },
+        {
+            "id": "inc1",
+            "app": "incrementor",
+            "inputs": {
+                "to_increment": "initial"
+            }
+        },
+        {
+            "id": "inc2",
+            "app": "two_step_increment",
+            "inputs": {
+                "to_increment": "inc1.incremented"
+            },
+            "outputs": {
+                "incremented": "incremented"
+            }
+        }
+    ]
+}
