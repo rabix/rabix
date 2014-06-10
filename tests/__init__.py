@@ -1,1 +1,1 @@
-from rabix.runtime.tests.mock_apps import test_mock_run
+from rabix.runtime.tests.mock_apps import test_mock_pipeline, test_mock_pipeline_remote_ref

@@ -1,0 +1,41 @@
+{
+    "$$type": "app/pipeline",
+    "apps": {
+        "generator": {
+            "$$type": "ref/app/mock/python",
+            "url": "https://s3.amazonaws.com/boysha/testfiles/generator.mock.json",
+            "checksum": "0e92966dcf609285282d7daa5a809bee"
+        },
+        "incrementor": {
+            "$$type": "app/mock/python",
+            "importable": "rabix.runtime.tests.mock_apps.incrementor"
+        },
+        "two_step_increment": {
+            "$$type": "app/mock/python",
+            "importable": "rabix.runtime.tests.mock_apps.two_step_increment"
+        }
+    },
+    "steps": [
+        {
+            "id": "gen1",
+            "app": "generator"
+        },
+        {
+            "id": "inc1",
+            "app": "incrementor",
+            "inputs": {
+                "to_increment": "initial"
+            }
+        },
+        {
+            "id": "inc2",
+            "app": "two_step_increment",
+            "inputs": {
+                "to_increment": "inc1.incremented"
+            },
+            "outputs": {
+                "incremented": "incremented"
+            }
+        }
+    ]
+}
