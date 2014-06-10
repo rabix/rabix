@@ -36,7 +36,7 @@ class Runner(object):
 
     def _make_pipeline_usage_string(self, pipeline_path):
         """
-        Takes a pipeline path string and returns the usage string for it. 
+        Takes a pipeline path string and returns the usage string for it.
         As this is the usage string for a given pipeline, <pipeline.json>
         is replaced with the actual pipeline (for the 'run' cmd)
         """

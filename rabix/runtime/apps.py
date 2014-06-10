@@ -193,5 +193,3 @@ class AppSchema(Model):
         self._check_is_list_and_has_unique_ids('inputs')
         self._check_is_list_and_has_unique_ids('outputs')
         self._check_is_list_and_has_unique_ids('params', required_element_fields=['type'])
-
-
