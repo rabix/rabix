@@ -131,6 +131,7 @@ def to_json(obj, fp=None):
 
 def resolve_ref(obj, parent_url='.'):
     url, checksum = obj.get('url'), obj.get('checksum')
+    logging.debug('resolve_ref - url: %s checksum: %s, parent_url: %s', url, checksum, parent_url)
     if not url:
         raise ValueError('Cannot resolve ref %s: url must not be empty.' % obj)
     if url.startswith('file://'):
@@ -158,6 +159,14 @@ def check_ref(text, checksum, url, parent_url):
 
 
 def from_url(url):
+    if url.startswith('file://'):
+        url = url[len('file://'):]
+    if '://' not in url:
+        if not os.path.isfile(url):
+            raise ResourceUnavailable('File not found: %s' % os.path.abspath(url))
+        with open(url) as fp:
+            contents = fp.read()
+        return from_json(contents, parent_url=url)
     return resolve_ref({'$$type': 'ref/', 'url': url}, parent_url=url)
 
 

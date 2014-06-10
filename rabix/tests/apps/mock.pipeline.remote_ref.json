@@ -4,15 +4,15 @@
         "generator": {
             "$$type": "ref/app/mock/python",
             "url": "https://s3.amazonaws.com/boysha/testfiles/generator.mock.json",
-            "checksum": "0e92966dcf609285282d7daa5a809bee"
+            "checksum": "5b041026477854326612de670a2a4e9b"
         },
         "incrementor": {
             "$$type": "app/mock/python",
-            "importable": "rabix.runtime.tests.mock_apps.incrementor"
+            "importable": "rabix.tests.test_mocks.incrementor"
         },
         "two_step_increment": {
             "$$type": "app/mock/python",
-            "importable": "rabix.runtime.tests.mock_apps.two_step_increment"
+            "importable": "rabix.tests.test_mocks.two_step_increment"
         }
     },
     "steps": [
