@@ -6,7 +6,7 @@ import logging
 import urlparse
 import requests
 
-from rabix.common.errors import ResourceUnavailable
+from rabix.common.errors import ResourceUnavailable, ValidationError
 
 log = logging.getLogger(__name__)
 MAPPINGS = {}
@@ -151,8 +151,8 @@ def resolve_ref(obj, parent_url='.'):
 
 
 def check_ref(text, _, checksum, url, parent_url):
-    if checksum and hashlib.md5(text).hexdigest():
-        log.error('Checksum not a match for url %s' % url)
+    if checksum and hashlib.md5(text).hexdigest() != checksum:
+        raise ValidationError('Checksum not a match for url %s' % url)
     return from_json(text, resolve_refs=True, parent_url=parent_url)
 
 
