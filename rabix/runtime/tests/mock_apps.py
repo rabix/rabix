@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-from rabix.common.protocol import from_json, Outputs, BaseJob
+from rabix.common.protocol import from_url, Outputs, BaseJob
 from rabix.common.util import rnd_name
 from rabix.runtime.graph import JobGraph
 from rabix.runtime.runners import RUNNER_MAP
@@ -51,8 +51,7 @@ def two_step_increment(job):
 def test_mock_run():
     prefix = 'x-test-%s' % rnd_name(5)  # Be warned, all dirs with this prefix will be rm -rf on success
     path = os.path.join(os.path.dirname(__file__), 'mock.pipeline.json')
-    with open(path) as fp:
-        pipeline = from_json(fp, parent_url=path)
+    pipeline = from_url(path)
     graph = JobGraph.from_pipeline(pipeline, job_prefix=prefix)
     graph.simple_run(RUNNER_MAP, {'initial': 'data:,1'})
     out = graph.get_outputs()['incremented'][0]

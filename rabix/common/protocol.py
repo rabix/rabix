@@ -156,6 +156,10 @@ def check_ref(text, _, checksum, url, parent_url):
     return from_json(text, resolve_refs=True, parent_url=parent_url)
 
 
+def from_url(url):
+    return resolve_ref({'$$type': 'ref/', 'url': url}, parent_url=url)
+
+
 MAPPINGS.update({
     'job': Job,
     'resources': Resources,

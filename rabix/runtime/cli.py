@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 from docopt import docopt, DocoptExit
-from rabix.common.protocol import from_json
+from rabix.runtime import from_url
 from rabix.runtime.graph import JobGraph, RunFailed
 from rabix.runtime.runners import RUNNER_MAP
 from rabix.runtime.cli_helpers import before_job, after_job, present_outputs
@@ -30,8 +30,7 @@ class Runner(object):
         if not os.path.isfile(path):
             print 'Not a file', path
             sys.exit(1)
-        with open(path) as fp:
-            self._pipeline = from_json(fp, parent_url=path)
+        self._pipeline = from_url(path)
         return self._pipeline
 
     def _make_pipeline_usage_string(self, pipeline_path):
