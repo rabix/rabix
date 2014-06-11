@@ -119,17 +119,6 @@ def find_image(client, repo, tag='latest'):
     return (images or [None])[0]
 
 
-def parse_repository_tag(repo):
-    column_index = repo.rfind(':')
-    if column_index < 0:
-        return repo, ''
-    tag = repo[column_index+1:]
-    slash_index = tag.find('/')
-    if slash_index < 0:
-        return repo[:column_index], tag
-    return repo, ''
-
-
 def get_image(client, repo, tag, pull_attempts=1):
     """
     Returns the image dict. If not found locally, will pull from the repository.
