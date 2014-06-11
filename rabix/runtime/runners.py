@@ -15,7 +15,7 @@ from rabix.runtime.apps import DockerApp, MockApp
 from rabix.runtime import from_json, to_json
 
 log = logging.getLogger(__name__)
-MOUNT_POINT = '/rabix/'
+MOUNT_POINT = '/rabix'
 
 
 class BaseRunner(object):
@@ -212,16 +212,8 @@ class InputRunner(BaseRunner):
 
 
 class OutputRunner(BaseRunner):
-    """
-    Runs output jobs. Since results come in absolute paths from containers, it will strip the MOUNT_POINT prefix.
-    """
     def run_and_wait(self, raise_errors=True):
-        results = [self._unpack(path) for path in self.job_args.get('$inputs', {}).get('io', [])]
-        return Outputs({'io': results})
-
-    def _unpack(self, path):
-        mnt_point = MOUNT_POINT if MOUNT_POINT.endswith('/') else MOUNT_POINT + '/'
-        return path[len(mnt_point):] if path.startswith(mnt_point) else path
+        return Outputs({'io': self.job_args.get('$inputs', {}).get('io', [])})
 
 
 class MockRunner(BaseRunner):
