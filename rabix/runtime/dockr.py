@@ -101,8 +101,7 @@ class Container(object):
             cmd += ['--cwd', cwd]
         self.run(cmd)
         if self.is_success():
-            pass
-            #self.remove()
+            self.remove()
 
     def schema(self, output=None):
         cmd = self.base_cmd + ['schema']
