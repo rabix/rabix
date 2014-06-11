@@ -12,7 +12,9 @@ log = logging.getLogger(__name__)
 
 class Runner(object):
     usage_string = """Usage:
-    cli.py run <pipeline.json>"""
+    cli.py run <pipeline.json>
+    cli.py install <pipeline.json>
+    """
 
     def __init__(self):
         self._pipeline = None
@@ -63,6 +65,10 @@ class Runner(object):
             if args["run"] and args["<pipeline.json>"]:
                 # user requests info about the pipeline
                 print self._make_pipeline_usage_string(args["<pipeline.json>"])
+            if args["install"]:
+                pipeline = self._load_pipeline(args["<pipeline.json>"])
+                graph = JobGraph.from_pipeline(pipeline)
+                graph.install_tools(RUNNER_MAP)
         except DocoptExit as e:
             # user is attempting to run the pipeline
             if len(argv) > 2 and argv[0] == "run":
