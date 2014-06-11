@@ -113,9 +113,12 @@ class JobRelation(object):
     __str__ = __unicode__ = __repr__ = lambda self: 'JobRelation[%s.%s->%s.%s]' % (
         self.src_node.node_id, self.src_path, self.dst_node.node_id, self.dst_path)
 
-    def resolve(self):
+    def resolve(self, runner_map):
         default = [] if self.src_node.role == JobNode.FINAL else None  # Default to empty list for finished steps.
         val = self.src_node.result.get(self.src_path, default=default)
+        if self.src_node.role == JobNode.FINAL:
+            val = self.src_node.get_runner_class(runner_map).transform_output(val)
+            val = self.dst_node.get_runner_class(runner_map).transform_input(val)
         self.dst_node.update_arg(self.dst_path, val)
         self.resolved = True
 
@@ -169,11 +172,15 @@ class JobNode(object):
         return filter(lambda rel: not rel.resolved, self.outgoing)
 
     def run(self, runner_map):
+        runner_class = self.get_runner_class(runner_map)
+        self.runner = runner_class(self.app, self.node_id, self.arguments.data, self.resources, {})
+        return self.runner()
+
+    def get_runner_class(self, runner_map):
         runner_class = runner_map.get(self.app.__class__ if self.app else self.role)
         if not runner_class:
             raise TypeError('No runner for app type %s' % self.app.__class__.__name__)
-        self.runner = runner_class(self.app, self.node_id, self.arguments.data, self.resources, {})
-        return self.runner()
+        return runner_class
 
     @property
     def is_ready(self):
@@ -197,7 +204,7 @@ class JobNode(object):
     def add_or_create_input(self, name):
         self.arguments.assure_input_in_arguments(name)
 
-    def resolve(self, result):
+    def resolve(self, result, runner_map):
         assert self.status != JobNode.DONE
         if isinstance(result, JobNode):
             return self._replace_with(result)
@@ -209,7 +216,7 @@ class JobNode(object):
         else:
             self.result.update(None, result)
         for rel in self.outgoing:
-            rel.resolve()
+            rel.resolve(runner_map)
         self.status = JobNode.DONE
 
 
@@ -221,9 +228,10 @@ class JobGraph(object):
     Lots of code here that needs to go somewhere else (e.g. a Scheduler class).
     If you're just using this class, see the from_pipeline and simple_run methods.
     """
-    def __init__(self, job_prefix=None):
+    def __init__(self, job_prefix=None, runner_map=None):
         self.nodes = {}
         self.job_prefix = job_prefix or rnd_name(5)
+        self.runner_map = runner_map or {}
 
     __str__ = __unicode__ = __repr__ = lambda self: 'JobGraph[%s nodes]' % len(self.nodes)
 
@@ -268,9 +276,9 @@ class JobGraph(object):
         if isinstance(result, BaseJob):
             replacement = self.add_node(node.step, node.app, result.args, result.resources)
             self.add_prereq_jobs(replacement)
-            node.resolve(replacement)
+            node.resolve(replacement, self.runner_map)
         else:
-            node.resolve(result)
+            node.resolve(result, self.runner_map)
             ready_finals = filter(lambda n: n.is_final, self.get_ready_nodes())
             if ready_finals:
                 self.resolve_node(ready_finals[0], None)
@@ -366,17 +374,16 @@ class JobGraph(object):
 
         return graph
 
-    def simple_run(self, runner_map, inputs=None, before_job=None, after_job=None):
+    def simple_run(self, inputs=None, before_job=None, after_job=None):
         """
         Runs each job one at a time. May take a while. Months, even.
 
-        :param runner_map: dict that maps app to runner. Just use rabix.runtime.runners.RUNNER_MAP
         :param inputs: dict that maps input_id to (list of) files.
         :param before_job: callable that gets a node argument. Called before running the job.
         :param after_job: callable that gets a node argument. Called after job is done.
         """
         for node in self.nodes.itervalues():
-            if node.app.__class__ not in runner_map and node.role not in runner_map:
+            if node.app.__class__ not in self.runner_map and node.role not in self.runner_map:
                 raise RuntimeError('Cannot run app: %s' % node.app)
         inputs = inputs or {}
         ready = self.get_ready_nodes()
@@ -388,7 +395,7 @@ class JobGraph(object):
                 if callable(before_job):
                     before_job(node)
                 try:
-                    result = node.run(runner_map)
+                    result = node.run(self.runner_map)
                 except:
                     node.status = JobNode.FAILED
                     logging.exception('Job failed.')

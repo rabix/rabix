@@ -40,6 +40,14 @@ class BaseRunner(object):
     def __call__(self):
         return self.run_and_wait(raise_errors=True)
 
+    @classmethod
+    def transform_input(cls, inp):
+        return inp
+
+    @classmethod
+    def transform_output(cls, out):
+        return out
+
 
 class DockerRunner(BaseRunner):
     """

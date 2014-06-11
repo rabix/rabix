@@ -71,9 +71,9 @@ class Runner(object):
                 for i in args:
                     if i.startswith('--'):
                         inputs[i[2:]] = args[i]
-                graph = JobGraph.from_pipeline(self._load_pipeline(argv[1]))
+                graph = JobGraph.from_pipeline(self._load_pipeline(argv[1]), runner_map=RUNNER_MAP)
                 try:
-                    graph.simple_run(RUNNER_MAP, inputs, before_job=before_job, after_job=after_job)
+                    graph.simple_run(inputs, before_job=before_job, after_job=after_job)
                 except RunFailed, e:
                     print 'Failed: %s' % e
                     raise e

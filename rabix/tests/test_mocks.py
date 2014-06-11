@@ -54,8 +54,8 @@ def two_step_increment(job):
 def test_pipeline(pipeline_url, expected_result, output_id):
     prefix = 'x-test-%s' % rnd_name(5)  # Be warned, all dirs with this prefix will be rm -rf on success
     pipeline = from_url(pipeline_url)
-    graph = JobGraph.from_pipeline(pipeline, job_prefix=prefix)
-    graph.simple_run(RUNNER_MAP, {'initial': 'data:,1'})
+    graph = JobGraph.from_pipeline(pipeline, job_prefix=prefix, runner_map=RUNNER_MAP)
+    graph.simple_run({'initial': 'data:,1'})
     out = graph.get_outputs()[output_id][0]
     with open(os.path.abspath('not_a_dir/'+out)) as fp:
         assert_equals(fp.read(), expected_result)
