@@ -175,6 +175,13 @@ class JobNode(object):
         self.runner = runner_class(self.app, self.node_id, self.arguments.data, self.resources, {})
         return self.runner()
 
+    def install_tool(self, runner_map):
+        runner_class = runner_map.get(self.app.__class__ if self.app else self.role)
+        if not runner_class:
+            raise TypeError('No runner for app type %s' % self.app.__class__.__name__)
+        self.runner = runner_class(self.app, self.node_id, self.arguments.data, self.resources, {})
+        self.runner.install_tool()
+
     @property
     def is_ready(self):
         return not self.get_unresolved_incoming() and self.status == JobNode.PENDING
@@ -398,3 +405,12 @@ class JobGraph(object):
                 if callable(after_job):
                     after_job(node)
             ready = self.get_ready_nodes()
+
+    def install_tools(self, runner_map):
+        """
+        Goes through a pipeline and installs all referenced tools.
+        """
+        for node in self.nodes.itervalues():
+            if node.app.__class__ not in runner_map and node.role not in runner_map:
+                continue
+            node.install_tool(runner_map)
