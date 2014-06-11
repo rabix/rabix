@@ -179,7 +179,7 @@
             }, 
             {
                 "category": "Population model", 
-                "description": "Output all alleles which pass input filters, regardles of genotyping outcome or model. [default: False]", 
+                "description": "Output all alleles which pass input filters, regardless of genotyping outcome or model. [default: False]",
                 "default": false, 
                 "required": false, 
                 "list": false, 
@@ -235,7 +235,7 @@
             }, 
             {
                 "category": "Allele scope", 
-                "description": "Ignore multi-nuceotide polymorphisms, MNPs. [default: False]", 
+                "description": "Ignore multi-nucleotide polymorphisms, MNPs. [default: False]",
                 "default": false, 
                 "required": false, 
                 "list": false, 
@@ -295,7 +295,7 @@
                 "type": "integer", 
                 "id": "haplotype_length", 
                 "condition": null, 
-                "name": "Haplotype llength"
+                "name": "Haplotype length"
             }, 
             {
                 "category": "Allele scope", 

@@ -107,7 +107,7 @@ class Pipeline(Model):
             self._check_field('app', basestring, null=False, look_in=step)
             assert step['app'] in self['apps'], '%s app not specified' % step['app']
         for app in self['apps'].itervalues():
-            app._validate()
+            app.validate()
         assert self.apps, 'No apps'
         assert self.steps, 'No steps'
         self._build_nx()
@@ -158,7 +158,7 @@ class DockerApp(Model):
         self._check_field('docker_image_ref', dict, null=False)
         self._check_field('wrapper_id', basestring, null=False)
         self._check_field('schema', AppSchema, null=False)
-        self.schema._validate()
+        self.schema.validate()
 
 
 class MockApp(Model):

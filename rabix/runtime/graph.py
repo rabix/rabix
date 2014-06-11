@@ -326,7 +326,7 @@ class JobGraph(object):
         *args and **kwargs are forwarded to the constructor.
         """
         to_list = lambda o: o if isinstance(o, list) else [] if o is None else [o]
-        args_for_step = lambda step: {'$inputs': {}, '$params': step.get('params', {})}
+        args_for_step = lambda s: {'$inputs': {}, '$params': s.get('params', {})}
         graph = cls(*args, **kwargs)
         in_connections, out_connections = {}, {}
 
