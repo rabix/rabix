@@ -48,6 +48,9 @@ class BaseRunner(object):
     def transform_output(cls, out):
         return map(os.path.abspath, out)
 
+    def install_tool(self):
+        pass
+
 
 class DockerRunner(BaseRunner):
     """
@@ -65,11 +68,15 @@ class DockerRunner(BaseRunner):
             raise NotImplementedError('Currently, can only run images specified by repo+tag.')
         self.job = Job(self.app.wrapper_id, job_id=job_id, args=job_args, resources=job_resources, context=job_context)
         self.container = None
+        self.image_id = None
+        self._docker_client = None
 
     def run_and_wait(self, raise_errors=True):
-        docker_client = docker.Client()
-        image = get_image(docker_client, self.image_repo, self.image_tag)
-        self.container = Container(docker_client, image['Id'], mount_point=MOUNT_POINT)
+
+        if self.image_id is None:
+            self.install_tool()
+
+        self.container = Container(self.docker_client, self.image_id, mount_point=MOUNT_POINT)
 
         job_dir = self.job.job_id
         os.mkdir(job_dir)
@@ -106,6 +113,16 @@ class DockerRunner(BaseRunner):
             if not i.startswith(cwd):
                 raise ValueError('Inputs and outputs must be passed as absolute paths. Got %s' % i)
         return [os.path.join(MOUNT_POINT, i[len(cwd):]) for i in inp]
+
+    def install_tool(self):
+        image = get_image(self.docker_client, self.image_repo, self.image_tag)
+        self.image_id = image['Id']
+
+    @property
+    def docker_client(self):
+        if self._docker_client is None:
+            self._docker_client = docker.Client(os.environ.get('DOCKER_HOST'))
+        return self._docker_client
 
 
 class InputRunner(BaseRunner):
