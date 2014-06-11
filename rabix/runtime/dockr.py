@@ -3,7 +3,7 @@ import os
 import signal
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import handle_signal
-
+import pwd
 
 log = logging.getLogger(__name__)
 
@@ -85,6 +85,7 @@ class Container(object):
 
     def run(self, command):
         log.info("Running command %s", command)
+        self.config['User'] = '%d:%d' % (os.getuid(), pwd.getpwuid(os.getuid()).pw_gid)
         self.container = self.docker.create_container_from_config(dict(self.config, Cmd=command))
         self.docker.start(container=self.container, binds=self.binds)
 
