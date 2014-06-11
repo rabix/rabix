@@ -1,17 +1,12 @@
-# Reproducible Analytics for Bioinformatics ![Build Status](https://travis-ci.org/rabix/rabix.svg?branch=devel)
+![Build Status](https://travis-ci.org/rabix/rabix.svg?branch=devel)
 
-This project aims to solve a problem of reproducing complex computational analytics that often occurs in bio-informatics.
-Reproducible experimental findings is one of the underpinnings of scientific method.
-As experiments grow dependent on computational methods, ensuring that other teams can replicate results,
-asks for robust approach to describing steps and preconditions of relevant analysis.
+## Reproducible Analyses for Bioinformatics 
 
+The goal of this project is to provide an easy way to package and distribute tools and pipelines using Docker images.
+There are three main components:
 
-## How its done
+* Format and protocol specification.
+* Tools to run apps and pipelines.
+* An SDK to easily package tools and pipelines into reusable components.
 
-There are two main components of the project: specification and a Docker-based Python implementation.
-Specification defines a format for describing tools and computation, and a runtime protocol.
-
-## How to contribute
-
-Master branch is reserved for releases and `devel` branch is used for ongoing development.
-You should create topic branches off `devel` branch.
+Note that this project is still under development. You can run pipelines, but can't (easily) make them yet.
