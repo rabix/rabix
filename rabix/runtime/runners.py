@@ -95,6 +95,7 @@ class DockerRunner(BaseRunner):
             self._docker_client = docker.Client(os.environ.get('DOCKER_HOST'))
         return self._docker_client
 
+
 class InputRunner(BaseRunner):
     """
     Runs input jobs. File paths are prefixed with '../' to be accessible from containers.
