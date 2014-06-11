@@ -2,8 +2,9 @@ import os
 import tempfile
 from nose.tools import nottest, assert_equals
 
-from rabix.common.protocol import from_url, Outputs, BaseJob
+from rabix.common.protocol import Outputs, BaseJob
 from rabix.common.util import rnd_name
+from rabix.runtime import from_url
 from rabix.runtime.graph import JobGraph
 from rabix.runtime.runners import RUNNER_MAP
 

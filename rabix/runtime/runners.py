@@ -8,10 +8,11 @@ import docker
 import requests
 
 from rabix.runtime.dockr import Container, get_image
-from rabix.common.protocol import to_json, from_url, from_json, Job, Outputs, BaseJob, JobError
+from rabix.common.protocol import Job, Outputs, BaseJob, JobError
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import import_name
 from rabix.runtime.apps import DockerApp, MockApp
+from rabix.runtime import from_json, to_json
 
 log = logging.getLogger(__name__)
 MOUNT_POINT = '/rabix'
