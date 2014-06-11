@@ -84,7 +84,6 @@ class Container(object):
         self.image = self.docker.commit(self.container['Id'], message=message, conf=conf)
 
     def run(self, command):
-        print command
         log.info("Running command %s", command)
         self.config['User'] = '%d:%d' % (os.getuid(), pwd.getpwuid(os.getuid()).pw_gid)
         self.container = self.docker.create_container_from_config(dict(self.config, Cmd=command))
