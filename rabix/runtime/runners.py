@@ -40,6 +40,14 @@ class BaseRunner(object):
     def __call__(self):
         return self.run_and_wait(raise_errors=True)
 
+    @classmethod
+    def transform_input(cls, inp):
+        return map(os.path.abspath, inp)
+
+    @classmethod
+    def transform_output(cls, out):
+        return map(os.path.abspath, out)
+
     def install_tool(self):
         pass
 
@@ -83,7 +91,28 @@ class DockerRunner(BaseRunner):
             result = from_json(fp)
         if raise_errors and isinstance(result, Exception):
             raise result
+        return self._fix_output_paths(result)
+
+    def _fix_output_paths(self, result):
+        mount_point = MOUNT_POINT if MOUNT_POINT.endswith('/') else MOUNT_POINT + '/'
+        if not isinstance(result, Outputs):
+            return result
+        for k, v in result.outputs.iteritems():
+            v = [os.path.abspath(os.path.join(mount_point, self.job.job_id, out)) for out in v if out]
+            for out in v:
+                if not out.startswith(mount_point):
+                    raise JobError('Output file outside mount point: %s' % out)
+            v = [os.path.abspath(out[len(mount_point):]) for out in v]
+            result.outputs[k] = v
         return result
+
+    @classmethod
+    def transform_input(cls, inp):
+        cwd = os.path.abspath('.') + '/'
+        for i in inp:
+            if not i.startswith(cwd):
+                raise ValueError('Inputs and outputs must be passed as absolute paths. Got %s' % i)
+        return [os.path.join(MOUNT_POINT, i[len(cwd):]) for i in inp]
 
     def install_tool(self):
         image = get_image(self.docker_client, self.image_repo, self.image_tag)
@@ -97,10 +126,7 @@ class DockerRunner(BaseRunner):
 
 
 class InputRunner(BaseRunner):
-    """
-    Runs input jobs. File paths are prefixed with '../' to be accessible from containers.
-    Will also handle 'data:,' URLs (for tests) and delegate other URLs to requests.get()
-    """
+    """ Will handle local files, 'data:,' URLs (for tests) and delegate other URLs to requests.get() """
     def __init__(self, app, job_id, job_args, job_resources, job_context):
         super(InputRunner, self).__init__(app, job_id, job_args, job_resources, job_context)
         self._job_dir = None
@@ -126,6 +152,7 @@ class InputRunner(BaseRunner):
             url = 'file://' + url
         if url.startswith('file://'):
             return self._local(url)
+
         log.debug('Downloading %s', url)
         r = requests.get(url)
         try:
@@ -140,7 +167,7 @@ class InputRunner(BaseRunner):
         if meta:
             with open(dest + '.meta', 'w') as fp:
                 to_json(meta, fp)
-        return '../' + dest
+        return dest
 
     def _get_meta_for_url(self, url):
         log.debug('Fetching metadata for %s', url)
@@ -165,7 +192,7 @@ class InputRunner(BaseRunner):
         dest = tempfile.mktemp(dir=self.job_dir)
         with open(dest, 'w') as fp:
             fp.write(data)
-        return '../' + dest
+        return dest
 
     def _get_dest_for_url(self, url):
         path = urlparse.urlparse(url).path
@@ -177,26 +204,16 @@ class InputRunner(BaseRunner):
 
     def _local(self, url):
         path = url[len('file://'):]
-        if path.startswith('/'):
-            raise NotImplementedError('No absolute paths yet. Got %s' % path)
         if not os.path.isfile(path):
             raise ResourceUnavailable('Not a file: %s' % path)
         if not os.path.abspath(path).startswith(os.path.abspath('.')):
             raise NotImplementedError('File must be in current dir or subdirs. Got %s' % path)
-        return '../' + path
+        return path
 
 
 class OutputRunner(BaseRunner):
-    """
-    Runs output jobs. Since results come in absolute paths from containers, it will strip the MOUNT_POINT prefix.
-    """
     def run_and_wait(self, raise_errors=True):
-        results = [self._unpack(path) for path in self.job_args.get('$inputs', {}).get('io', [])]
-        return Outputs({'io': results})
-
-    def _unpack(self, path):
-        mnt_point = MOUNT_POINT if MOUNT_POINT.endswith('/') else MOUNT_POINT + '/'
-        return path[len(mnt_point):] if path.startswith(mnt_point) else path
+        return Outputs({'io': self.job_args.get('$inputs', {}).get('io', [])})
 
 
 class MockRunner(BaseRunner):

@@ -44,6 +44,7 @@ class Runner(object):
         pipeline = self._load_pipeline(pipeline_path)
         inputs = pipeline.get_inputs()
         usage_str = self.usage_string.replace("run <pipeline.json>", "run " + pipeline_path) + " "
+        usage_str = usage_str.replace("cli.py install <pipeline.json>\n", "")
         options = "\n\nOptions:\n"
         for i in inputs.keys():
             arg = "--" + i + "=" + (i + "_file").upper()
@@ -67,8 +68,8 @@ class Runner(object):
                 print self._make_pipeline_usage_string(args["<pipeline.json>"])
             if args["install"]:
                 pipeline = self._load_pipeline(args["<pipeline.json>"])
-                graph = JobGraph.from_pipeline(pipeline)
-                graph.install_tools(RUNNER_MAP)
+                graph = JobGraph.from_pipeline(pipeline, runner_map=RUNNER_MAP)
+                graph.install_tools()
         except DocoptExit as e:
             # user is attempting to run the pipeline
             if len(argv) > 2 and argv[0] == "run":
@@ -77,9 +78,9 @@ class Runner(object):
                 for i in args:
                     if i.startswith('--'):
                         inputs[i[2:]] = args[i]
-                graph = JobGraph.from_pipeline(self._load_pipeline(argv[1]))
+                graph = JobGraph.from_pipeline(self._load_pipeline(argv[1]), runner_map=RUNNER_MAP)
                 try:
-                    graph.simple_run(RUNNER_MAP, inputs, before_job=before_job, after_job=after_job)
+                    graph.simple_run(inputs, before_job=before_job, after_job=after_job)
                 except RunFailed, e:
                     print 'Failed: %s' % e
                     raise e
