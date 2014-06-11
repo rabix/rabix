@@ -1,9 +1,15 @@
 from setuptools import setup, find_packages
+import sys
+import os
 
+
+sys.path.append(os.path.dirname(__file__))
+
+from rabix import VERSION
 
 setup(
     name="rabix",
-    version='0.1.0',
+    version=VERSION,
     include_package_data=True,
     packages=find_packages(),
     entry_points={
