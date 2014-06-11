@@ -14,11 +14,11 @@ def load(path):
         return fp.read()
 
 
-def save(val, job_id):
+def save(val):
     result = tempfile.mktemp(dir='.')
     with open(result, 'w') as fp:
         fp.write(unicode(val))
-    return os.path.join('..', job_id, result) if job_id else result
+    return os.path.abspath(result)
 
 
 def get_inp(d, inp, unpack=False, cast=None):
@@ -30,14 +30,14 @@ def get_inp(d, inp, unpack=False, cast=None):
     return val
 
 
-def generator(job):
-    return Outputs({'generated': save(1, job.job_id)})
+def generator(_):
+    return Outputs({'generated': save(1)})
 
 
 def incrementor(job):
     args = job.args
     num = get_inp(args, 'to_increment', True, int) or 0
-    return Outputs({'incremented': save(num + 1, job.job_id)})
+    return Outputs({'incremented': save(num + 1)})
 
 
 def two_step_increment(job):
@@ -47,7 +47,7 @@ def two_step_increment(job):
         return BaseJob(args={'the_number': num+1, '$step': 1})
     else:
         num = args.get('the_number')
-        return Outputs({'incremented': save(num + 1, job.job_id)})
+        return Outputs({'incremented': save(num + 1)})
 
 
 @nottest
@@ -56,8 +56,7 @@ def test_pipeline(pipeline_url, expected_result, output_id):
     pipeline = from_url(pipeline_url)
     graph = JobGraph.from_pipeline(pipeline, job_prefix=prefix, runner_map=RUNNER_MAP)
     graph.simple_run({'initial': 'data:,1'})
-    out = graph.get_outputs()[output_id][0]
-    with open(os.path.abspath('not_a_dir/'+out)) as fp:
+    with open(graph.get_outputs()[output_id][0]) as fp:
         assert_equals(fp.read(), expected_result)
     os.system('rm -rf %s.*' % prefix)
 

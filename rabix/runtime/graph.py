@@ -116,7 +116,7 @@ class JobRelation(object):
     def resolve(self, runner_map):
         default = [] if self.src_node.role == JobNode.FINAL else None  # Default to empty list for finished steps.
         val = self.src_node.result.get(self.src_path, default=default)
-        if self.src_node.role == JobNode.FINAL:
+        if self.src_node.role in [JobNode.FINAL, JobNode.INPUT]:
             val = self.src_node.get_runner_class(runner_map).transform_output(val)
             val = self.dst_node.get_runner_class(runner_map).transform_input(val)
         self.dst_node.update_arg(self.dst_path, val)

@@ -15,7 +15,7 @@ from rabix.runtime.apps import DockerApp, MockApp
 from rabix.runtime import from_json, to_json
 
 log = logging.getLogger(__name__)
-MOUNT_POINT = '/rabix'
+MOUNT_POINT = '/rabix/'
 
 
 class BaseRunner(object):
@@ -42,11 +42,11 @@ class BaseRunner(object):
 
     @classmethod
     def transform_input(cls, inp):
-        return inp
+        return map(os.path.abspath, inp)
 
     @classmethod
     def transform_output(cls, out):
-        return out
+        return map(os.path.abspath, out)
 
 
 class DockerRunner(BaseRunner):
@@ -84,14 +84,32 @@ class DockerRunner(BaseRunner):
             result = from_json(fp)
         if raise_errors and isinstance(result, Exception):
             raise result
+        return self._fix_output_paths(result)
+
+    def _fix_output_paths(self, result):
+        mount_point = MOUNT_POINT if MOUNT_POINT.endswith('/') else MOUNT_POINT + '/'
+        if not isinstance(result, Outputs):
+            return result
+        for k, v in result.outputs.iteritems():
+            v = [os.path.abspath(os.path.join(mount_point, self.job.job_id, out)) for out in v if out]
+            for out in v:
+                if not out.startswith(mount_point):
+                    raise JobError('Output file outside mount point: %s' % out)
+            v = [os.path.abspath(out[len(mount_point):]) for out in v]
+            result.outputs[k] = v
         return result
+
+    @classmethod
+    def transform_input(cls, inp):
+        cwd = os.path.abspath('.') + '/'
+        for i in inp:
+            if not i.startswith(cwd):
+                raise ValueError('Inputs and outputs must be passed as absolute paths. Got %s' % i)
+        return [os.path.join(MOUNT_POINT, i[len(cwd):]) for i in inp]
 
 
 class InputRunner(BaseRunner):
-    """
-    Runs input jobs. File paths are prefixed with '../' to be accessible from containers.
-    Will also handle 'data:,' URLs (for tests) and delegate other URLs to requests.get()
-    """
+    """ Will handle local files, 'data:,' URLs (for tests) and delegate other URLs to requests.get() """
     def __init__(self, app, job_id, job_args, job_resources, job_context):
         super(InputRunner, self).__init__(app, job_id, job_args, job_resources, job_context)
         self._job_dir = None
@@ -117,6 +135,7 @@ class InputRunner(BaseRunner):
             url = 'file://' + url
         if url.startswith('file://'):
             return self._local(url)
+
         log.debug('Downloading %s', url)
         r = requests.get(url)
         try:
@@ -131,7 +150,7 @@ class InputRunner(BaseRunner):
         if meta:
             with open(dest + '.meta', 'w') as fp:
                 to_json(meta, fp)
-        return '../' + dest
+        return dest
 
     def _get_meta_for_url(self, url):
         log.debug('Fetching metadata for %s', url)
@@ -156,7 +175,7 @@ class InputRunner(BaseRunner):
         dest = tempfile.mktemp(dir=self.job_dir)
         with open(dest, 'w') as fp:
             fp.write(data)
-        return '../' + dest
+        return dest
 
     def _get_dest_for_url(self, url):
         path = urlparse.urlparse(url).path
@@ -168,13 +187,11 @@ class InputRunner(BaseRunner):
 
     def _local(self, url):
         path = url[len('file://'):]
-        if path.startswith('/'):
-            raise NotImplementedError('No absolute paths yet. Got %s' % path)
         if not os.path.isfile(path):
             raise ResourceUnavailable('Not a file: %s' % path)
         if not os.path.abspath(path).startswith(os.path.abspath('.')):
             raise NotImplementedError('File must be in current dir or subdirs. Got %s' % path)
-        return '../' + path
+        return path
 
 
 class OutputRunner(BaseRunner):
