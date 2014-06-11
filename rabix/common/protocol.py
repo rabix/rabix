@@ -6,7 +6,7 @@ import logging
 import urlparse
 import requests
 
-from rabix.common.errors import ResourceUnavailable
+from rabix.common.errors import ResourceUnavailable, ValidationError
 
 log = logging.getLogger(__name__)
 MAPPINGS = {}
@@ -130,7 +130,8 @@ def to_json(obj, fp=None):
 
 
 def resolve_ref(obj, parent_url='.'):
-    t, url, checksum = obj['$$type'][4:], obj.get('url'), obj.get('checksum')
+    url, checksum = obj.get('url'), obj.get('checksum')
+    logging.debug('resolve_ref - url: %s checksum: %s, parent_url: %s', url, checksum, parent_url)
     if not url:
         raise ValueError('Cannot resolve ref %s: url must not be empty.' % obj)
     if url.startswith('file://'):
@@ -141,19 +142,32 @@ def resolve_ref(obj, parent_url='.'):
         r = requests.get(url)
         if not r.ok:
             r.raise_for_status()
-        return check_ref(r.text, t, checksum, url, parent_url)
+        return check_ref(r.text, checksum, url, parent_url)
     if '://' not in url:
         if not os.path.isfile(url):
             raise ResourceUnavailable('File not found: %s' % os.path.abspath(url))
         with open(url) as fp:
-            return check_ref(fp.read(), t, checksum, url, parent_url)
+            contents = fp.read()
+        return check_ref(contents, checksum, url, parent_url)
     raise ValueError('Unsupported schema for URL %s' % url)
 
 
-def check_ref(text, _, checksum, url, parent_url):
-    if checksum and hashlib.md5(text).hexdigest():
-        log.error('Checksum not a match for url %s' % url)
+def check_ref(text, checksum, url, parent_url):
+    if checksum and hashlib.md5(text).hexdigest() != checksum:
+        raise ValidationError('Checksum not a match for url %s' % url)
     return from_json(text, resolve_refs=True, parent_url=parent_url)
+
+
+def from_url(url):
+    if url.startswith('file://'):
+        url = url[len('file://'):]
+    if '://' not in url:
+        if not os.path.isfile(url):
+            raise ResourceUnavailable('File not found: %s' % os.path.abspath(url))
+        with open(url) as fp:
+            contents = fp.read()
+        return from_json(contents, parent_url=url)
+    return resolve_ref({'$$type': 'ref/', 'url': url}, parent_url=url)
 
 
 MAPPINGS.update({

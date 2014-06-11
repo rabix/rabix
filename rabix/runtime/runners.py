@@ -2,17 +2,18 @@ import os
 import stat
 import tempfile
 import urlparse
+import logging
 
 import docker
 import requests
 
 from rabix.runtime.dockr import Container, get_image
-from rabix.common.protocol import to_json, from_json, Job, Outputs, BaseJob
+from rabix.common.protocol import to_json, from_url, from_json, Job, Outputs, BaseJob, JobError
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import import_name
 from rabix.runtime.apps import DockerApp, MockApp
 
-
+log = logging.getLogger(__name__)
 MOUNT_POINT = '/rabix'
 
 
@@ -68,6 +69,8 @@ class DockerRunner(BaseRunner):
         with open(in_file, 'w') as fp:
             to_json(self.job, fp)
         self.container.run_job('__in__.json', '__out__.json', cwd=job_dir)
+        if not os.path.isfile(out_file):
+            raise JobError('Job failed.')
         with open(out_file) as fp:
             result = from_json(fp)
         if raise_errors and isinstance(result, Exception):
@@ -105,6 +108,7 @@ class InputRunner(BaseRunner):
             url = 'file://' + url
         if url.startswith('file://'):
             return self._local(url)
+        log.debug('Downloading %s', url)
         r = requests.get(url)
         try:
             r.raise_for_status()
@@ -114,7 +118,29 @@ class InputRunner(BaseRunner):
         with open(dest, 'wb') as fp:
             for chunk in r.iter_content(chunk_size=1024):
                 fp.write(chunk)
+        meta = self._get_meta_for_url(url)
+        if meta:
+            with open(dest + '.meta', 'w') as fp:
+                to_json(meta, fp)
         return '../' + dest
+
+    def _get_meta_for_url(self, url):
+        log.debug('Fetching metadata for %s', url)
+        chunks = list(urlparse.urlparse(url))
+        chunks[2] += '.meta'
+        meta_url = urlparse.urlunparse(chunks)
+        r = requests.get(meta_url)
+        if not r.ok:
+            log.warning('Failed to get metadata for URL %s', url)
+            return
+        try:
+            meta = r.json()
+            assert isinstance(meta, dict)
+            log.info('Fetched metadata from %s', meta_url)
+        except:
+            log.warning('Metadata not valid JSON object: %s', meta_url)
+            return
+        return meta
 
     def _data_url(self, url):
         data = url[len('data:,'):]

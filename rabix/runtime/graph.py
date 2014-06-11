@@ -135,7 +135,7 @@ class JobNode(object):
         INPUT: Handles the input files to pipeline. Not an actual step, but can take a while in case of download/copy.
         OUTPUT: Output jobs fix the path of files, and don't do much more. But it's the thing we care about.
     """
-    INITIAL, MIDDLE, FINAL, INPUT, OUTPUT = 'initial', 'mid', 'final', 'input', 'output'
+    INITIAL, MIDDLE, FINAL, INPUT, OUTPUT = 'initial', 'job', 'final', 'input', 'output'
     PENDING, RUNNING, DONE, FAILED = 'pending', 'running', 'done', 'failed'
 
     def __init__(self, node_id, step, app, arguments=None, resources=None, role=None):

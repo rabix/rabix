@@ -3,15 +3,16 @@
     "apps": {
         "generator": {
             "$$type": "ref/app/mock/python",
-            "url": "file://generator.mock.json"
+            "url": "file://generator.mock.json",
+            "checksum": "5b041026477854326612de670a2a4e9b"
         },
         "incrementor": {
             "$$type": "app/mock/python",
-            "importable": "rabix.runtime.tests.mock_apps.incrementor"
+            "importable": "rabix.tests.test_mocks.incrementor"
         },
         "two_step_increment": {
             "$$type": "app/mock/python",
-            "importable": "rabix.runtime.tests.mock_apps.two_step_increment"
+            "importable": "rabix.tests.test_mocks.two_step_increment"
         }
     },
     "steps": [

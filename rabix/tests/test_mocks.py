@@ -1,7 +1,8 @@
 import os
 import tempfile
+from nose.tools import nottest, assert_equals
 
-from rabix.common.protocol import from_json, Outputs, BaseJob
+from rabix.common.protocol import from_url, Outputs, BaseJob
 from rabix.common.util import rnd_name
 from rabix.runtime.graph import JobGraph
 from rabix.runtime.runners import RUNNER_MAP
@@ -48,15 +49,21 @@ def two_step_increment(job):
         return Outputs({'incremented': save(num + 1, job.job_id)})
 
 
-def test_mock_run():
+@nottest
+def test_pipeline(pipeline_url, expected_result, output_id):
     prefix = 'x-test-%s' % rnd_name(5)  # Be warned, all dirs with this prefix will be rm -rf on success
-    path = os.path.join(os.path.dirname(__file__), 'mock.pipeline.json')
-    with open(path) as fp:
-        pipeline = from_json(fp, parent_url=path)
+    pipeline = from_url(pipeline_url)
     graph = JobGraph.from_pipeline(pipeline, job_prefix=prefix)
     graph.simple_run(RUNNER_MAP, {'initial': 'data:,1'})
-    out = graph.get_outputs()['incremented'][0]
+    out = graph.get_outputs()[output_id][0]
     with open(os.path.abspath('not_a_dir/'+out)) as fp:
-        result = int(fp.read())
-    assert result == 4
+        assert_equals(fp.read(), expected_result)
     os.system('rm -rf %s.*' % prefix)
+
+
+def test_mock_pipeline():
+    test_pipeline(os.path.join(os.path.dirname(__file__), 'apps/mock.pipeline.json'), '4', 'incremented')
+
+
+def test_mock_pipeline_remote_ref():
+    test_pipeline(os.path.join(os.path.dirname(__file__), 'apps/mock.pipeline.remote_ref.json'), '4', 'incremented')
