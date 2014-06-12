@@ -10,8 +10,8 @@ from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import handle_signal
 from rabix.common.protocol import WrapperJob, Outputs, JobError
 from rabix.runtime import from_json, to_json
-from rabix.runtime.base import Worker, App, AppSchema
-from rabix.runtime.tasks import PipelineStepTask, AppInstallTask
+from rabix.runtime.models import App, AppSchema
+from rabix.runtime.tasks import Worker, PipelineStepTask
 
 log = logging.getLogger(__name__)
 MOUNT_POINT = '/rabix'
@@ -57,7 +57,7 @@ class DockerRunner(Worker):
                              args=self._fix_input_paths(self.task.arguments), resources=self.task.resources)
         task_dir = self.task.task_id
         os.mkdir(task_dir)
-        os.chmod(task_dir, os.stat(task_dir).st_mode | stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)
+        os.chmod(task_dir, os.stat(task_dir).st_mode | stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)  # TODO: remove?
         in_file, out_file = [os.path.join(task_dir, f) for f in '__in__.json', '__out__.json']
         with open(in_file, 'w') as fp:
             to_json(wrp_job, fp)

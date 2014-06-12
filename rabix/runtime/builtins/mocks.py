@@ -2,7 +2,8 @@ import re
 import os
 import keyword
 
-from rabix.runtime.base import App, Worker
+from rabix.runtime.models import App
+from rabix.runtime.tasks import Worker
 from rabix.common.util import import_name
 from rabix.common.protocol import WrapperJob
 

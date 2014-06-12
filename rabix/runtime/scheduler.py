@@ -3,8 +3,8 @@ import logging
 from rabix.runtime.builtins.dockr import DockerApp, DockerRunner, DockerAppInstaller
 from rabix.runtime.builtins.io import InputRunner
 from rabix.runtime.builtins.mocks import MockRunner, MockApp
-from rabix.runtime.base import Worker, Pipeline
-from rabix.runtime.tasks import TaskDAG, Task, InputTask, OutputTask, PipelineStepTask, AppInstallTask
+from rabix.runtime.models import Pipeline
+from rabix.runtime.tasks import TaskDAG, Worker, InputTask, OutputTask, PipelineStepTask, AppInstallTask
 
 log = logging.getLogger(__name__)
 

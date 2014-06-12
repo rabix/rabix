@@ -232,3 +232,34 @@ def update_on_path(obj, path, val):
     else:
         parent[dest] = val
     return obj
+
+
+class Worker(object):
+    def __init__(self, task):
+        self.task = task
+        self.status = Task.QUEUED
+
+    def run(self, async=False):
+        if async:
+            raise NotImplementedError('Blocking runs only.')
+        self.status = Task.RUNNING
+        try:
+            result = self.run_and_wait()
+            self.status = Task.FINISHED
+            return result
+        except Exception, e:
+            log.exception('Task error (%s)', self.task.task_id)
+            self.status = Task.FAILED
+            return e
+
+    def report(self):
+        return None
+
+    def abort(self):
+        pass
+
+    def run_and_wait(self):
+        pass
+
+    def get_requirements(self):
+        return self.task.resources

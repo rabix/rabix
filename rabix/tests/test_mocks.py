@@ -69,6 +69,5 @@ def test_mock_pipeline():
     test_pipeline(os.path.join(os.path.dirname(__file__), 'apps/mock.pipeline.json'), '4', 'incremented')
 
 
-@nottest
 def test_mock_pipeline_remote_ref():
     test_pipeline(os.path.join(os.path.dirname(__file__), 'apps/mock.pipeline.remote_ref.json'), '4', 'incremented')

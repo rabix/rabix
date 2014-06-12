@@ -7,8 +7,7 @@ import requests
 
 from rabix.runtime import to_json
 from rabix.common.errors import ResourceUnavailable
-from rabix.runtime.tasks import InputTask
-from rabix.runtime.base import Worker
+from rabix.runtime.tasks import InputTask, Worker
 
 log = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@
         "generator": {
             "$$type": "ref/app/mock/python",
             "url": "file://generator.mock.json",
-            "checksum": ""
+            "checksum": "2c2dda15533c18ec43327543ef1bd682"
         },
         "incrementor": {
             "$$type": "app/mock/python",
