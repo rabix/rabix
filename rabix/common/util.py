@@ -72,5 +72,5 @@ handle_signal = SignalContextProcessor
 
 
 rnd_str = lambda length: ''.join(random.choice(map(chr, range(ord('a'), ord('z')+1))) for _ in range(length))
-rnd_name = lambda n: ''.join(itertools.chain(*zip(
+rnd_name = lambda n=5: ''.join(itertools.chain(*zip(
     (random.choice('bcdfghjklmnpqrstvwxz') for _ in range(n)), (random.choice('aeiou') for _ in range(n)))))

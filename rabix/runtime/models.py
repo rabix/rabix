@@ -1,6 +1,4 @@
-import re
-from copy import deepcopy
-from keyword import iskeyword
+import copy
 import logging
 
 import networkx as nx
@@ -72,17 +70,21 @@ class Pipeline(Model):
         g = nx.DiGraph()
         inputs, outputs = set(), set()
         for step in self.steps:
-            g.add_node(step['id'], step)
+            g.add_node(step['id'], step=step, app=self.apps[step['app']])
             for inp_id, src_list in step.get('inputs', {}).iteritems():
                 src_list = src_list if isinstance(src_list, list) else filter(None, [src_list])
                 for src in src_list:
                     if '.' not in src:
                         inputs.add(src)
                         g.add_node(src, id=src, app='$$input')
-                        g.add_edge(src, step['id'], out_id='io', inp_id=inp_id)
+                        conns = g.get_edge_data(src, step['id'], default={'conns': []})['conns']
+                        conns.append([None, inp_id])
+                        g.add_edge(src, step['id'], conns=conns)
                     else:
                         src_id, out_id = src.split('.')
-                        g.add_edge(src_id, step['id'], out_id=out_id, inp_id=inp_id)
+                        conns = g.get_edge_data(src, step['id'], default={'conns': []})['conns']
+                        conns.append([out_id, inp_id])
+                        g.add_edge(src_id, step['id'], conns=conns)
             for out_id, dst_list in step.get('outputs', {}).iteritems():
                 dst_list = dst_list if isinstance(dst_list, list) else filter(None, [dst_list])
                 for dst in dst_list:
@@ -91,7 +93,9 @@ class Pipeline(Model):
                         continue
                     outputs.add(dst)
                     g.add_node(dst, id=dst, app='$$output')
-                    g.add_edge(step['id'], dst, out_id=out_id, inp_id='io')
+                    conns = g.get_edge_data(step['id'], dst, default={'conns': []})['conns']
+                    conns.append([out_id, None])
+                    g.add_edge(step['id'], dst, conns=conns)
         step_ids = set(s['id'] for s in self.steps)
         assert not inputs.intersection(step_ids), 'Some inputs have same id as steps'
         assert not outputs.intersection(step_ids), 'Some outputs have same id as steps'
@@ -136,7 +140,7 @@ class Pipeline(Model):
                     app_inputs = self['apps'][step['app']].schema.inputs
                     schema = filter(lambda i: i['id'] == app_inp_id, app_inputs)[0]
                     if conn not in inputs:
-                        inputs[conn] = deepcopy(schema)
+                        inputs[conn] = copy.deepcopy(schema)
                     else:
                         # Input goes to multiple steps, check again for list/required
                         inp = inputs[conn]
@@ -147,32 +151,8 @@ class Pipeline(Model):
         return inputs
 
 
-class DockerApp(Model):
-    TYPE = 'app/tool/docker'
-
-    image_ref = property(lambda self: self['docker_image_ref'])
-    wrapper_id = property(lambda self: self['wrapper_id'])
+class App(Model):
     schema = property(lambda self: self['schema'])
-
-    def _validate(self):
-        self._check_field('docker_image_ref', dict, null=False)
-        self._check_field('wrapper_id', basestring, null=False)
-        self._check_field('schema', AppSchema, null=False)
-        self.schema.validate()
-
-
-class MockApp(Model):
-    TYPE = 'app/mock/python'
-
-    importable = property(lambda self: self['importable'])
-
-    def _validate(self):
-        self._check_field('importable', basestring, null=False)
-        chunks = self['importable'].split('.')
-        assert len(chunks) > 1, 'importable cannot be a module'
-        for chunk in chunks:
-            assert not iskeyword(chunk), '"%s" is a Python keyword' % chunk
-            assert re.match('^[A-Za-z_][A-Za-z0-9_]*$', chunk), '"%s" is not a valid Python identifier' % chunk
 
 
 class AppSchema(Model):

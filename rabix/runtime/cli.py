@@ -1,46 +1,27 @@
 from __future__ import print_function
 
-import os
 import sys
 import logging
 
 from docopt import docopt, DocoptExit
 from rabix import VERSION
+from rabix.common.util import rnd_name
 from rabix.runtime import from_url
-from rabix.runtime.graph import JobGraph, RunFailed
-from rabix.runtime.runners import RUNNER_MAP
-from rabix.runtime.cli_helpers import before_job, after_job, present_outputs
+from rabix.runtime.scheduler import SequentialScheduler, RunJob, InstallJob
 
 log = logging.getLogger(__name__)
 
 
-USAGE_TEMPLATE = """Usage:
-cli.py run {run_args}
-cli.py install <ref>
+USAGE_TPL = """Usage:
+rabix run {run_args}
+rabix install <pipeline.json>
 
 Options:
 -h --help        Display this message.
 --version        Print version to standard output and quit.
-<ref>            Path to JSON tool or pipeline description.
 {options}
 """
-
-DEFAULT_TEMPLATE_ARGS = {'run_args': '<pipeline.json> [-- <pipeline_args>...]',
-                         'options': '<pipeline.json>  Path to a JSON file describing a pipeline.'}
-
-
-def load_pipeline(path):
-    """
-    Takes a string path and returns a pipeline object obtained by parsing
-    the JSON file indicated by the path
-    """
-    if '://' in path:
-        print('Currently can only use local pipeline files')
-        sys.exit(1)
-    if not os.path.isfile(path):
-        print('Not a file', path)
-        sys.exit(1)
-    return from_url(path)
+USAGE = USAGE_TPL.format(run_args='<pipeline.json>', options='')
 
 
 def make_pipeline_usage_string(pipeline, path):
@@ -51,68 +32,44 @@ def make_pipeline_usage_string(pipeline, path):
     """
     inputs = pipeline.get_inputs()
 
-    usage_str = " -- "
-    options = "\nPipelne options:\n"
-    for i in inputs.keys():
-        arg = "--" + i + "=" + (i + "_file").upper()
-        arg += "..." if inputs[i]["list"] else ""
-        usage_str += arg + " " if inputs[i]["required"] else "[" + arg + "] "
-        options += '{0: <40}'.format(arg) + inputs[i]["description"] + "\n"
-    pipeline_docstring = {'run_args': path + usage_str,
-                          'options': options}
-    USAGE_TEMPLATE.replace("run <pipeline.json>", "run " + path) + " "
-    return USAGE_TEMPLATE.format(**pipeline_docstring)
+    usage_str = " "
+    options = "\nInputs:\n"
+    for inp_id, inp_details in inputs.iteritems():
+        arg = "--" + inp_id + "=" + (inp_id + "_file").upper()
+        arg += "..." if inp_details["list"] else ""
+        usage_str += arg + " " if inp_details["required"] else "[" + arg + "] "
+        options += '{0: <40}'.format(arg) + inp_details["description"] + "\n"
+    docstring_args = {'run_args': path + usage_str, 'options': options}
+    return USAGE_TPL.replace("rabix install <pipeline.json>\n", "").format(**docstring_args)
 
 
-def parse(argv=None):
-    """
-    Read the array of command line arguments and determine if
-    the user is requesting info about the pipeline or
-    just wants to run the pipeline or wants to do something else.
-    """
-    args = docopt(USAGE_TEMPLATE.format(**DEFAULT_TEMPLATE_ARGS), argv=argv, version=VERSION)
-
-    if args["run"]:
-        pipeline_path = args['<pipeline.json>']
-        pipeline = load_pipeline(pipeline_path)
-        pipeline_args = args.get("<pipeline_args>")
-        pipeline_usage = make_pipeline_usage_string(pipeline, pipeline_path)
-        if not pipeline_args:
-            # user requests info about the pipeline
-            print(pipeline_usage)
-        else:
-            pipeline_args = docopt(pipeline_usage, argv=argv)
-            run(pipeline, pipeline_args)
-    elif args["install"]:
-        ref = args['<ref>']
-        # TODO: make it work for individual tools
-        pipeline = load_pipeline(ref)
-        install(pipeline)
-
-
-def run(pipeline, args):
-    inputs = {}
-    for i in args:
-        if i.startswith('--'):
-            inputs[i[2:]] = args[i]
-    graph = JobGraph.from_pipeline(pipeline, runner_map=RUNNER_MAP)
-    try:
-        graph.simple_run(inputs, before_job=before_job, after_job=after_job)
-    except RunFailed, e:
-        print('Failed: %s' % e)
-        raise e
-    finally:
-        present_outputs(graph.get_outputs())
+def run():
+    path = sys.argv[2]
+    pipeline = from_url(path)
+    args = docopt(make_pipeline_usage_string(pipeline, path), version=VERSION)
+    inputs = {i[len('--'):]: args[i] for i in args if i.startswith('--')}
+    SequentialScheduler().submit(RunJob(rnd_name(), pipeline, inputs=inputs)).run()
 
 
 def install(pipeline):
-    graph = JobGraph.from_pipeline(pipeline, runner_map=RUNNER_MAP)
-    graph.install_tools()
+    SequentialScheduler().submit(InstallJob(rnd_name(), pipeline)).run()
 
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
-    parse()
+    try:
+        args = docopt(USAGE, version=VERSION)
+    except DocoptExit:
+        if len(sys.argv) > 3:
+            return run()
+        print(USAGE)
+        return
+    if args["run"]:
+        pipeline_path = args['<pipeline.json>']
+        pipeline = from_url(pipeline_path)
+        print(make_pipeline_usage_string(pipeline, pipeline_path))
+    elif args["install"]:
+        install(from_url(args['<pipeline.json>']))
 
 
 if __name__ == '__main__':

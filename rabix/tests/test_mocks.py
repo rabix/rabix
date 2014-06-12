@@ -2,11 +2,10 @@ import os
 import tempfile
 from nose.tools import nottest, assert_equals
 
-from rabix.common.protocol import Outputs, BaseJob
+from rabix.common.protocol import Outputs, WrapperJob
 from rabix.common.util import rnd_name
 from rabix.runtime import from_url
-from rabix.runtime.graph import JobGraph
-from rabix.runtime.runners import RUNNER_MAP
+from rabix.runtime.scheduler import SequentialScheduler, RunJob
 
 
 def load(path):
@@ -22,7 +21,8 @@ def save(val):
 
 
 def get_inp(d, inp, unpack=False, cast=None):
-    val = map(load, d.get('$inputs', {}).get(inp, []))
+    # val = map(load, d.get('$inputs', {}).get(inp, []))
+    val = map(load, d['$inputs'][inp])
     if cast:
         val = map(cast, val)
     if unpack:
@@ -42,21 +42,25 @@ def incrementor(job):
 
 def two_step_increment(job):
     args = job.args
-    if args.get('$step', 0) == 0:
+    step = args.get('$step', 0)
+    if step == 0:
         num = get_inp(args, 'to_increment', True, int) or 0
-        return BaseJob(args={'the_number': num+1, '$step': 1})
+        return WrapperJob(args={'$step': 2, 'sum': [num, WrapperJob(args={'$step': 1}), WrapperJob(args={'$step': 1})]})
+    elif step == 1:
+        return 1
+    elif step == 2:
+        return Outputs({'incremented': save(sum(args['sum']))})
     else:
-        num = args.get('the_number')
-        return Outputs({'incremented': save(num + 1)})
+        raise ValueError('Bad step %s' % step)
 
 
 @nottest
 def test_pipeline(pipeline_url, expected_result, output_id):
     prefix = 'x-test-%s' % rnd_name(5)  # Be warned, all dirs with this prefix will be rm -rf on success
     pipeline = from_url(pipeline_url)
-    graph = JobGraph.from_pipeline(pipeline, job_prefix=prefix, runner_map=RUNNER_MAP)
-    graph.simple_run({'initial': 'data:,1'})
-    with open(graph.get_outputs()[output_id][0]) as fp:
+    job = RunJob(prefix, pipeline, inputs={'number': 'data:,1'})
+    SequentialScheduler().submit(job).run()
+    with open(job.get_outputs()['%s.%s' % (prefix, output_id)][0]) as fp:
         assert_equals(fp.read(), expected_result)
     os.system('rm -rf %s.*' % prefix)
 

@@ -64,42 +64,33 @@ class Outputs(object):
         return cls(outputs_dict=d.get('outputs', {}))
 
 
-class BaseJob(object):
-    def __init__(self, job_id=None, args=None, resources=None, context=None):
+class WrapperJob(object):
+    def __init__(self, wrapper_id=None, job_id=None, args=None, resources=None, context=None):
+        self.wrapper_id = wrapper_id
         self.job_id = job_id
         self.args = args or {}
         self.resources = resources or Resources()
         self.context = context or {}
 
-    __str__ = __unicode__ = __repr__ = lambda self: 'BaseJob[%s]' % self.job_id
+    __str__ = __unicode__ = __repr__ = lambda self: 'WrapperJob[%s, %s]' % (self.wrapper_id, self.job_id)
 
     def __json__(self):
         return {
             '$$type': 'job',
             'job_id': self.job_id,
+            'wrapper_id': self.wrapper_id,
             'args': self.args,
             'resources': self.resources,
+            'context': self.context,
         }
-
-
-class Job(BaseJob):
-    def __init__(self, wrapper_id, job_id=None, args=None, resources=None, context=None):
-        BaseJob.__init__(self, job_id, args, resources, context)
-        self.wrapper_id = wrapper_id
-
-    __str__ = __unicode__ = __repr__ = lambda self: 'Job[%s]' % self.job_id
-
-    def __json__(self):
-        return dict(BaseJob.__json__(self), wrapper_id=self.wrapper_id)
 
     @classmethod
     def from_dict(cls, obj):
-        return cls(wrapper_id=obj['wrapper_id'], job_id=obj.get('job_id'), args=obj.get('args'),
-                   resources=obj.get('resources'), context=obj.get('context'))
+        return cls(**obj)
 
 
 MAPPINGS.update({
-    'job': Job,
+    'job': WrapperJob,
     'resources': Resources,
     'outputs': Outputs,
     'error': JobError,
