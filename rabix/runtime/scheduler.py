@@ -17,6 +17,8 @@ class Job(object):
         self.job_id = job_id
         self.tasks = TaskDAG(task_prefix=str(job_id))
 
+    __str__ = __unicode__ = __repr__ = lambda self: '%s[%s]' % (self.__class__.__name__, self.job_id)
+
 
 class PipelineJob(Job):
     def __init__(self, job_id, pipeline):
@@ -84,17 +86,16 @@ class SequentialScheduler(object):
             self.run_job(job)
 
     def run_job(self, job):
+        log.info('Running job %s', job)
         ready = job.tasks.get_ready_tasks()
         while ready:
             for task in ready:
                 log.debug('Running task %s with %s', task, task.arguments)
                 worker = self.assignments[task.task_id] = self.get_worker(task)
-                try:
-                    result = worker.run_and_wait()
-                except:
-                    task.status = Task.FAILED
-                    logging.exception('Job failed.')
-                    raise RuntimeError('Task %s failed. Reason: %s' % (task.task_id, task.result))
+                result = worker.run(async=False)
+                task.status = worker.report()
+                if isinstance(result, Exception):
+                    raise RuntimeError('Task %s failed. Reason: %s' % (task.task_id, result))
                 log.debug('Result for %s: %s', task, result)
                 job.tasks.resolve_task(task.task_id, result)
             ready = job.tasks.get_ready_tasks()

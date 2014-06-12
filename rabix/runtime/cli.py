@@ -3,9 +3,7 @@ import sys
 import logging
 from docopt import docopt, DocoptExit
 from rabix.runtime import from_url
-from rabix.runtime.graph import JobGraph, RunFailed
-from rabix.runtime.runners import RUNNER_MAP
-from rabix.runtime.cli_helpers import before_job, after_job, present_outputs
+from rabix.runtime.scheduler import SequentialScheduler, RunJob, InstallJob
 
 log = logging.getLogger(__name__)
 
@@ -68,8 +66,7 @@ class Runner(object):
                 print self._make_pipeline_usage_string(args["<pipeline.json>"])
             if args["install"]:
                 pipeline = self._load_pipeline(args["<pipeline.json>"])
-                graph = JobGraph.from_pipeline(pipeline, runner_map=RUNNER_MAP)
-                graph.install_tools()
+                SequentialScheduler().submit(InstallJob('INSTALL', pipeline)).run()
         except DocoptExit as e:
             # user is attempting to run the pipeline
             if len(argv) > 2 and argv[0] == "run":
@@ -78,14 +75,11 @@ class Runner(object):
                 for i in args:
                     if i.startswith('--'):
                         inputs[i[2:]] = args[i]
-                graph = JobGraph.from_pipeline(self._load_pipeline(argv[1]), runner_map=RUNNER_MAP)
                 try:
-                    graph.simple_run(inputs, before_job=before_job, after_job=after_job)
-                except RunFailed, e:
+                    SequentialScheduler().submit(RunJob('RUN', self._load_pipeline(argv[1]), inputs=inputs)).run()
+                except Exception, e:
                     print 'Failed: %s' % e
                     raise e
-                finally:
-                    present_outputs(graph.get_outputs())
             else:
                 raise e
 

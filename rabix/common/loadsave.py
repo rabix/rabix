@@ -37,7 +37,6 @@ def to_json(obj, fp=None):
 
 def resolve_ref(obj, parent_url='.'):
     url, checksum = obj.get('url'), obj.get('checksum')
-    logging.debug('resolve_ref - url: %s checksum: %s, parent_url: %s', url, checksum, parent_url)
     if not url:
         raise ValueError('Cannot resolve ref %s: url must not be empty.' % obj)
     if url.startswith('file://'):

@@ -42,12 +42,16 @@ def incrementor(job):
 
 def two_step_increment(job):
     args = job.args
-    if args.get('$step', 0) == 0:
+    step = args.get('$step', 0)
+    if step == 0:
         num = get_inp(args, 'to_increment', True, int) or 0
-        return WrapperJob(args={'the_number': num+1, '$step': 1})
+        return WrapperJob(args={'$step': 2, 'sum': [num, WrapperJob(args={'$step': 1}), WrapperJob(args={'$step': 1})]})
+    elif step == 1:
+        return 1
+    elif step == 2:
+        return Outputs({'incremented': save(sum(args['sum']))})
     else:
-        num = args.get('the_number')
-        return Outputs({'incremented': save(num + 1)})
+        raise ValueError('Bad step %s' % step)
 
 
 @nottest

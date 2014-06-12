@@ -11,6 +11,7 @@ from rabix.common.util import handle_signal
 from rabix.common.protocol import WrapperJob, Outputs, JobError
 from rabix.runtime import from_json, to_json
 from rabix.runtime.base import Worker, App, AppSchema
+from rabix.runtime.tasks import PipelineStepTask, AppInstallTask
 
 log = logging.getLogger(__name__)
 MOUNT_POINT = '/rabix'
@@ -36,48 +37,43 @@ class DockerRunner(Worker):
     """
     def __init__(self, task):
         super(DockerRunner, self).__init__(task)
-        app, job_id, job_args, job_resources, job_context = task.app, task.task_id, task.arguments, task.resources, None
-        if not isinstance(app, DockerApp):
+        if not isinstance(task, PipelineStepTask):
+            raise TypeError('Can only run pipeline step tasks.')
+        if not isinstance(task.app, DockerApp):
             raise TypeError('Can only run app/tool/docker.')
-        docker_image_ref = app.image_ref
+        docker_image_ref = task.app.image_ref
         self.image_repo = docker_image_ref.get('image_repo')
         self.image_tag = docker_image_ref.get('image_tag')
         if not self.image_repo or not self.image_tag:
             raise NotImplementedError('Currently, can only run images specified by repo+tag.')
-        self.job = WrapperJob(task.app.wrapper_id, job_id=job_id, args=job_args,
-                              resources=job_resources, context=job_context)
         self.container = None
         self.image_id = None
         self._docker_client = None
 
     def run_and_wait(self):
-
-        if self.image_id is None:
-            self.install_tool()
-
+        self.image_id = get_image(self.docker_client, self.image_repo, self.image_tag)['Id']
         self.container = Container(self.docker_client, self.image_id, mount_point=MOUNT_POINT)
-
-        job_dir = self.job.job_id
-        os.mkdir(job_dir)
-        os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)
-        in_file, out_file = [os.path.join(job_dir, f) for f in '__in__.json', '__out__.json']
+        wrp_job = WrapperJob(self.task.app.wrapper_id, job_id=self.task.task_id,
+                             args=self._fix_input_paths(self.task.arguments), resources=self.task.resources)
+        task_dir = self.task.task_id
+        os.mkdir(task_dir)
+        os.chmod(task_dir, os.stat(task_dir).st_mode | stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)
+        in_file, out_file = [os.path.join(task_dir, f) for f in '__in__.json', '__out__.json']
         with open(in_file, 'w') as fp:
-            to_json(self.job, fp)
-        self.container.run_job('__in__.json', '__out__.json', cwd=job_dir)
+            to_json(wrp_job, fp)
+        self.container.run_job('__in__.json', '__out__.json', cwd=task_dir)
         if not os.path.isfile(out_file):
             raise JobError('Job failed.')
         with open(out_file) as fp:
             result = from_json(fp)
         if isinstance(result, Exception):
             raise result
-        return self._fix_output_paths(result)
+        return self._fix_output_paths(result) if isinstance(result, Outputs) else result
 
     def _fix_output_paths(self, result):
         mount_point = MOUNT_POINT if MOUNT_POINT.endswith('/') else MOUNT_POINT + '/'
-        if not isinstance(result, Outputs):
-            return result
         for k, v in result.outputs.iteritems():
-            v = [os.path.abspath(os.path.join(mount_point, self.job.job_id, out)) for out in v if out]
+            v = [os.path.abspath(os.path.join(mount_point, self.task.task_id, out)) for out in v if out]
             for out in v:
                 if not out.startswith(mount_point):
                     raise JobError('Output file outside mount point: %s' % out)
@@ -85,17 +81,29 @@ class DockerRunner(Worker):
             result.outputs[k] = v
         return result
 
-    @classmethod
-    def transform_input(cls, inp):
+    def _fix_input_paths(self, args):
+        # TODO: Some other way to transform paths. This is really bad.
+        log.debug('_fix_input_paths(%s)', args)
+        if not isinstance(args, dict):
+            return args
+        if set(args.keys()) != {'$inputs', '$params'}:
+            log.debug('_fix_input_paths: Keys do not match: %s', set(args.keys()))
+            return args
+        if not isinstance(args['$inputs'], dict):
+            log.debug('_fix_input_paths: Type of $inputs is %s', type(args['$inputs']))
+            return args
+        args['$inputs'] = {k: self._transform_input(v) for k, v in args.get('$inputs', {}).iteritems()}
+        log.debug('_fix_input_paths -> %s', args)
+        return args
+
+    def _transform_input(self, inp):
+        if not isinstance(inp, list):
+            return inp
         cwd = os.path.abspath('.') + '/'
         for i in inp:
             if not i.startswith(cwd):
                 raise ValueError('Inputs and outputs must be passed as absolute paths. Got %s' % i)
         return [os.path.join(MOUNT_POINT, i[len(cwd):]) for i in inp]
-
-    def install_tool(self):
-        image = get_image(self.docker_client, self.image_repo, self.image_tag)
-        self.image_id = image['Id']
 
     @property
     def docker_client(self):
@@ -106,10 +114,10 @@ class DockerRunner(Worker):
 
 class DockerAppInstaller(Worker):
     def run_and_wait(self):
-        app = self.task.app
-        assert isinstance(app, DockerApp)
-        repo, tag = app.image_ref['image_repo'], app.image_ref['image_tag']
-        get_image(docker.Client(), repo, tag)
+        if not isinstance(self.task.app, DockerApp):
+            raise TypeError('Can only install app/tool/docker')
+        repo, tag = self.task.app.image_ref['image_repo'], self.task.app.image_ref['image_tag']
+        get_image(docker.Client(os.environ.get('DOCKER_HOST')), repo, tag)
 
 
 class Container(object):

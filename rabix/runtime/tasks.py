@@ -5,7 +5,6 @@ import networkx as nx
 
 from rabix.common.protocol import WrapperJob, Outputs
 from rabix.common.util import rnd_name
-from rabix.runtime.base import App
 
 log = logging.getLogger(__name__)
 
@@ -33,17 +32,17 @@ class Task(object):
     def _replace_wrapper_job_with_task(self, obj):
         """ Traverses arguments, creates replacement tasks in place of wrapper jobs """
         if isinstance(obj, list):
-            for ndx, item in enumerate(list):
+            for ndx, item in enumerate(obj):
                 if isinstance(item, WrapperJob):
                     obj[ndx] = self.replacement(resources=item.resources, arguments=item.args)
                 elif isinstance(obj, (dict, list)):
-                    obj[ndx] = self._replace_wrapper_job_with_task(obj)
+                    obj[ndx] = self._replace_wrapper_job_with_task(item)
         if isinstance(obj, dict):
             for key, val in obj.iteritems():
                 if isinstance(val, WrapperJob):
                     obj[key] = self.replacement(resources=val.resources, arguments=val.args)
                 elif isinstance(val, (dict, list)):
-                    obj[key] = self._replace_wrapper_job_with_task(obj)
+                    obj[key] = self._replace_wrapper_job_with_task(val)
         return obj
 
     def iter_deps(self):
@@ -73,8 +72,6 @@ class Task(object):
 class AppTask(Task):
     def __init__(self, app, task_id='', resources=None, arguments=None):
         super(AppTask, self).__init__(task_id, resources, arguments)
-        if not isinstance(app, App):
-            raise TypeError('Wrong type for app: %s' % app.__class__.__name__)
         self.app = app
 
 
@@ -181,14 +178,12 @@ class TaskDAG(object):
     def add_from_pipeline(self, pipeline, inputs):
         inputs = inputs or {}
         for node_id, node in pipeline.nx.node.iteritems():
-            if isinstance(node['app'], App):
-                self.add_task(PipelineStepTask(node['app'], node['step'], task_id=node_id))
-            elif node['app'] == '$$input':
+            if node['app'] == '$$input':
                 self.add_task(InputTask(node_id, arguments=inputs.get(node_id, [])))
             elif node['app'] == '$$output':
                 self.add_task(OutputTask(node_id))
             else:
-                raise ValueError('Could not create tasks from pipeline. Got %s for app.' % node['app'])
+                self.add_task(PipelineStepTask(node['app'], node['step'], task_id=node_id))
         for src_id, destinations in pipeline.nx.edge.iteritems():
             for dst_id, data in destinations.iteritems():
                 for out_id, inp_id in data['conns']:

@@ -4,6 +4,7 @@ import logging
 import networkx as nx
 
 from rabix.common.errors import ValidationError
+from rabix.runtime.tasks import Task
 
 log = logging.getLogger(__name__)
 
@@ -178,21 +179,29 @@ class AppSchema(Model):
 class Worker(object):
     def __init__(self, task):
         self.task = task
-        self.running = False
-        self.done = False
+        self.status = Task.QUEUED
 
-    def run(self):
-        self.running = self.done = True
-        return None
+    def run(self, async=False):
+        if async:
+            raise NotImplementedError('Blocking runs only.')
+        self.status = Task.RUNNING
+        try:
+            result = self.run_and_wait()
+            self.status = Task.FINISHED
+            return result
+        except Exception, e:
+            log.exception('Task error (%s)', self.task.task_id)
+            self.status = Task.FAILED
+            return e
 
     def report(self):
         return None
 
     def abort(self):
-        return None
+        pass
 
     def run_and_wait(self):
-        return self.run()
+        pass
 
     def get_requirements(self):
         return self.task.resources
