@@ -147,7 +147,11 @@ class Pipeline(Model):
         return inputs
 
 
-class DockerApp(Model):
+class App(Model):
+    pass
+
+
+class DockerApp(App):
     TYPE = 'app/tool/docker'
 
     image_ref = property(lambda self: self['docker_image_ref'])
@@ -161,7 +165,7 @@ class DockerApp(Model):
         self.schema.validate()
 
 
-class MockApp(Model):
+class MockApp(App):
     TYPE = 'app/mock/python'
 
     importable = property(lambda self: self['importable'])
