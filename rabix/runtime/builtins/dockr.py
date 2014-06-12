@@ -1,11 +1,115 @@
+import pwd
 import logging
 import os
 import signal
+import stat
+
+import docker
+
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import handle_signal
-import pwd
+from rabix.common.protocol import WrapperJob, Outputs, JobError
+from rabix.runtime import from_json, to_json
+from rabix.runtime.base import Worker, App, AppSchema
 
 log = logging.getLogger(__name__)
+MOUNT_POINT = '/rabix'
+
+
+class DockerApp(App):
+    TYPE = 'app/tool/docker'
+
+    image_ref = property(lambda self: self['docker_image_ref'])
+    wrapper_id = property(lambda self: self['wrapper_id'])
+
+    def _validate(self):
+        self._check_field('docker_image_ref', dict, null=False)
+        self._check_field('wrapper_id', basestring, null=False)
+        self._check_field('schema', AppSchema, null=False)
+        self.schema.validate()
+
+
+class DockerRunner(Worker):
+    """
+    Runs docker apps. Instantiates a container from specified image, mounts the current directory and runs entry point.
+    A directory is created for each job.
+    """
+    def __init__(self, task):
+        super(DockerRunner, self).__init__(task)
+        app, job_id, job_args, job_resources, job_context = task.app, task.task_id, task.arguments, task.resources, None
+        if not isinstance(app, DockerApp):
+            raise TypeError('Can only run app/tool/docker.')
+        docker_image_ref = app.image_ref
+        self.image_repo = docker_image_ref.get('image_repo')
+        self.image_tag = docker_image_ref.get('image_tag')
+        if not self.image_repo or not self.image_tag:
+            raise NotImplementedError('Currently, can only run images specified by repo+tag.')
+        self.job = WrapperJob(task.app.wrapper_id, job_id=job_id, args=job_args,
+                              resources=job_resources, context=job_context)
+        self.container = None
+        self.image_id = None
+        self._docker_client = None
+
+    def run_and_wait(self):
+
+        if self.image_id is None:
+            self.install_tool()
+
+        self.container = Container(self.docker_client, self.image_id, mount_point=MOUNT_POINT)
+
+        job_dir = self.job.job_id
+        os.mkdir(job_dir)
+        os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)
+        in_file, out_file = [os.path.join(job_dir, f) for f in '__in__.json', '__out__.json']
+        with open(in_file, 'w') as fp:
+            to_json(self.job, fp)
+        self.container.run_job('__in__.json', '__out__.json', cwd=job_dir)
+        if not os.path.isfile(out_file):
+            raise JobError('Job failed.')
+        with open(out_file) as fp:
+            result = from_json(fp)
+        if isinstance(result, Exception):
+            raise result
+        return self._fix_output_paths(result)
+
+    def _fix_output_paths(self, result):
+        mount_point = MOUNT_POINT if MOUNT_POINT.endswith('/') else MOUNT_POINT + '/'
+        if not isinstance(result, Outputs):
+            return result
+        for k, v in result.outputs.iteritems():
+            v = [os.path.abspath(os.path.join(mount_point, self.job.job_id, out)) for out in v if out]
+            for out in v:
+                if not out.startswith(mount_point):
+                    raise JobError('Output file outside mount point: %s' % out)
+            v = [os.path.abspath(out[len(mount_point):]) for out in v]
+            result.outputs[k] = v
+        return result
+
+    @classmethod
+    def transform_input(cls, inp):
+        cwd = os.path.abspath('.') + '/'
+        for i in inp:
+            if not i.startswith(cwd):
+                raise ValueError('Inputs and outputs must be passed as absolute paths. Got %s' % i)
+        return [os.path.join(MOUNT_POINT, i[len(cwd):]) for i in inp]
+
+    def install_tool(self):
+        image = get_image(self.docker_client, self.image_repo, self.image_tag)
+        self.image_id = image['Id']
+
+    @property
+    def docker_client(self):
+        if self._docker_client is None:
+            self._docker_client = docker.Client(os.environ.get('DOCKER_HOST'))
+        return self._docker_client
+
+
+class DockerAppInstaller(Worker):
+    def run_and_wait(self):
+        app = self.task.app
+        assert isinstance(app, DockerApp)
+        repo, tag = app.image_ref['image_repo'], app.image_ref['image_tag']
+        get_image(docker.Client(), repo, tag)
 
 
 class Container(object):

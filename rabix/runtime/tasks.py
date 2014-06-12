@@ -5,7 +5,7 @@ import networkx as nx
 
 from rabix.common.protocol import WrapperJob, Outputs
 from rabix.common.util import rnd_name
-from rabix.runtime.apps import App
+from rabix.runtime.base import App
 
 log = logging.getLogger(__name__)
 
@@ -20,12 +20,15 @@ class Task(object):
         self.arguments = arguments
         self.result = None
 
+    __str__ = __unicode__ = __repr__ = lambda self: '%s[%s]' % (self.__class__.__name__, self.task_id)
+
     def replacement(self, resources, arguments):
-        result = copy.deepcopy(self)
-        result.status = Task.QUEUED
-        result.resources = resources
-        result.arguments = self._replace_wrapper_job_with_task(arguments)
-        return result
+        replacement = copy.deepcopy(self)
+        replacement.status = Task.QUEUED
+        replacement.resources = resources
+        replacement.arguments = self._replace_wrapper_job_with_task(arguments)
+        replacement.result = None
+        return replacement
 
     def _replace_wrapper_job_with_task(self, obj):
         """ Traverses arguments, creates replacement tasks in place of wrapper jobs """
@@ -34,13 +37,13 @@ class Task(object):
                 if isinstance(item, WrapperJob):
                     obj[ndx] = self.replacement(resources=item.resources, arguments=item.args)
                 elif isinstance(obj, (dict, list)):
-                    return self._replace_wrapper_job_with_task(obj)
+                    obj[ndx] = self._replace_wrapper_job_with_task(obj)
         if isinstance(obj, dict):
             for key, val in obj.iteritems():
                 if isinstance(val, WrapperJob):
                     obj[key] = self.replacement(resources=val.resources, arguments=val.args)
-                elif isinstance(obj, (dict, list)):
-                    return self._replace_wrapper_job_with_task(obj)
+                elif isinstance(val, (dict, list)):
+                    obj[key] = self._replace_wrapper_job_with_task(obj)
         return obj
 
     def iter_deps(self):
@@ -77,11 +80,12 @@ class AppTask(Task):
 
 class PipelineStepTask(AppTask):
     def __init__(self, app, step, task_id='', resources=None, arguments=None):
-        super(PipelineStepTask, self).__init__(task_id, resources)
+        super(PipelineStepTask, self).__init__(app, task_id, resources)
         self.step = step
         self.arguments = arguments
         if arguments is None:
-            self.arguments = {'$inputs': {inp: [] for inp in app.schema.inputs}, '$params': {}}
+            inputs = list(inp['id'] for inp in app.schema.inputs)
+            self.arguments = {'$inputs': {inp: [] for inp in inputs}, '$params': {}}
 
 
 class AppInstallTask(AppTask):
@@ -101,20 +105,20 @@ class TaskDAG(object):
         self.task_prefix = task_prefix or rnd_name()
         self.dag = nx.DiGraph()
 
-    def get_id_for_task(self, task):
-        task_id = '%s.%s' % (self.task_prefix, task.task_id)
+    def get_id_for_task(self, task, add_prefix=True):
+        task_id = '%s.%s' % (self.task_prefix, task.task_id) if add_prefix else task.task_id
         counter = 0
         while task_id in self.dag:
             counter += 1
             task_id = '%s.%s' % (task_id, counter)
         return task_id
 
-    def add_task(self, task):
+    def add_task(self, task, replacement=False):
         """ Modifies task id. Returns modified task. """
-        task.task_id = self.get_id_for_task(task)
+        task.task_id = self.get_id_for_task(task, add_prefix=not replacement)
         self.dag.add_node(task.task_id, task=task)
         for path, dep in task.iter_deps():
-            dep = self.add_task(dep)
+            dep = self.add_task(dep, replacement)
             self.connect(dep.task_id, task.task_id, [], path)
         return task
 
@@ -127,6 +131,10 @@ class TaskDAG(object):
 
     def get_task(self, task_id):
         return self.dag.node[task_id]['task']
+
+    def iter_tasks(self):
+        for node in self.dag.node.itervalues():
+            yield node['task']
 
     def resolve_task(self, task_id, result, resolution=Task.FINISHED):
         """
@@ -144,17 +152,56 @@ class TaskDAG(object):
         if isinstance(result, Outputs):
             result = result.outputs
         task.result = result
+        task.status = resolution
         if isinstance(result, WrapperJob):
-            return self.add_task(task.replacement(resources=task.result.resources, arguments=task.result.args))
-        for dst_id in self.dag.neighbors_iter(task_id):
-            dst = self.dag.node[dst_id]
+            replacement = task.replacement(resources=task.result.resources, arguments=task.result.args)
+            replacement = self.add_task(replacement, replacement=True)
+            for n in self.dag.neighbors(task_id):
+                self.dag.add_edge(replacement.task_id, n, **self.dag.get_edge_data(task_id, n))
+                self.dag.remove_edge(task_id, n)
+            return
+        for dst_id in self.dag.neighbors(task_id):
+            dst = self.get_task(dst_id)
             for src_path, dst_path in self.dag.get_edge_data(task_id, dst_id)['conns']:
                 self.propagate(task, dst, src_path, dst_path)
+            self.update_status(dst)
+
+    def update_status(self, task):
+        if task.status in (Task.CANCELED, Task.FAILED, Task.FINISHED):
+            return task
+        dep_ids = self.dag.reverse(copy=True).neighbors(task.task_id)  # TODO: Don't copy!
+        deps = [self.get_task(dep_id) for dep_id in dep_ids]
+        if not deps or all(dep.status == Task.FINISHED for dep in deps):
+            task.status = Task.READY
+        return task
+
+    def get_ready_tasks(self):
+        return [task for task in self.iter_tasks() if self.update_status(task).status == Task.READY]
+
+    def add_from_pipeline(self, pipeline, inputs):
+        inputs = inputs or {}
+        for node_id, node in pipeline.nx.node.iteritems():
+            if isinstance(node['app'], App):
+                self.add_task(PipelineStepTask(node['app'], node['step'], task_id=node_id))
+            elif node['app'] == '$$input':
+                self.add_task(InputTask(node_id, arguments=inputs.get(node_id, [])))
+            elif node['app'] == '$$output':
+                self.add_task(OutputTask(node_id))
+            else:
+                raise ValueError('Could not create tasks from pipeline. Got %s for app.' % node['app'])
+        for src_id, destinations in pipeline.nx.edge.iteritems():
+            for dst_id, data in destinations.iteritems():
+                for out_id, inp_id in data['conns']:
+                    src_path = [out_id] if out_id else []
+                    dst_path = ['$inputs', inp_id] if inp_id else []
+                    self.connect('%s.%s' % (self.task_prefix, src_id), '%s.%s' % (self.task_prefix, dst_id),
+                                 src_path, dst_path)
 
     def propagate(self, src, dst, src_path, dst_path):
         """" Propagates results. Possibly override to add shuttling tasks when multi node and no shared storage. """
         val = get_val_from_path(src.result, src_path)
         dst.arguments = update_on_path(dst.arguments, dst_path, val)
+        return
 
 
 def get_val_from_path(obj, path, default=None):

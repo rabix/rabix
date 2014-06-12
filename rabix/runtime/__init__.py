@@ -1,6 +1,8 @@
 from rabix.common.protocol import MAPPINGS
 from rabix.common import from_url, from_json, to_json
-from rabix.runtime.apps import MockApp, Pipeline, DockerApp, AppSchema
+from rabix.runtime.base import Pipeline, AppSchema
+from rabix.runtime.builtins.dockr import DockerApp
+from rabix.runtime.builtins.mocks import MockApp
 
 
 MAPPINGS.update({

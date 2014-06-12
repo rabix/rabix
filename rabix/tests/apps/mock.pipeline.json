@@ -4,15 +4,27 @@
         "generator": {
             "$$type": "ref/app/mock/python",
             "url": "file://generator.mock.json",
-            "checksum": "5b041026477854326612de670a2a4e9b"
+            "checksum": ""
         },
         "incrementor": {
             "$$type": "app/mock/python",
-            "importable": "rabix.tests.test_mocks.incrementor"
+            "importable": "rabix.tests.test_mocks.incrementor",
+            "schema": {
+                "$$type": "schema/app/sbgsdk",
+                "inputs": [{"id": "to_increment", "list": false}],
+                "params" : [],
+                "outputs": [{"id": "incremented", "list": false}]
+            }
         },
         "two_step_increment": {
             "$$type": "app/mock/python",
-            "importable": "rabix.tests.test_mocks.two_step_increment"
+            "importable": "rabix.tests.test_mocks.two_step_increment",
+            "schema": {
+                "$$type": "schema/app/sbgsdk",
+                "inputs": [{"id": "to_increment", "list": false}],
+                "params" : [],
+                "outputs": [{"id": "incremented", "list": false}]
+            }
         }
     },
     "steps": [
@@ -24,7 +36,7 @@
             "id": "inc1",
             "app": "incrementor",
             "inputs": {
-                "to_increment": "initial"
+                "to_increment": "number"
             }
         },
         {
