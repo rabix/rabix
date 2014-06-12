@@ -1,93 +1,75 @@
-import os
+from __future__ import print_function
+
 import sys
 import logging
+
 from docopt import docopt, DocoptExit
+from rabix import VERSION
+from rabix.common.util import rnd_name
 from rabix.runtime import from_url
 from rabix.runtime.scheduler import SequentialScheduler, RunJob, InstallJob
 
 log = logging.getLogger(__name__)
 
 
-class Runner(object):
-    usage_string = """Usage:
-    cli.py run <pipeline.json>
-    cli.py install <pipeline.json>
+USAGE_TPL = """Usage:
+rabix run {run_args}
+rabix install <pipeline.json>
+
+Options:
+-h --help        Display this message.
+--version        Print version to standard output and quit.
+{options}
+"""
+USAGE = USAGE_TPL.format(run_args='<pipeline.json>', options='')
+
+
+def make_pipeline_usage_string(pipeline, path):
     """
+    Takes a pipeline path string and returns the usage string for it.
+    As this is the usage string for a given pipeline, <pipeline.json>
+    is replaced with the actual pipeline (for the 'run' cmd)
+    """
+    inputs = pipeline.get_inputs()
 
-    def __init__(self):
-        self._pipeline = None
+    usage_str = " "
+    options = "\nInputs:\n"
+    for inp_id, inp_details in inputs.iteritems():
+        arg = "--" + inp_id + "=" + (inp_id + "_file").upper()
+        arg += "..." if inp_details["list"] else ""
+        usage_str += arg + " " if inp_details["required"] else "[" + arg + "] "
+        options += '{0: <40}'.format(arg) + inp_details["description"] + "\n"
+    docstring_args = {'run_args': path + usage_str, 'options': options}
+    return USAGE_TPL.replace("rabix install <pipeline.json>\n", "").format(**docstring_args)
 
-    def _load_pipeline(self, path):
-        """
-        Takes a string path and returns a pipeline object obtained by parsing
-        the JSON file indicated by the path
-        """
-        if self._pipeline:
-            return self._pipeline
-        if '://' in path:
-            print 'Currently can only use local pipeline files'
-            sys.exit(1)
-        if not os.path.isfile(path):
-            print 'Not a file', path
-            sys.exit(1)
-        self._pipeline = from_url(path)
-        return self._pipeline
 
-    def _make_pipeline_usage_string(self, pipeline_path):
-        """
-        Takes a pipeline path string and returns the usage string for it.
-        As this is the usage string for a given pipeline, <pipeline.json>
-        is replaced with the actual pipeline (for the 'run' cmd)
-        """
-        pipeline = self._load_pipeline(pipeline_path)
-        inputs = pipeline.get_inputs()
-        usage_str = self.usage_string.replace("run <pipeline.json>", "run " + pipeline_path) + " "
-        usage_str = usage_str.replace("cli.py install <pipeline.json>\n", "")
-        options = "\n\nOptions:\n"
-        for i in inputs.keys():
-            arg = "--" + i + "=" + (i + "_file").upper()
-            usage_str += arg if inputs[i]["required"] else "[" + arg + "]"
-            usage_str += "... " if inputs[i]["list"] else " "
-            options += '{0: <40}'.format(arg) + inputs[i]["description"] + "\n"
-        usage_str += options
-        return usage_str
+def run():
+    path = sys.argv[2]
+    pipeline = from_url(path)
+    args = docopt(make_pipeline_usage_string(pipeline, path), version=VERSION)
+    inputs = {i[len('--'):]: args[i] for i in args if i.startswith('--')}
+    SequentialScheduler().submit(RunJob(rnd_name(), pipeline, inputs=inputs)).run()
 
-    def parse(self, argv=None):
-        """
-        Read the array of command line arguments and determine if
-        the user is requesting info about the pipeline or
-        just wants to run the pipeline or wants to do something else.
-        """
-        argv = argv if argv else sys.argv[1:]
-        try:
-            args = docopt(self.usage_string, argv=argv)
-            if args["run"] and args["<pipeline.json>"]:
-                # user requests info about the pipeline
-                print self._make_pipeline_usage_string(args["<pipeline.json>"])
-            if args["install"]:
-                pipeline = self._load_pipeline(args["<pipeline.json>"])
-                SequentialScheduler().submit(InstallJob('INSTALL', pipeline)).run()
-        except DocoptExit as e:
-            # user is attempting to run the pipeline
-            if len(argv) > 2 and argv[0] == "run":
-                args = docopt(self._make_pipeline_usage_string(argv[1]), argv=argv)
-                inputs = {}
-                for i in args:
-                    if i.startswith('--'):
-                        inputs[i[2:]] = args[i]
-                try:
-                    SequentialScheduler().submit(RunJob('RUN', self._load_pipeline(argv[1]), inputs=inputs)).run()
-                except Exception, e:
-                    print 'Failed: %s' % e
-                    raise e
-            else:
-                raise e
+
+def install(pipeline):
+    SequentialScheduler().submit(InstallJob(rnd_name(), pipeline)).run()
 
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
-    r = Runner()
-    r.parse()
+    try:
+        args = docopt(USAGE, version=VERSION)
+    except DocoptExit:
+        if len(sys.argv) > 3:
+            return run()
+        print(USAGE)
+        return
+    if args["run"]:
+        pipeline_path = args['<pipeline.json>']
+        pipeline = from_url(pipeline_path)
+        print(make_pipeline_usage_string(pipeline, pipeline_path))
+    elif args["install"]:
+        install(from_url(args['<pipeline.json>']))
 
 
 if __name__ == '__main__':
