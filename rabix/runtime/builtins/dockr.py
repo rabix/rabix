@@ -57,8 +57,7 @@ class DockerRunner(Worker):
                              args=self._fix_input_paths(self.task.arguments), resources=self.task.resources)
         task_dir = self.task.task_id
         os.mkdir(task_dir)
-        os.chmod(task_dir, os.stat(task_dir).st_mode | stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)  # TODO: remove?
-        in_file, out_file = [os.path.join(task_dir, f) for f in '__in__.json', '__out__.json']
+        in_file, out_file = os.path.join(task_dir, '__in__.json'), os.path.join(task_dir, '__out__.json')
         with open(in_file, 'w') as fp:
             to_json(wrp_job, fp)
         self.container.run_job('__in__.json', '__out__.json', cwd=task_dir)

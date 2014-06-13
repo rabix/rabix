@@ -202,7 +202,7 @@ class TaskDAG(object):
             self.add_task(AppInstallTask(app, task_id=app_id + '.install'))
 
     def get_outputs(self):
-        return {task.task_id: task.arguments for task in self.iter_tasks() if isinstance(task, OutputTask)}
+        return {task.task_id: task.result for task in self.iter_tasks() if isinstance(task, OutputTask)}
 
 
 def get_val_from_path(obj, path, default=None):
@@ -242,6 +242,8 @@ def update_on_path(obj, path, val):
 
 class Worker(object):
     def __init__(self, task):
+        if not isinstance(task, Task):
+            raise TypeError('Expected Task, got %s' % type(task))
         self.task = task
         self.status = Task.QUEUED
 
@@ -259,13 +261,13 @@ class Worker(object):
             return e
 
     def report(self):
-        return None
+        return self.task.status
 
     def abort(self):
         pass
 
     def run_and_wait(self):
-        pass
+        return self.task.arguments
 
     def get_requirements(self):
         return self.task.resources
