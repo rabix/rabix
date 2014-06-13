@@ -2,10 +2,14 @@ from setuptools import setup, find_packages
 import sys
 import os
 
-
 sys.path.append(os.path.dirname(__file__))
-
 from rabix import VERSION
+
+with open('README.md') as fp:
+    README = fp.read()
+
+with open('requirements.txt') as fp:
+    REQS = [line.rstrip('\n\r') for line in fp.readlines() if line.rstrip('\n\r')]
 
 setup(
     name="rabix",
@@ -15,9 +19,8 @@ setup(
     entry_points={
         'console_scripts': ['rabix = rabix.runtime.cli:main'],
     },
-    install_requires=[
-        'nose==1.3.0', 'docker-py==0.3.1', 'docopt==0.6.1', 'requests==2.2.1', 'networkx==1.9rc1', 'pep8==1.5.7'
-    ],
+    install_requires=REQS,
+    long_description=README,
     zip_safe=False,
     test_suite='tests',
     license='AGPLv3',
@@ -25,7 +28,6 @@ setup(
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
         'Intended Audience :: Science/Research',
-        'Intended Audience :: Healthcare Industry',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7'

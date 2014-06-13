@@ -3,3 +3,4 @@ docker-py==0.3.1
 docopt==0.6.1
 requests==2.2.1
 networkx==1.9rc1
+pep8==1.5.7
