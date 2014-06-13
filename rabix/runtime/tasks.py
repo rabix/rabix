@@ -12,9 +12,10 @@ log = logging.getLogger(__name__)
 class Task(object):
     QUEUED, READY, RUNNING, FINISHED, CANCELED, FAILED = 'queued', 'ready', 'running', 'finished', 'canceled', 'failed'
 
-    def __init__(self, task_id='', resources=None, arguments=None):
+    def __init__(self, task_name='', resources=None, arguments=None):
         self.status = Task.QUEUED
-        self.task_id = task_id
+        self.task_id = None  # Determined by TaskDAG
+        self.task_name = task_name
         self.resources = resources
         self.arguments = arguments
         self.result = None
@@ -26,6 +27,7 @@ class Task(object):
         replacement.status = Task.QUEUED
         replacement.resources = resources
         replacement.arguments = self._replace_wrapper_job_with_task(arguments)
+        replacement.task_id = None
         replacement.result = None
         return replacement
 
@@ -70,14 +72,14 @@ class Task(object):
 
 
 class AppTask(Task):
-    def __init__(self, app, task_id='', resources=None, arguments=None):
-        super(AppTask, self).__init__(task_id, resources, arguments)
+    def __init__(self, app, task_name='', resources=None, arguments=None):
+        super(AppTask, self).__init__(task_name, resources, arguments)
         self.app = app
 
 
 class PipelineStepTask(AppTask):
-    def __init__(self, app, step, task_id='', resources=None, arguments=None):
-        super(PipelineStepTask, self).__init__(app, task_id, resources)
+    def __init__(self, app, step, task_name='', resources=None, arguments=None):
+        super(PipelineStepTask, self).__init__(app, task_name, resources)
         self.step = step
         self.arguments = arguments
         if arguments is None:
@@ -102,20 +104,20 @@ class TaskDAG(object):
         self.task_prefix = task_prefix or rnd_name()
         self.dag = nx.DiGraph()
 
-    def get_id_for_task(self, task, add_prefix=True):
-        task_id = '%s.%s' % (self.task_prefix, task.task_id) if add_prefix else task.task_id
-        counter = 0
+    def get_id_for_task(self, task):
+        base = '%s.%s' % (self.task_prefix, task.task_name)
+        task_id, counter = base, 0
         while task_id in self.dag:
             counter += 1
-            task_id = '%s.%s' % (task_id, counter)
+            task_id = '%s.%s' % (base, counter)
         return task_id
 
-    def add_task(self, task, replacement=False):
+    def add_task(self, task):
         """ Modifies task id. Returns modified task. """
-        task.task_id = self.get_id_for_task(task, add_prefix=not replacement)
+        task.task_id = self.get_id_for_task(task)
         self.dag.add_node(task.task_id, task=task)
         for path, dep in task.iter_deps():
-            dep = self.add_task(dep, replacement)
+            dep = self.add_task(dep)
             self.connect(dep.task_id, task.task_id, [], path)
         return task
 
@@ -151,8 +153,7 @@ class TaskDAG(object):
         task.result = result
         task.status = resolution
         if isinstance(result, WrapperJob):
-            replacement = task.replacement(resources=task.result.resources, arguments=task.result.args)
-            replacement = self.add_task(replacement, replacement=True)
+            replacement = self.add_task(task.replacement(resources=task.result.resources, arguments=task.result.args))
             for n in self.dag.neighbors(task_id):
                 self.dag.add_edge(replacement.task_id, n, **self.dag.get_edge_data(task_id, n))
                 self.dag.remove_edge(task_id, n)
@@ -171,7 +172,7 @@ class TaskDAG(object):
     def update_status(self, task):
         if task.status in (Task.CANCELED, Task.FAILED, Task.FINISHED):
             return task
-        dep_ids = self.dag.reverse(copy=True).neighbors(task.task_id)  # TODO: Don't copy!
+        dep_ids = self.dag.reverse(copy=True).neighbors(task.task_id)  # TODO: Do it without copying.
         deps = [self.get_task(dep_id) for dep_id in dep_ids]
         if not deps or all(dep.status == Task.FINISHED for dep in deps):
             task.status = Task.READY
@@ -188,7 +189,7 @@ class TaskDAG(object):
             elif node['app'] == '$$output':
                 self.add_task(OutputTask(node_id))
             else:
-                self.add_task(PipelineStepTask(node['app'], node['step'], task_id=node_id))
+                self.add_task(PipelineStepTask(node['app'], node['step'], task_name=node_id))
         for src_id, destinations in pipeline.nx.edge.iteritems():
             for dst_id, data in destinations.iteritems():
                 for out_id, inp_id in data['conns']:
@@ -199,10 +200,10 @@ class TaskDAG(object):
 
     def add_install_tasks(self, pipeline):
         for app_id, app in pipeline.apps.iteritems():
-            self.add_task(AppInstallTask(app, task_id=app_id + '.install'))
+            self.add_task(AppInstallTask(app, task_name=app_id + '.install'))
 
     def get_outputs(self):
-        return {task.task_id: task.result for task in self.iter_tasks() if isinstance(task, OutputTask)}
+        return {task.task_name: task.result for task in self.iter_tasks() if isinstance(task, OutputTask)}
 
 
 def get_val_from_path(obj, path, default=None):

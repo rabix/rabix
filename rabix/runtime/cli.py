@@ -49,13 +49,13 @@ def before_task(task):
     sys.stdout.flush()
 
 
-def present_outputs(outputs, strip_prefix=''):
+def present_outputs(outputs):
     row_fmt = '{:<20}{:<80}{:>16}'
     print('')
     print(row_fmt.format('Output ID', 'File path', 'File size'))
     for out_id, file_list in outputs.iteritems():
         for path in file_list:
-            print(row_fmt.format(out_id[len(strip_prefix):], path, str(os.path.getsize(path))))
+            print(row_fmt.format(out_id, path, str(os.path.getsize(path))))
 
 
 def run():
@@ -66,7 +66,7 @@ def run():
     job_id = rnd_name()
     job = RunJob(job_id, pipeline, inputs=inputs)
     SequentialScheduler(before_task=before_task).submit(job).run()
-    present_outputs(job.get_outputs(), strip_prefix=job_id + '.')
+    present_outputs(job.get_outputs())
 
 
 def install(pipeline):

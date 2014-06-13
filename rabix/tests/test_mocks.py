@@ -60,7 +60,7 @@ def test_pipeline(pipeline_url, expected_result, output_id):
     pipeline = from_url(pipeline_url)
     job = RunJob(prefix, pipeline, inputs={'number': 'data:,1'})
     get_scheduler().submit(job).run()
-    with open(job.get_outputs()['%s.%s' % (prefix, output_id)][0]) as fp:
+    with open(job.get_outputs()[output_id][0]) as fp:
         assert_equals(fp.read(), expected_result)
     os.system('rm -rf %s.*' % prefix)
 
