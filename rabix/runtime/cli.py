@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import os
 import sys
 import logging
 
@@ -43,16 +44,34 @@ def make_pipeline_usage_string(pipeline, path):
     return USAGE_TPL.replace("rabix install <pipeline.json>\n", "").format(**docstring_args)
 
 
+def before_task(task):
+    print('Running', task.task_id)
+    sys.stdout.flush()
+
+
+def present_outputs(outputs, strip_prefix=''):
+    row_fmt = '{:<20}{:<80}{:>16}'
+    print('')
+    print(row_fmt.format('Output ID', 'File path', 'File size'))
+    for out_id, file_list in outputs.iteritems():
+        for path in file_list:
+            print(row_fmt.format(out_id[len(strip_prefix):], path, str(os.path.getsize(path))))
+
+
 def run():
     path = sys.argv[2]
     pipeline = from_url(path)
     args = docopt(make_pipeline_usage_string(pipeline, path), version=VERSION)
     inputs = {i[len('--'):]: args[i] for i in args if i.startswith('--')}
-    SequentialScheduler().submit(RunJob(rnd_name(), pipeline, inputs=inputs)).run()
+    job_id = rnd_name()
+    job = RunJob(job_id, pipeline, inputs=inputs)
+    SequentialScheduler(before_task=before_task).submit(job).run()
+    present_outputs(job.get_outputs(), strip_prefix=job_id + '.')
 
 
 def install(pipeline):
-    SequentialScheduler().submit(InstallJob(rnd_name(), pipeline)).run()
+    job = InstallJob(rnd_name(), pipeline)
+    SequentialScheduler(before_task=before_task).submit(job).run()
 
 
 def main():
