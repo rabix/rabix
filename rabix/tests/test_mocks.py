@@ -5,7 +5,7 @@ from nose.tools import nottest, assert_equals
 from rabix.common.protocol import Outputs, WrapperJob
 from rabix.common.util import rnd_name
 from rabix.runtime import from_url
-from rabix.runtime.scheduler import SequentialScheduler, RunJob
+from rabix.runtime.scheduler import get_scheduler, RunJob
 
 
 def load(path):
@@ -59,7 +59,7 @@ def test_pipeline(pipeline_url, expected_result, output_id):
     prefix = 'x-test-%s' % rnd_name(5)  # Be warned, all dirs with this prefix will be rm -rf on success
     pipeline = from_url(pipeline_url)
     job = RunJob(prefix, pipeline, inputs={'number': 'data:,1'})
-    SequentialScheduler().submit(job).run()
+    get_scheduler().submit(job).run()
     with open(job.get_outputs()['%s.%s' % (prefix, output_id)][0]) as fp:
         assert_equals(fp.read(), expected_result)
     os.system('rm -rf %s.*' % prefix)

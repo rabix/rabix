@@ -163,6 +163,11 @@ class TaskDAG(object):
                 self.propagate(task, dst, src_path, dst_path)
             self.update_status(dst)
 
+    def propagate(self, src, dst, src_path, dst_path):
+        """" Propagates results. Possibly override to add shuttling tasks when multi node and no shared storage. """
+        val = get_val_from_path(src.result, src_path)
+        dst.arguments = update_on_path(dst.arguments, dst_path, val)
+
     def update_status(self, task):
         if task.status in (Task.CANCELED, Task.FAILED, Task.FINISHED):
             return task
@@ -192,11 +197,12 @@ class TaskDAG(object):
                     self.connect('%s.%s' % (self.task_prefix, src_id), '%s.%s' % (self.task_prefix, dst_id),
                                  src_path, dst_path)
 
-    def propagate(self, src, dst, src_path, dst_path):
-        """" Propagates results. Possibly override to add shuttling tasks when multi node and no shared storage. """
-        val = get_val_from_path(src.result, src_path)
-        dst.arguments = update_on_path(dst.arguments, dst_path, val)
-        return
+    def add_install_tasks(self, pipeline):
+        for app_id, app in pipeline.apps.iteritems():
+            self.add_task(AppInstallTask(app, task_id=app_id + '.install'))
+
+    def get_outputs(self):
+        return {task.task_id: task.arguments for task in self.iter_tasks() if isinstance(task, OutputTask)}
 
 
 def get_val_from_path(obj, path, default=None):

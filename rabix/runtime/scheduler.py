@@ -1,12 +1,11 @@
 import logging
 
-from rabix.runtime.builtins.dockr import DockerApp, DockerRunner, DockerAppInstaller
-from rabix.runtime.builtins.io import InputRunner
-from rabix.runtime.builtins.mocks import MockRunner, MockApp
-from rabix.runtime.models import Pipeline
-from rabix.runtime.tasks import TaskDAG, Worker, InputTask, OutputTask, PipelineStepTask, AppInstallTask
+from rabix import CONFIG
+from rabix.common.util import import_name
+from rabix.runtime.tasks import TaskDAG
 
 log = logging.getLogger(__name__)
+scheduler = None
 
 
 class Job(object):
@@ -23,8 +22,6 @@ class Job(object):
 class PipelineJob(Job):
     def __init__(self, job_id, pipeline):
         super(PipelineJob, self).__init__(job_id)
-        if not isinstance(pipeline, Pipeline):
-            raise TypeError('Not a pipeline: %s' % pipeline)
         self.pipeline = pipeline
         self.pipeline.validate()
 
@@ -37,42 +34,33 @@ class RunJob(PipelineJob):
         self.tasks.add_from_pipeline(pipeline, inputs)
 
     def get_outputs(self):
-        result = {}
-        for task in [x['task'] for x in self.tasks.dag.node.itervalues()]:
-            if isinstance(task, OutputTask):
-                result[task.task_id] = task.arguments
-        return result
+        return self.tasks.get_outputs()
 
 
 class InstallJob(PipelineJob):
     def __init__(self, job_id, pipeline):
         super(InstallJob, self).__init__(job_id, pipeline)
-        for app_id, app in self.pipeline.apps.iteritems():
-            self.tasks.add_task(AppInstallTask(app, task_id=app_id))
+        self.tasks.add_install_tasks(pipeline)
 
 
 class SequentialScheduler(object):
-    def __init__(self):
-        super(SequentialScheduler, self).__init__()
+    def __init__(self, before_task=None, after_task=None):
         self.jobs = {}
         self.assignments = {}  # task_id: worker
+        self.before_task = before_task or (lambda t: None)
+        self.after_task = after_task or (lambda t: None)
 
     def get_worker(self, task):
-        if isinstance(task, InputTask):
-            return InputRunner(task)
-        elif isinstance(task, OutputTask):
-            return Worker(task)
-        elif isinstance(task, PipelineStepTask):
-            return {
-                DockerApp: DockerRunner,
-                MockApp: MockRunner,
-            }[task.app.__class__](task)
-        elif isinstance(task, AppInstallTask):
-            return {
-                DockerApp: DockerAppInstaller,
-                MockApp: Worker,
-            }[task.app.__class__](task)
-        raise ValueError('No runner for task %s' % task)
+        worker_config = CONFIG['scheduler']['workers'][task.__class__.__name__]
+        if isinstance(worker_config, basestring):
+            worker_cls = import_name(worker_config)
+            log.debug('Worker for %s: %s', task, worker_cls)
+            return worker_cls(task)
+        if isinstance(worker_config, dict):
+            worker_cls = import_name(worker_config[task.app.TYPE])
+            log.debug('Worker for %s: %s', task, worker_cls)
+            return worker_cls(task)
+        raise TypeError('Worker config must be string or dict. Got %s' % type(worker_config))
 
     def submit(self, job):
         self.jobs[job.job_id] = job
@@ -91,11 +79,21 @@ class SequentialScheduler(object):
         while ready:
             for task in ready:
                 log.debug('Running task %s with %s', task, task.arguments)
+                self.before_task(task)
                 worker = self.assignments[task.task_id] = self.get_worker(task)
                 result = worker.run(async=False)
                 task.status = worker.report()
+                self.after_task(task)
                 if isinstance(result, Exception):
                     raise RuntimeError('Task %s failed. Reason: %s' % (task.task_id, result))
                 log.debug('Result for %s: %s', task, result)
                 job.tasks.resolve_task(task.task_id, result)
             ready = job.tasks.get_ready_tasks()
+
+
+def get_scheduler():
+    global scheduler
+    if scheduler:
+        return scheduler
+    scheduler = import_name(CONFIG['scheduler']['class'])(**CONFIG['scheduler'].get('options', {}))
+    return scheduler
