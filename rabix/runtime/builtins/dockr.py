@@ -53,8 +53,8 @@ class DockerRunner(Worker):
     def run_and_wait(self):
         self.image_id = get_image(self.docker_client, self.image_repo, self.image_tag)['Id']
         self.container = Container(self.docker_client, self.image_id, mount_point=MOUNT_POINT)
-        wrp_job = WrapperJob(self.task.app.wrapper_id, job_id=self.task.task_id,
-                             args=self._fix_input_paths(self.task.arguments), resources=self.task.resources)
+        args = self.task.arguments if self.task.is_replacement else self._fix_input_paths(self.task.arguments)
+        wrp_job = WrapperJob(self.task.app.wrapper_id, self.task.task_id, args, self.task.resources)
         task_dir = self.task.task_id
         os.mkdir(task_dir)
         in_file, out_file = os.path.join(task_dir, '__in__.json'), os.path.join(task_dir, '__out__.json')
@@ -81,18 +81,7 @@ class DockerRunner(Worker):
         return result
 
     def _fix_input_paths(self, args):
-        # TODO: Some other way to transform paths. This is really bad.
-        log.debug('_fix_input_paths(%s)', args)
-        if not isinstance(args, dict):
-            return args
-        if set(args.keys()) != {'$inputs', '$params'}:
-            log.debug('_fix_input_paths: Keys do not match: %s', set(args.keys()))
-            return args
-        if not isinstance(args['$inputs'], dict):
-            log.debug('_fix_input_paths: Type of $inputs is %s', type(args['$inputs']))
-            return args
         args['$inputs'] = {k: self._transform_input(v) for k, v in args.get('$inputs', {}).iteritems()}
-        log.debug('_fix_input_paths -> %s', args)
         return args
 
     def _transform_input(self, inp):

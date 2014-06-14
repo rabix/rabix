@@ -19,6 +19,7 @@ class Task(object):
         self.resources = resources
         self.arguments = arguments
         self.result = None
+        self.is_replacement = False
 
     __str__ = __unicode__ = __repr__ = lambda self: '%s[%s]' % (self.__class__.__name__, self.task_id)
 
@@ -29,6 +30,7 @@ class Task(object):
         replacement.arguments = self._replace_wrapper_job_with_task(arguments)
         replacement.task_id = None
         replacement.result = None
+        replacement.is_replacement = True
         return replacement
 
     def _replace_wrapper_job_with_task(self, obj):
