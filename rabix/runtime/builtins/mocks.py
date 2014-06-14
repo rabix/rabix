@@ -26,7 +26,7 @@ class MockRunner(Worker):
     """
     Runs the app/mock/python jobs. A directory is created for each job.
     """
-    def run_and_wait(self):
+    def run(self):
         func = import_name(self.task.app.importable)
         job = WrapperJob(None, self.task.task_id, self.task.arguments, self.task.resources, None)
         cwd = os.path.abspath('.')

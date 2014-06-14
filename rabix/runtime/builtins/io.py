@@ -29,7 +29,7 @@ class InputRunner(Worker):
             self._task_dir = self.task.task_id
         return self._task_dir
 
-    def run_and_wait(self):
+    def run(self):
         return map(os.path.abspath, (self._download(url) for url in self.urls))
 
     def _download(self, url):

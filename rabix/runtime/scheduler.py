@@ -46,7 +46,7 @@ class InstallJob(PipelineJob):
         self.tasks.add_install_tasks(pipeline)
 
 
-class SequentialScheduler(object):
+class Scheduler(object):
     def __init__(self, before_task=None, after_task=None):
         self.jobs = {}
         self.before_task = before_task or (lambda t: None)
@@ -63,6 +63,21 @@ class SequentialScheduler(object):
     def submit(self, job):
         self.jobs[job.job_id] = job
         return self
+
+    def run(self):
+        pass
+
+
+class SequentialScheduler(Scheduler):
+    def run_task(self, task):
+        task.status = Task.RUNNING
+        try:
+            task.result = self.get_worker(task).run()
+            task.status = Task.FINISHED
+        except Exception, e:
+            log.exception('Task error (%s)', task.task_id)
+            task.status = Task.FAILED
+            task.result = e
 
     def run(self):
         for job in self.jobs.itervalues():
@@ -82,11 +97,11 @@ class SequentialScheduler(object):
         while ready:
             for task in ready:
                 self.before_task(task)
-                self.get_worker(task).run(async=False)
+                self.run_task(task)
                 if task.status == Task.FAILED:
                     raise JobError('Task %s failed. Reason: %s' % (task.task_id, task.result))
                 self.after_task(task)
-                job.tasks.resolve_task(task, task.status)
+                job.tasks.resolve_task(task)
             ready = job.tasks.get_ready_tasks()
 
 

@@ -247,25 +247,7 @@ class Worker(object):
             raise TypeError('Expected Task, got %s' % type(task))
         self.task = task
 
-    def run(self, async=False):
-        if async:
-            raise NotImplementedError('Blocking runs only.')
-        self.task.status = Task.RUNNING
-        try:
-            self.task.result = self.run_and_wait()
-            self.task.status = Task.FINISHED
-        except Exception, e:
-            log.exception('Task error (%s)', self.task.task_id)
-            self.task.status = Task.FAILED
-            self.task.result = e
-
-    def report(self):
-        return self.task.status
-
-    def abort(self):
-        pass
-
-    def run_and_wait(self):
+    def run(self):
         return self.task.arguments
 
     def get_requirements(self):

@@ -50,7 +50,7 @@ class DockerRunner(Worker):
         self.image_id = None
         self._docker_client = None
 
-    def run_and_wait(self):
+    def run(self):
         self.image_id = get_image(self.docker_client, self.image_repo, self.image_tag)['Id']
         self.container = Container(self.docker_client, self.image_id, mount_point=MOUNT_POINT)
         args = self.task.arguments if self.task.is_replacement else self._fix_input_paths(self.task.arguments)
@@ -102,7 +102,7 @@ class DockerRunner(Worker):
 
 
 class DockerAppInstaller(Worker):
-    def run_and_wait(self):
+    def run(self):
         if not isinstance(self.task.app, DockerApp):
             raise TypeError('Can only install app/tool/docker')
         repo, tag = self.task.app.image_ref['image_repo'], self.task.app.image_ref['image_tag']
