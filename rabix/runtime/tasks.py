@@ -203,7 +203,7 @@ class TaskDAG(object):
             self.add_task(AppInstallTask(app, task_name=app_id + '.install'))
 
     def get_outputs(self):
-        return {task.task_name: task.result for task in self.iter_tasks() if isinstance(task, OutputTask)}
+        return {task.task_name: task.result or [] for task in self.iter_tasks() if isinstance(task, OutputTask)}
 
 
 def get_val_from_path(obj, path, default=None):

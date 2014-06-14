@@ -2,6 +2,7 @@ import logging
 
 from rabix import CONFIG
 from rabix.common.util import import_name
+from rabix.common.protocol import JobError
 from rabix.runtime.tasks import TaskDAG
 
 log = logging.getLogger(__name__)
@@ -15,6 +16,8 @@ class Job(object):
         self.status = Job.QUEUED
         self.job_id = job_id
         self.tasks = TaskDAG(task_prefix=str(job_id))
+        self.error_message = None
+        self.warnings = []
 
     __str__ = __unicode__ = __repr__ = lambda self: '%s[%s]' % (self.__class__.__name__, self.job_id)
 
@@ -46,20 +49,15 @@ class InstallJob(PipelineJob):
 class SequentialScheduler(object):
     def __init__(self, before_task=None, after_task=None):
         self.jobs = {}
-        self.assignments = {}  # task_id: worker
         self.before_task = before_task or (lambda t: None)
         self.after_task = after_task or (lambda t: None)
 
     def get_worker(self, task):
         worker_config = CONFIG['scheduler']['workers'][task.__class__.__name__]
         if isinstance(worker_config, basestring):
-            worker_cls = import_name(worker_config)
-            log.debug('Worker for %s: %s', task, worker_cls)
-            return worker_cls(task)
+            return import_name(worker_config)(task)
         if isinstance(worker_config, dict):
-            worker_cls = import_name(worker_config[task.app.TYPE])
-            log.debug('Worker for %s: %s', task, worker_cls)
-            return worker_cls(task)
+            return import_name(worker_config[task.app.TYPE])(task)
         raise TypeError('Worker config must be string or dict. Got %s' % type(worker_config))
 
     def submit(self, job):
@@ -71,22 +69,25 @@ class SequentialScheduler(object):
             if job.status != Job.QUEUED:
                 continue
             job.status = Job.RUNNING
-            self.run_job(job)
+            try:
+                self.run_job(job)
+                job.status = Job.FINISHED
+            except JobError, e:
+                job.status = Job.FAILED
+                job.error_message = str(e)
 
     def run_job(self, job):
         log.info('Running job %s', job)
         ready = job.tasks.get_ready_tasks()
         while ready:
             for task in ready:
-                log.debug('Running task %s with %s', task, task.arguments)
                 self.before_task(task)
-                worker = self.assignments[task.task_id] = self.get_worker(task)
+                worker = self.get_worker(task)
                 result = worker.run(async=False)
                 task.status = worker.report()
-                self.after_task(task)
                 if isinstance(result, Exception):
-                    raise RuntimeError('Task %s failed. Reason: %s' % (task.task_id, result))
-                log.debug('Result for %s: %s', task, result)
+                    raise JobError('Task %s failed. Reason: %s' % (task.task_id, result))
+                self.after_task(task)
                 job.tasks.resolve_task(task.task_id, result)
             ready = job.tasks.get_ready_tasks()
 

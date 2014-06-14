@@ -47,10 +47,13 @@ def before_task(task):
 
 
 def present_outputs(outputs):
+    header = False
     row_fmt = '{:<20}{:<80}{:>16}'
-    print row_fmt.format('Output ID', 'File path', 'File size')
     for out_id, file_list in outputs.iteritems():
         for path in file_list:
+            if not header:
+                print row_fmt.format('Output ID', 'File path', 'File size')
+                header = True
             print row_fmt.format(out_id, path, str(os.path.getsize(path)))
 
 
@@ -62,12 +65,16 @@ def run():
     job_id = rnd_name()
     job = RunJob(job_id, pipeline, inputs=inputs)
     SequentialScheduler(before_task=before_task).submit(job).run()
+    if job.status == RunJob.FAILED:
+        print job.error_message
     present_outputs(job.get_outputs())
 
 
 def install(pipeline):
     job = InstallJob(rnd_name(), pipeline)
     SequentialScheduler(before_task=before_task).submit(job).run()
+    if job.status == InstallJob.FAILED:
+        print job.error_message
 
 
 def main():
