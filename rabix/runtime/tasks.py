@@ -137,32 +137,30 @@ class TaskDAG(object):
         for node in self.dag.node.itervalues():
             yield node['task']
 
-    def resolve_task(self, task_id, result, resolution=Task.FINISHED):
+    def resolve_task(self, task_or_id, resolution=Task.FINISHED, result=None):
         """
         If successful, result is stored and propagated downstream. Downstream tasks may get READY status.
         If result is a task, it is used as a replacement and dependency tasks are added to the graph.
         If failed, result should be an exception.
         If cancelled, result should be None.
         """
-        task = self.get_task(task_id)
-        valid_resolutions = Task.FINISHED, Task.CANCELED, Task.FAILED
-        if resolution not in valid_resolutions:
-            raise ValueError('Resolution must be one of: %s' % ', '.join(valid_resolutions))
-        if resolution == Task.FAILED and not isinstance(result, Exception):
-            raise TypeError('Results of failed tasks should be exceptions.')
+        task = task_or_id if isinstance(task_or_id, Task) else self.get_task(task_or_id)
+        if resolution not in (Task.FINISHED, Task.CANCELED, Task.FAILED):
+            raise ValueError('Invalid resolution: %s' % resolution)
+        result = result or task.result
         if isinstance(result, Outputs):
             result = result.outputs
         task.result = result
         task.status = resolution
         if isinstance(result, WrapperJob):
             replacement = self.add_task(task.replacement(resources=task.result.resources, arguments=task.result.args))
-            for n in self.dag.neighbors(task_id):
-                self.dag.add_edge(replacement.task_id, n, **self.dag.get_edge_data(task_id, n))
-                self.dag.remove_edge(task_id, n)
+            for n in self.dag.neighbors(task.task_id):
+                self.dag.add_edge(replacement.task_id, n, **self.dag.get_edge_data(task.task_id, n))
+                self.dag.remove_edge(task.task_id, n)
             return
-        for dst_id in self.dag.neighbors(task_id):
+        for dst_id in self.dag.neighbors(task.task_id):
             dst = self.get_task(dst_id)
-            for src_path, dst_path in self.dag.get_edge_data(task_id, dst_id)['conns']:
+            for src_path, dst_path in self.dag.get_edge_data(task.task_id, dst_id)['conns']:
                 self.propagate(task, dst, src_path, dst_path)
             self.update_status(dst)
 
@@ -248,20 +246,18 @@ class Worker(object):
         if not isinstance(task, Task):
             raise TypeError('Expected Task, got %s' % type(task))
         self.task = task
-        self.status = Task.QUEUED
 
     def run(self, async=False):
         if async:
             raise NotImplementedError('Blocking runs only.')
-        self.status = Task.RUNNING
+        self.task.status = Task.RUNNING
         try:
-            result = self.run_and_wait()
-            self.status = Task.FINISHED
-            return result
+            self.task.result = self.run_and_wait()
+            self.task.status = Task.FINISHED
         except Exception, e:
             log.exception('Task error (%s)', self.task.task_id)
-            self.status = Task.FAILED
-            return e
+            self.task.status = Task.FAILED
+            self.task.result = e
 
     def report(self):
         return self.task.status

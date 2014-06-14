@@ -3,7 +3,7 @@ import logging
 from rabix import CONFIG
 from rabix.common.util import import_name
 from rabix.common.protocol import JobError
-from rabix.runtime.tasks import TaskDAG
+from rabix.runtime.tasks import TaskDAG, Task
 
 log = logging.getLogger(__name__)
 scheduler = None
@@ -82,13 +82,11 @@ class SequentialScheduler(object):
         while ready:
             for task in ready:
                 self.before_task(task)
-                worker = self.get_worker(task)
-                result = worker.run(async=False)
-                task.status = worker.report()
-                if isinstance(result, Exception):
-                    raise JobError('Task %s failed. Reason: %s' % (task.task_id, result))
+                self.get_worker(task).run(async=False)
+                if task.status == Task.FAILED:
+                    raise JobError('Task %s failed. Reason: %s' % (task.task_id, task.result))
                 self.after_task(task)
-                job.tasks.resolve_task(task.task_id, result)
+                job.tasks.resolve_task(task, task.status)
             ready = job.tasks.get_ready_tasks()
 
 

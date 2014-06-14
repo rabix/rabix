@@ -2,7 +2,7 @@ import pwd
 import logging
 import os
 import signal
-import stat
+import copy
 
 import docker
 
@@ -81,6 +81,7 @@ class DockerRunner(Worker):
         return result
 
     def _fix_input_paths(self, args):
+        args = copy.deepcopy(args)
         args['$inputs'] = {k: self._transform_input(v) for k, v in args.get('$inputs', {}).iteritems()}
         return args
 
