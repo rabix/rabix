@@ -1,7 +1,7 @@
 VERSION = '0.1.0'
 CONFIG = {
     'scheduler': {
-        'class': 'rabix.runtime.scheduler.SequentialScheduler',
+        'class': 'rabix.runtime.scheduler.BasicScheduler',
         'workers': {
             'InputTask': 'rabix.runtime.builtins.io.InputRunner',
             'OutputTask': 'rabix.runtime.tasks.Worker',

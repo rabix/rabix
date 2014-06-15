@@ -184,6 +184,19 @@ class BasicScheduler(Scheduler):
             result = self.pool.apply_async(worker)
             self.running.append([job, task, result])
 
+    def update_jobs_check_ready(self):
+        has_ready = False
+        for job in self.jobs.itervalues():
+            if job.tasks.get_ready_tasks():
+                has_ready = True
+                continue
+            else:
+                if filter(lambda t: t.status != Task.FINISHED, job.tasks.iter_tasks()):
+                    job.status = Job.FAILED
+                else:
+                    job.status = Job.FINISHED
+        return has_ready
+
     def run(self):
         if not list(self.iter_ready()):
             return
@@ -196,7 +209,8 @@ class BasicScheduler(Scheduler):
                     to_remove.append(ndx)
             if to_remove:
                 self.running = [x for n, x in enumerate(self.running) if n not in to_remove]
-                if not self.running and not list(self.iter_ready()):
+                has_ready = self.update_jobs_check_ready()
+                if not self.running and not has_ready:
                     return
             else:
                 time.sleep(1)
