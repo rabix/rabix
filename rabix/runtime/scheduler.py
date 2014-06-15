@@ -64,11 +64,12 @@ class Scheduler(object):
             return import_name(worker_config[task.app.TYPE])(task)
         raise TypeError('Worker config must be string or dict. Got %s' % type(worker_config))
 
-    def submit(self, job):
-        self.jobs[job.job_id] = job
-        return self
+    def run(self, *jobs):
+        for job in jobs:
+            self.jobs[job.job_id] = job
+        self.run_all()
 
-    def run(self):
+    def run_all(self):
         pass
 
 
@@ -83,7 +84,7 @@ class SequentialScheduler(Scheduler):
             task.status = Task.FAILED
             task.result = e
 
-    def run(self):
+    def run_all(self):
         for job in self.jobs.itervalues():
             if job.status != Job.QUEUED:
                 continue
@@ -124,31 +125,30 @@ class BasicScheduler(Scheduler):
         return '%s/%s%s;%s/%s' % (self.available_cpu, self.total_cpu, 'L' if self.multi_cpu_lock else '',
                                   self.available_ram, self.total_ram)
 
-    def can_acquire(self, resources):
-        log.debug('[resources: %s] Attempting to acquire %s', self._res(), resources)
-        if resources.mem_mb > self.available_ram:
+    def acquire_resources(self, task):
+        res = task.resources
+        log.debug('[resources: %s] Acquiring %s for %s', self._res(), res, task)
+        if res.mem_mb > self.available_ram:
             return False
-        if resources.cpu == resources.CPU_ALL and (self.multi_cpu_lock or self.available_cpu != self.total_cpu):
+        if res.cpu == res.CPU_ALL and (self.multi_cpu_lock or self.available_cpu != self.total_cpu):
             return False
-        if resources.cpu > self.available_cpu:
+        if res.cpu > self.available_cpu:
             return False
-        return True
-
-    def acquire(self, resources):
-        log.debug('[resources: %s] Acquiring %s', self._res(), resources)
-        self.available_ram -= resources.mem_mb
-        if resources.cpu == resources.CPU_ALL:
+        self.available_ram -= res.mem_mb
+        if res.cpu == res.CPU_ALL:
             self.multi_cpu_lock = True
         else:
-            self.available_cpu -= resources.cpu
+            self.available_cpu -= res.cpu
+        return True
 
-    def release(self, resources):
-        log.debug('[resources: %s] Releasing %s', self._res(), resources)
-        self.available_ram += resources.mem_mb
-        if resources.cpu == resources.CPU_ALL:
+    def release_resources(self, task):
+        res = task.resources
+        log.debug('[resources: %s] Releasing %s from %s', self._res(), res, task)
+        self.available_ram += res.mem_mb
+        if res.cpu == res.CPU_ALL:
             self.multi_cpu_lock = False
         else:
-            self.available_cpu += resources.cpu
+            self.available_cpu += res.cpu
 
     def process_result(self, job, task, result):
         try:
@@ -161,8 +161,8 @@ class BasicScheduler(Scheduler):
             task.status = Task.FAILED
             task.result = e
         self.after_task(task)
-        self.release(task.resources)
-        job.tasks.resolve_task(task, task.status)
+        self.release_resources(task)
+        job.tasks.resolve_task(task)
 
     def iter_ready(self):
         for job in self.jobs.itervalues():
@@ -174,9 +174,8 @@ class BasicScheduler(Scheduler):
             worker = self.get_worker(task)
             if not task.resources:
                 task.resources = worker.get_requirements()
-            if not self.can_acquire(task.resources):
+            if not self.acquire_resources(task):
                 continue
-            self.acquire(task.resources)
             self.before_task(task)
             task.status = Task.RUNNING
             log.info('Running %s', task)
@@ -197,9 +196,7 @@ class BasicScheduler(Scheduler):
                     job.status = Job.FINISHED
         return has_ready
 
-    def run(self):
-        if not list(self.iter_ready()):
-            return
+    def run_all(self):
         while True:
             self.run_ready_tasks()
             to_remove = []

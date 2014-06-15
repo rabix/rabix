@@ -64,7 +64,7 @@ def run():
     inputs = {i[len('--'):]: args[i] for i in args if i.startswith('--')}
     job_id = rnd_name()
     job = RunJob(job_id, pipeline, inputs=inputs)
-    BasicScheduler(before_task=before_task).submit(job).run()
+    BasicScheduler(before_task=before_task).run(job)
     if job.status == RunJob.FAILED:
         print job.error_message
     present_outputs(job.get_outputs())
@@ -72,7 +72,7 @@ def run():
 
 def install(pipeline):
     job = InstallJob(rnd_name(), pipeline)
-    SequentialScheduler(before_task=before_task).submit(job).run()
+    SequentialScheduler(before_task=before_task).run(job)
     if job.status == InstallJob.FAILED:
         print job.error_message
 

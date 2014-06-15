@@ -59,7 +59,7 @@ def test_pipeline(pipeline_url, expected_result, output_id):
     prefix = 'x-test-%s' % rnd_name(5)  # Be warned, all dirs with this prefix will be rm -rf on success
     pipeline = from_url(pipeline_url)
     job = RunJob(prefix, pipeline, inputs={'number': 'data:,1'})
-    get_scheduler().submit(job).run()
+    get_scheduler().run(job)
     assert_equals(job.status, RunJob.FINISHED)
     with open(job.get_outputs()[output_id][0]) as fp:
         assert_equals(fp.read(), expected_result)
