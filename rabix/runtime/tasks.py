@@ -170,7 +170,7 @@ class TaskDAG(object):
         dst.arguments = update_on_path(dst.arguments, dst_path, val)
 
     def update_status(self, task):
-        if task.status in (Task.CANCELED, Task.FAILED, Task.FINISHED):
+        if task.status != Task.QUEUED:
             return task
         dep_ids = self.dag.reverse(copy=True).neighbors(task.task_id)  # TODO: Do it without copying.
         deps = [self.get_task(dep_id) for dep_id in dep_ids]
@@ -252,3 +252,10 @@ class Worker(object):
 
     def get_requirements(self):
         return self.task.resources
+
+    def __call__(self):
+        try:
+            return self.run()
+        except:
+            log.exception('Task %s failed:', self.task)
+            raise

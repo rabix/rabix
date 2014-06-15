@@ -1,4 +1,8 @@
+import functools
 import logging
+import multiprocessing
+import time
+import sys
 
 from rabix import CONFIG
 from rabix.common.util import import_name
@@ -85,13 +89,13 @@ class SequentialScheduler(Scheduler):
                 continue
             job.status = Job.RUNNING
             try:
-                self.run_job(job)
+                self._run_job(job)
                 job.status = Job.FINISHED
             except JobError, e:
                 job.status = Job.FAILED
                 job.error_message = str(e)
 
-    def run_job(self, job):
+    def _run_job(self, job):
         log.info('Running job %s', job)
         ready = job.tasks.get_ready_tasks()
         while ready:
@@ -103,6 +107,54 @@ class SequentialScheduler(Scheduler):
                 self.after_task(task)
                 job.tasks.resolve_task(task)
             ready = job.tasks.get_ready_tasks()
+
+
+class Bahat(Scheduler):
+    def __init__(self, before_task=None, after_task=None):
+        super(Bahat, self).__init__(before_task, after_task)
+        self.pool = multiprocessing.Pool()
+        self.running = []
+
+    def process_result(self, job, task, result):
+        # job = self.jobs[job_id]
+        # task = job.tasks.get_task(task_id)
+        try:
+            task.result = result.get()
+            task.status = Task.FINISHED
+            log.info('Finished: %s', task)
+            log.debug('Result: %s', task.result)
+            print 'Done: %s' % task
+            sys.stdout.flush()
+        except Exception, e:
+            log.error('Failed: %s', task.task_id)
+            task.status = Task.FAILED
+            task.result = e
+        self.after_task(task)
+        job.tasks.resolve_task(task, task.status)
+
+    def run_ready_tasks(self):
+        for job in self.jobs.itervalues():
+            for task in job.tasks.get_ready_tasks():
+                self.before_task(task)
+                worker = self.get_worker(task)
+                task.status = Task.RUNNING
+                log.info('Running %s', task)
+                log.debug('Arguments: %s', task.arguments)
+                result = self.pool.apply_async(worker)
+                self.running.append([job, task, result])
+
+    def run(self):
+        while True:
+            self.run_ready_tasks()
+            to_remove = []
+            for ndx, item in enumerate(self.running):
+                if item[2].ready():
+                    self.process_result(*item)
+                    to_remove.append(ndx)
+            if to_remove:
+                self.running = [x for n, x in enumerate(self.running) if n not in to_remove]
+            else:
+                time.sleep(1)
 
 
 def get_scheduler():
