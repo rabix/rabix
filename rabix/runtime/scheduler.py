@@ -1,8 +1,6 @@
-import functools
 import logging
 import multiprocessing
 import time
-import sys
 
 from rabix import CONFIG
 from rabix.common.util import import_name
@@ -116,15 +114,11 @@ class Bahat(Scheduler):
         self.running = []
 
     def process_result(self, job, task, result):
-        # job = self.jobs[job_id]
-        # task = job.tasks.get_task(task_id)
         try:
             task.result = result.get()
             task.status = Task.FINISHED
             log.info('Finished: %s', task)
             log.debug('Result: %s', task.result)
-            print 'Done: %s' % task
-            sys.stdout.flush()
         except Exception, e:
             log.error('Failed: %s', task.task_id)
             task.status = Task.FAILED
@@ -132,18 +126,24 @@ class Bahat(Scheduler):
         self.after_task(task)
         job.tasks.resolve_task(task, task.status)
 
-    def run_ready_tasks(self):
+    def iter_ready(self):
         for job in self.jobs.itervalues():
             for task in job.tasks.get_ready_tasks():
-                self.before_task(task)
-                worker = self.get_worker(task)
-                task.status = Task.RUNNING
-                log.info('Running %s', task)
-                log.debug('Arguments: %s', task.arguments)
-                result = self.pool.apply_async(worker)
-                self.running.append([job, task, result])
+                yield job, task
+
+    def run_ready_tasks(self):
+        for job, task in self.iter_ready():
+            self.before_task(task)
+            worker = self.get_worker(task)
+            task.status = Task.RUNNING
+            log.info('Running %s', task)
+            log.debug('Arguments: %s', task.arguments)
+            result = self.pool.apply_async(worker)
+            self.running.append([job, task, result])
 
     def run(self):
+        if not list(self.iter_ready()):
+            return
         while True:
             self.run_ready_tasks()
             to_remove = []
@@ -153,6 +153,8 @@ class Bahat(Scheduler):
                     to_remove.append(ndx)
             if to_remove:
                 self.running = [x for n, x in enumerate(self.running) if n not in to_remove]
+                if not self.running and not list(self.iter_ready()):
+                    return
             else:
                 time.sleep(1)
 
