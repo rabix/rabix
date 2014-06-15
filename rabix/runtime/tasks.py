@@ -3,7 +3,7 @@ import copy
 
 import networkx as nx
 
-from rabix.common.protocol import WrapperJob, Outputs
+from rabix.common.protocol import WrapperJob, Outputs, Resources
 from rabix.common.util import rnd_name
 
 log = logging.getLogger(__name__)
@@ -251,7 +251,7 @@ class Worker(object):
         return self.task.arguments
 
     def get_requirements(self):
-        return self.task.resources
+        return self.task.resources or Resources(200, Resources.CPU_NEGLIGIBLE)
 
     def __call__(self):
         try:

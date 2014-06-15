@@ -54,6 +54,8 @@ class Scheduler(object):
         self.before_task = before_task or (lambda t: None)
         self.after_task = after_task or (lambda t: None)
 
+    __str__ = __unicode__ = __repr__ = lambda self: '%s[%s jobs]' % (self.__class__.__name__, len(self.jobs))
+
     def get_worker(self, task):
         worker_config = CONFIG['scheduler']['workers'][task.__class__.__name__]
         if isinstance(worker_config, basestring):
@@ -107,11 +109,46 @@ class SequentialScheduler(Scheduler):
             ready = job.tasks.get_ready_tasks()
 
 
-class Bahat(Scheduler):
+class BasicScheduler(Scheduler):
     def __init__(self, before_task=None, after_task=None):
-        super(Bahat, self).__init__(before_task, after_task)
+        super(BasicScheduler, self).__init__(before_task, after_task)
         self.pool = multiprocessing.Pool()
         self.running = []
+        self.total_ram = CONFIG['scheduler']['ram_mb']
+        self.total_cpu = multiprocessing.cpu_count()
+        self.available_ram = self.total_ram
+        self.available_cpu = self.total_cpu
+        self.multi_cpu_lock = False
+
+    def _res(self):
+        return '%s/%s%s;%s/%s' % (self.available_cpu, self.total_cpu, 'L' if self.multi_cpu_lock else '',
+                                  self.available_ram, self.total_ram)
+
+    def can_acquire(self, resources):
+        log.debug('[resources: %s] Attempting to acquire %s', self._res(), resources)
+        if resources.mem_mb > self.available_ram:
+            return False
+        if resources.cpu == resources.CPU_ALL and (self.multi_cpu_lock or self.available_cpu != self.total_cpu):
+            return False
+        if resources.cpu > self.available_cpu:
+            return False
+        return True
+
+    def acquire(self, resources):
+        log.debug('[resources: %s] Acquiring %s', self._res(), resources)
+        self.available_ram -= resources.mem_mb
+        if resources.cpu == resources.CPU_ALL:
+            self.multi_cpu_lock = True
+        else:
+            self.available_cpu -= resources.cpu
+
+    def release(self, resources):
+        log.debug('[resources: %s] Releasing %s', self._res(), resources)
+        self.available_ram += resources.mem_mb
+        if resources.cpu == resources.CPU_ALL:
+            self.multi_cpu_lock = False
+        else:
+            self.available_cpu += resources.cpu
 
     def process_result(self, job, task, result):
         try:
@@ -124,6 +161,7 @@ class Bahat(Scheduler):
             task.status = Task.FAILED
             task.result = e
         self.after_task(task)
+        self.release(task.resources)
         job.tasks.resolve_task(task, task.status)
 
     def iter_ready(self):
@@ -133,8 +171,13 @@ class Bahat(Scheduler):
 
     def run_ready_tasks(self):
         for job, task in self.iter_ready():
-            self.before_task(task)
             worker = self.get_worker(task)
+            if not task.resources:
+                task.resources = worker.get_requirements()
+            if not self.can_acquire(task.resources):
+                continue
+            self.acquire(task.resources)
+            self.before_task(task)
             task.status = Task.RUNNING
             log.info('Running %s', task)
             log.debug('Arguments: %s', task.arguments)

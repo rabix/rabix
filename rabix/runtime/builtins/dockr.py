@@ -8,7 +8,7 @@ import docker
 
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import handle_signal
-from rabix.common.protocol import WrapperJob, Outputs, JobError
+from rabix.common.protocol import WrapperJob, Outputs, JobError, Resources
 from rabix.runtime import from_json, to_json
 from rabix.runtime.models import App, AppSchema
 from rabix.runtime.tasks import Worker, PipelineStepTask
@@ -49,6 +49,9 @@ class DockerRunner(Worker):
         self.container = None
         self.image_id = None
         self._docker_client = None
+
+    def get_requirements(self):
+        return Resources(200, Resources.CPU_NEGLIGIBLE)
 
     def run(self):
         self.image_id = get_image(self.docker_client, self.image_repo, self.image_tag)['Id']

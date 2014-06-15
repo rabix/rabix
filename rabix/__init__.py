@@ -13,6 +13,7 @@ CONFIG = {
                 'app/tool/docker': 'rabix.runtime.builtins.dockr.DockerRunner',
                 'app/mock/python': 'rabix.runtime.builtins.mocks.MockRunner'
             }
-        }
+        },
+        'ram_mb': 7 * 1024,
     }
 }

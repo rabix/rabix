@@ -7,7 +7,7 @@ from docopt import docopt, DocoptExit
 from rabix import VERSION
 from rabix.common.util import rnd_name
 from rabix.runtime import from_url
-from rabix.runtime.scheduler import SequentialScheduler, RunJob, InstallJob, Bahat
+from rabix.runtime.scheduler import SequentialScheduler, RunJob, InstallJob, BasicScheduler
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def run():
     inputs = {i[len('--'):]: args[i] for i in args if i.startswith('--')}
     job_id = rnd_name()
     job = RunJob(job_id, pipeline, inputs=inputs)
-    Bahat(before_task=before_task).submit(job).run()
+    BasicScheduler(before_task=before_task).submit(job).run()
     if job.status == RunJob.FAILED:
         print job.error_message
     present_outputs(job.get_outputs())
