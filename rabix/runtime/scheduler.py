@@ -2,6 +2,9 @@ import logging
 import multiprocessing
 import time
 
+import rq
+import redis
+
 from rabix import CONFIG
 from rabix.common.util import import_name
 from rabix.common.protocol import JobError
@@ -57,7 +60,7 @@ class Scheduler(object):
     __str__ = __unicode__ = __repr__ = lambda self: '%s[%s jobs]' % (self.__class__.__name__, len(self.jobs))
 
     def get_worker(self, task):
-        worker_config = CONFIG['scheduler']['workers'][task.__class__.__name__]
+        worker_config = CONFIG['workers'][task.__class__.__name__]
         if isinstance(worker_config, basestring):
             return import_name(worker_config)(task)
         if isinstance(worker_config, dict):
@@ -110,10 +113,9 @@ class SequentialScheduler(Scheduler):
             ready = job.tasks.get_ready_tasks()
 
 
-class BasicScheduler(Scheduler):
+class AsyncScheduler(Scheduler):
     def __init__(self, before_task=None, after_task=None):
-        super(BasicScheduler, self).__init__(before_task, after_task)
-        self.pool = multiprocessing.Pool()
+        super(AsyncScheduler, self).__init__(before_task, after_task)
         self.running = []
         self.total_ram = CONFIG['scheduler']['ram_mb']
         self.total_cpu = multiprocessing.cpu_count()
@@ -150,9 +152,18 @@ class BasicScheduler(Scheduler):
         else:
             self.available_cpu += res.cpu
 
-    def process_result(self, job, task, result):
+    def get_result_or_raise_error(self, async_result):
+        raise NotImplementedError()
+
+    def run_task_async(self, worker):
+        raise NotImplementedError()
+
+    def check_async_result_ready(self, async_result):
+        raise NotImplementedError()
+
+    def process_result(self, job, task, async_result):
         try:
-            task.result = result.get()
+            task.result = self.get_result_or_raise_error(async_result)
             task.status = Task.FINISHED
             log.info('Finished: %s', task)
             log.debug('Result: %s', task.result)
@@ -164,13 +175,13 @@ class BasicScheduler(Scheduler):
         self.release_resources(task)
         job.tasks.resolve_task(task)
 
-    def iter_ready(self):
+    def _iter_ready(self):
         for job in self.jobs.itervalues():
             for task in job.tasks.get_ready_tasks():
                 yield job, task
 
-    def run_ready_tasks(self):
-        for job, task in self.iter_ready():
+    def _run_ready_tasks(self):
+        for job, task in self._iter_ready():
             worker = self.get_worker(task)
             if not task.resources:
                 task.resources = worker.get_requirements()
@@ -180,10 +191,10 @@ class BasicScheduler(Scheduler):
             task.status = Task.RUNNING
             log.info('Running %s', task)
             log.debug('Arguments: %s', task.arguments)
-            result = self.pool.apply_async(worker)
+            result = self.run_task_async(worker)
             self.running.append([job, task, result])
 
-    def update_jobs_check_ready(self):
+    def _update_jobs_check_ready(self):
         has_ready = False
         for job in self.jobs.itervalues():
             if job.tasks.get_ready_tasks():
@@ -198,19 +209,59 @@ class BasicScheduler(Scheduler):
 
     def run_all(self):
         while True:
-            self.run_ready_tasks()
+            self._run_ready_tasks()
             to_remove = []
             for ndx, item in enumerate(self.running):
-                if item[2].ready():
+                if self.check_async_result_ready(item[2]):
                     self.process_result(*item)
                     to_remove.append(ndx)
             if to_remove:
                 self.running = [x for n, x in enumerate(self.running) if n not in to_remove]
-                has_ready = self.update_jobs_check_ready()
+                has_ready = self._update_jobs_check_ready()
                 if not self.running and not has_ready:
                     return
             else:
                 time.sleep(1)
+
+
+class MultiprocessingScheduler(AsyncScheduler):
+    def __init__(self, before_task=None, after_task=None):
+        super(MultiprocessingScheduler, self).__init__(before_task, after_task)
+        self.pool = multiprocessing.Pool()
+
+    def get_result_or_raise_error(self, async_result):
+        return async_result.get()
+
+    def run_task_async(self, worker):
+        return self.pool.apply_async(worker)
+
+    def check_async_result_ready(self, async_result):
+        return async_result.ready()
+
+
+class RQScheduler(AsyncScheduler):
+    def __init__(self, before_task=None, after_task=None):
+        super(RQScheduler, self).__init__(before_task, after_task)
+        self.queue = rq.Queue(connection=redis.Redis())
+        self.failed = rq.Queue('failed', connection=redis.Redis())
+
+    def check_async_result_ready(self, async_result):
+        async_result.refresh()
+        return async_result.get_status() in ['finished', 'failed']
+
+    def get_result_or_raise_error(self, async_result):
+        if async_result.get_id() in self.failed.job_ids:
+            raise RuntimeError('Task failed.')
+        return self.queue.fetch_job(async_result.get_id()).result
+
+    def run_task_async(self, worker):
+        cls = worker.__class__
+        return self.queue.enqueue(rq_work, '.'.join([cls.__module__, cls.__name__]), worker.task)
+
+
+def rq_work(importable, task):
+    worker = import_name(importable)
+    return worker(task).run()
 
 
 def get_scheduler():

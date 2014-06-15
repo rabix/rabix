@@ -5,7 +5,7 @@ from nose.tools import nottest, assert_equals
 from rabix.common.protocol import Outputs, WrapperJob
 from rabix.common.util import rnd_name
 from rabix.runtime import from_url
-from rabix.runtime.scheduler import get_scheduler, RunJob
+from rabix.runtime.scheduler import get_scheduler, RunJob, SequentialScheduler, MultiprocessingScheduler, RQScheduler
 
 
 def load(path):
@@ -55,20 +55,34 @@ def two_step_increment(job):
 
 
 @nottest
-def test_pipeline(pipeline_url, expected_result, output_id):
+def test_pipeline(pipeline_name, scheduler_cls=None):
     prefix = 'x-test-%s' % rnd_name(5)  # Be warned, all dirs with this prefix will be rm -rf on success
-    pipeline = from_url(pipeline_url)
+    pipeline = from_url(get_mock_pipeline(pipeline_name))
     job = RunJob(prefix, pipeline, inputs={'number': 'data:,1'})
-    get_scheduler().run(job)
+    sch = scheduler_cls() if scheduler_cls else get_scheduler()
+    sch.run(job)
     assert_equals(job.status, RunJob.FINISHED)
-    with open(job.get_outputs()[output_id][0]) as fp:
-        assert_equals(fp.read(), expected_result)
-    os.system('rm -rf %s.*' % prefix)
+    with open(job.get_outputs()['incremented'][0]) as fp:
+        assert_equals(fp.read(), '4')
+    if prefix.startswith('x-test-'):
+        os.system('rm -rf %s.*' % prefix)
 
 
-def test_mock_pipeline():
-    test_pipeline(os.path.join(os.path.dirname(__file__), 'apps/mock.pipeline.json'), '4', 'incremented')
+def get_mock_pipeline(name):
+    return os.path.join(os.path.dirname(__file__), 'apps', name)
+
+
+def test_mock_pipeline_sequential():
+    test_pipeline('mock.pipeline.json', SequentialScheduler)
+
+
+def test_mock_pipeline_mp():
+    test_pipeline('mock.pipeline.json', MultiprocessingScheduler)
+
+
+def test_mock_pipeline_rq():
+    test_pipeline('mock.pipeline.json', RQScheduler)
 
 
 def test_mock_pipeline_remote_ref():
-    test_pipeline(os.path.join(os.path.dirname(__file__), 'apps/mock.pipeline.remote_ref.json'), '4', 'incremented')
+    test_pipeline('mock.pipeline.remote_ref.json')
