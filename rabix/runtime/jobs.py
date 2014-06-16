@@ -39,5 +39,3 @@ class InstallJob(PipelineJob):
     def __init__(self, job_id, pipeline):
         super(InstallJob, self).__init__(job_id, pipeline)
         self.tasks.add_install_tasks(pipeline)
-
-
