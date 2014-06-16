@@ -1,4 +1,3 @@
-import pwd
 import logging
 import os
 import signal
@@ -6,6 +5,7 @@ import copy
 
 import docker
 
+from rabix import CONFIG
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import handle_signal
 from rabix.common.protocol import WrapperJob, Outputs, JobError, Resources
@@ -64,6 +64,7 @@ class DockerRunner(Worker):
         with open(in_file, 'w') as fp:
             to_json(wrp_job, fp)
         self.container.run_job('__in__.json', '__out__.json', cwd=task_dir)
+        self._fix_uid()
         if not os.path.isfile(out_file):
             raise JobError('Job failed.')
         with open(out_file) as fp:
@@ -97,10 +98,16 @@ class DockerRunner(Worker):
                 raise ValueError('Inputs and outputs must be passed as absolute paths. Got %s' % i)
         return [os.path.join(MOUNT_POINT, i[len(cwd):]) for i in inp]
 
+    def _fix_uid(self):
+        busybox = find_image(self.docker_client, 'busybox')
+        c = Container(self.docker_client, busybox['Id'])
+        c.run(['chown', '-R', '%s' % os.getuid(), self.task.task_id])
+        c.wait()
+
     @property
     def docker_client(self):
         if self._docker_client is None:
-            self._docker_client = docker.Client(os.environ.get('DOCKER_HOST'))
+            self._docker_client = docker.Client()
         return self._docker_client
 
 
@@ -189,7 +196,6 @@ class Container(object):
 
     def run(self, command):
         log.info("Running command %s", command)
-        self.config['User'] = '%d:%d' % (os.getuid(), pwd.getpwuid(os.getuid()).pw_gid)
         self.container = self.docker.create_container_from_config(dict(self.config, Cmd=command))
         self.docker.start(container=self.container, binds=self.binds)
 

@@ -65,9 +65,10 @@ def run():
     job_id = rnd_name()
     job = RunJob(job_id, pipeline, inputs=inputs)
     MultiprocessingScheduler(before_task=before_task).run(job)
+    present_outputs(job.get_outputs())
     if job.status == RunJob.FAILED:
         print job.error_message
-    present_outputs(job.get_outputs())
+        sys.exit(1)
 
 
 def install(pipeline):
@@ -75,6 +76,7 @@ def install(pipeline):
     SequentialScheduler(before_task=before_task).run(job)
     if job.status == InstallJob.FAILED:
         print job.error_message
+        sys.exit(1)
 
 
 def main():
