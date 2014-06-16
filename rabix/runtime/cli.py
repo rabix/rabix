@@ -16,20 +16,22 @@ log = logging.getLogger(__name__)
 
 USAGE = """
 Usage:
-  rabix run <file>
-  rabix install <file>
+  rabix run [-v] <file>
+  rabix install [-v] <file>
   rabix -h | --help
   rabix --version
 
 Options:
   -h --help        Display this message.
   --version        Print version to standard output and quit.
+  --verbose        Log level set to DEBUG
 """
 
 RUN_TPL = """
-Usage: rabix run {pipeline} {arguments}
+Usage: rabix run [-v] {pipeline} {arguments}
 
 Options:
+  -v --verbose                          Log level set to DEBUG
 {options}
 """
 
@@ -37,7 +39,7 @@ Options:
 def make_pipeline_usage_string(pipeline, path):
     usage_str, options = [], []
     for inp_id, inp_details in pipeline.get_inputs().iteritems():
-        arg = '--%s=<%s_file>' % (inp_id, inp_id) + ('...' if inp_details['list'] else '')
+        arg = '  --%s=<%s_file>' % (inp_id, inp_id) + ('...' if inp_details['list'] else '')
         usage_str.append(arg if inp_details['required'] else '[%s]' % arg)
         options.append('{0: <40}{1}'.format(arg, inp_details.get('description', '')))
     return RUN_TPL.format(pipeline=path, arguments=' '.join(usage_str), options='\n'.join(options))
@@ -62,6 +64,7 @@ def present_outputs(outputs):
 def run(path):
     pipeline = Pipeline.from_app(from_url(path))
     args = docopt(make_pipeline_usage_string(pipeline, path), version=VERSION)
+    logging.root.setLevel(logging.DEBUG if args['-v'] else logging.WARN)
     inputs = {i[len('--'):]: args[i] for i in args if i.startswith('--')}
     job_id = rnd_name()
     job = RunJob(job_id, pipeline, inputs=inputs)
@@ -82,7 +85,7 @@ def install(pipeline):
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.WARN)
     try:
         args = docopt(USAGE, version=VERSION)
     except DocoptExit:
@@ -90,6 +93,7 @@ def main():
             return run(sys.argv[2])
         print USAGE
         return
+    logging.root.setLevel(logging.DEBUG if args['-v'] else logging.WARN)
     if args["run"]:
         pipeline_path = args['<file>']
         pipeline = from_url(pipeline_path)
