@@ -7,7 +7,8 @@ from docopt import docopt, DocoptExit
 from rabix import VERSION
 from rabix.common.util import rnd_name
 from rabix.runtime import from_url
-from rabix.runtime.scheduler import SequentialScheduler, RunJob, InstallJob, MultiprocessingScheduler
+from rabix.runtime.engine import SequentialEngine, get_engine
+from rabix.runtime.jobs import RunJob, InstallJob
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ def run():
     inputs = {i[len('--'):]: args[i] for i in args if i.startswith('--')}
     job_id = rnd_name()
     job = RunJob(job_id, pipeline, inputs=inputs)
-    MultiprocessingScheduler(before_task=before_task).run(job)
+    get_engine(before_task=before_task).run(job)
     present_outputs(job.get_outputs())
     if job.status == RunJob.FAILED:
         print job.error_message
@@ -73,7 +74,7 @@ def run():
 
 def install(pipeline):
     job = InstallJob(rnd_name(), pipeline)
-    SequentialScheduler(before_task=before_task).run(job)
+    SequentialEngine(before_task=before_task).run(job)
     if job.status == InstallJob.FAILED:
         print job.error_message
         sys.exit(1)

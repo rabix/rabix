@@ -239,7 +239,7 @@ def update_on_path(obj, path, val):
     return obj
 
 
-class Worker(object):
+class Runner(object):
     def __init__(self, task):
         if not isinstance(task, Task):
             raise TypeError('Expected Task, got %s' % type(task))

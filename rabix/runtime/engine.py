@@ -8,50 +8,14 @@ import redis
 from rabix import CONFIG
 from rabix.common.util import import_name
 from rabix.common.protocol import JobError
-from rabix.runtime.tasks import TaskDAG, Task
+from rabix.runtime.tasks import Task
+from rabix.runtime.jobs import Job
 
 log = logging.getLogger(__name__)
-scheduler = None
+engine = None
 
 
-class Job(object):
-    QUEUED, RUNNING, FINISHED, CANCELED, FAILED = 'queued', 'running', 'finished', 'canceled', 'failed'
-
-    def __init__(self, job_id):
-        self.status = Job.QUEUED
-        self.job_id = job_id
-        self.tasks = TaskDAG(task_prefix=str(job_id))
-        self.error_message = None
-        self.warnings = []
-
-    __str__ = __unicode__ = __repr__ = lambda self: '%s[%s]' % (self.__class__.__name__, self.job_id)
-
-
-class PipelineJob(Job):
-    def __init__(self, job_id, pipeline):
-        super(PipelineJob, self).__init__(job_id)
-        self.pipeline = pipeline
-        self.pipeline.validate()
-
-
-class RunJob(PipelineJob):
-    def __init__(self, job_id, pipeline, inputs=None, params=None):
-        super(RunJob, self).__init__(job_id, pipeline)
-        self.inputs = inputs or {}
-        self.params = params or {}
-        self.tasks.add_from_pipeline(pipeline, inputs)
-
-    def get_outputs(self):
-        return self.tasks.get_outputs()
-
-
-class InstallJob(PipelineJob):
-    def __init__(self, job_id, pipeline):
-        super(InstallJob, self).__init__(job_id, pipeline)
-        self.tasks.add_install_tasks(pipeline)
-
-
-class Scheduler(object):
+class Engine(object):
     def __init__(self, before_task=None, after_task=None):
         self.jobs = {}
         self.before_task = before_task or (lambda t: None)
@@ -59,13 +23,13 @@ class Scheduler(object):
 
     __str__ = __unicode__ = __repr__ = lambda self: '%s[%s jobs]' % (self.__class__.__name__, len(self.jobs))
 
-    def get_worker(self, task):
-        worker_config = CONFIG['workers'][task.__class__.__name__]
-        if isinstance(worker_config, basestring):
-            return import_name(worker_config)(task)
-        if isinstance(worker_config, dict):
-            return import_name(worker_config[task.app.TYPE])(task)
-        raise TypeError('Worker config must be string or dict. Got %s' % type(worker_config))
+    def get_runner(self, task):
+        runner_cfg = CONFIG['runners'][task.__class__.__name__]
+        if isinstance(runner_cfg, basestring):
+            return import_name(runner_cfg)(task)
+        if isinstance(runner_cfg, dict):
+            return import_name(runner_cfg[task.app.TYPE])(task)
+        raise TypeError('Runner config must be string or dict. Got %s' % type(runner_cfg))
 
     def run(self, *jobs):
         for job in jobs:
@@ -76,11 +40,11 @@ class Scheduler(object):
         pass
 
 
-class SequentialScheduler(Scheduler):
+class SequentialEngine(Engine):
     def run_task(self, task):
         task.status = Task.RUNNING
         try:
-            task.result = self.get_worker(task).run()
+            task.result = self.get_runner(task).run()
             task.status = Task.FINISHED
         except Exception, e:
             log.exception('Task error (%s)', task.task_id)
@@ -113,11 +77,11 @@ class SequentialScheduler(Scheduler):
             ready = job.tasks.get_ready_tasks()
 
 
-class AsyncScheduler(Scheduler):
+class AsyncEngine(Engine):
     def __init__(self, before_task=None, after_task=None):
-        super(AsyncScheduler, self).__init__(before_task, after_task)
+        super(AsyncEngine, self).__init__(before_task, after_task)
         self.running = []
-        self.total_ram = CONFIG['scheduler']['ram_mb']
+        self.total_ram = CONFIG['engine']['ram_mb']
         self.total_cpu = multiprocessing.cpu_count()
         self.available_ram = self.total_ram
         self.available_cpu = self.total_cpu
@@ -155,7 +119,7 @@ class AsyncScheduler(Scheduler):
     def get_result_or_raise_error(self, async_result):
         raise NotImplementedError()
 
-    def run_task_async(self, worker):
+    def run_task_async(self, runner):
         raise NotImplementedError()
 
     def check_async_result_ready(self, async_result):
@@ -182,16 +146,16 @@ class AsyncScheduler(Scheduler):
 
     def _run_ready_tasks(self):
         for job, task in self._iter_ready():
-            worker = self.get_worker(task)
+            runner = self.get_runner(task)
             if not task.resources:
-                task.resources = worker.get_requirements()
+                task.resources = runner.get_requirements()
             if not self.acquire_resources(task):
                 continue
             self.before_task(task)
             task.status = Task.RUNNING
             log.info('Running %s', task)
             log.debug('Arguments: %s', task.arguments)
-            result = self.run_task_async(worker)
+            result = self.run_task_async(runner)
             self.running.append([job, task, result])
 
     def _update_jobs_check_ready(self):
@@ -224,24 +188,24 @@ class AsyncScheduler(Scheduler):
                 time.sleep(1)
 
 
-class MultiprocessingScheduler(AsyncScheduler):
+class MultiprocessingEngine(AsyncEngine):
     def __init__(self, before_task=None, after_task=None):
-        super(MultiprocessingScheduler, self).__init__(before_task, after_task)
+        super(MultiprocessingEngine, self).__init__(before_task, after_task)
         self.pool = multiprocessing.Pool()
 
     def get_result_or_raise_error(self, async_result):
         return async_result.get()
 
-    def run_task_async(self, worker):
-        return self.pool.apply_async(worker)
+    def run_task_async(self, runner):
+        return self.pool.apply_async(runner)
 
     def check_async_result_ready(self, async_result):
         return async_result.ready()
 
 
-class RQScheduler(AsyncScheduler):
+class RQEngine(AsyncEngine):
     def __init__(self, before_task=None, after_task=None):
-        super(RQScheduler, self).__init__(before_task, after_task)
+        super(RQEngine, self).__init__(before_task, after_task)
         self.queue = rq.Queue(connection=redis.Redis())
         self.failed = rq.Queue('failed', connection=redis.Redis())
 
@@ -254,19 +218,21 @@ class RQScheduler(AsyncScheduler):
             raise RuntimeError('Task failed.')
         return self.queue.fetch_job(async_result.get_id()).result
 
-    def run_task_async(self, worker):
-        cls = worker.__class__
-        return self.queue.enqueue(rq_work, '.'.join([cls.__module__, cls.__name__]), worker.task)
+    def run_task_async(self, runner):
+        cls = runner.__class__
+        return self.queue.enqueue(rq_work, '.'.join([cls.__module__, cls.__name__]), runner.task)
 
 
 def rq_work(importable, task):
-    worker = import_name(importable)
-    return worker(task).run()
+    runner = import_name(importable)
+    return runner(task).run()
 
 
-def get_scheduler():
-    global scheduler
-    if scheduler:
-        return scheduler
-    scheduler = import_name(CONFIG['scheduler']['class'])(**CONFIG['scheduler'].get('options', {}))
-    return scheduler
+def get_engine(**kwargs):
+    global engine
+    if engine:
+        return engine
+    options = CONFIG['engine'].get('options', {})
+    options.update(**kwargs)
+    engine = import_name(CONFIG['engine']['class'])(**options)
+    return engine

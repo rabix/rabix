@@ -1,19 +1,21 @@
 VERSION = '0.1.0'
 CONFIG = {
-    'scheduler': {
-        'class': 'rabix.runtime.scheduler.MultiprocessingScheduler',
+    'engine': {
+        'class': 'rabix.runtime.engine.MultiprocessingEngine',
         'ram_mb': 7 * 1024,
     },
-    'workers': {
+    'runners': {
         'InputTask': 'rabix.runtime.builtins.io.InputRunner',
-        'OutputTask': 'rabix.runtime.tasks.Worker',
+        'OutputTask': 'rabix.runtime.tasks.Runner',
         'AppInstallTask': {
             'app/tool/docker': 'rabix.runtime.builtins.dockr.DockerAppInstaller',
-            'app/mock/python': 'rabix.runtime.tasks.Worker'
+            'app/mock/python': 'rabix.runtime.tasks.Runner'
         },
         'PipelineStepTask': {
             'app/tool/docker': 'rabix.runtime.builtins.dockr.DockerRunner',
             'app/mock/python': 'rabix.runtime.builtins.mocks.MockRunner'
         }
+    },
+    'docker': {
     },
 }

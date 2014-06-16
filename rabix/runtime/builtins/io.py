@@ -7,12 +7,12 @@ import requests
 
 from rabix.runtime import to_json
 from rabix.common.errors import ResourceUnavailable
-from rabix.runtime.tasks import Worker
+from rabix.runtime.tasks import Runner
 
 log = logging.getLogger(__name__)
 
 
-class InputRunner(Worker):
+class InputRunner(Runner):
     """ Will handle local files, 'data:,' URLs (for tests) and delegate other URLs to requests.get() """
     def __init__(self, task):
         super(InputRunner, self).__init__(task)

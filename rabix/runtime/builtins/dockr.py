@@ -11,7 +11,7 @@ from rabix.common.util import handle_signal
 from rabix.common.protocol import WrapperJob, Outputs, JobError, Resources
 from rabix.runtime import from_json, to_json
 from rabix.runtime.models import App, AppSchema
-from rabix.runtime.tasks import Worker, PipelineStepTask
+from rabix.runtime.tasks import Runner, PipelineStepTask
 
 log = logging.getLogger(__name__)
 MOUNT_POINT = '/rabix'
@@ -30,7 +30,7 @@ class DockerApp(App):
         self.schema.validate()
 
 
-class DockerRunner(Worker):
+class DockerRunner(Runner):
     """
     Runs docker apps. Instantiates a container from specified image, mounts the current directory and runs entry point.
     A directory is created for each job.
@@ -99,8 +99,8 @@ class DockerRunner(Worker):
         return [os.path.join(MOUNT_POINT, i[len(cwd):]) for i in inp]
 
     def _fix_uid(self):
-        busybox = get_image(self.docker_client, 'busybox', 'latest')
-        c = Container(self.docker_client, busybox['Id'])
+        fixer_image_id = CONFIG['docker'].get('fixer_image_id') or get_image(self.docker_client, 'busybox')['Id']
+        c = Container(self.docker_client, fixer_image_id)
         c.run(['chown', '-R', '%s' % os.getuid(), self.task.task_id])
         c.wait()
 
@@ -111,7 +111,7 @@ class DockerRunner(Worker):
         return self._docker_client
 
 
-class DockerAppInstaller(Worker):
+class DockerAppInstaller(Runner):
     def run(self):
         if not isinstance(self.task.app, DockerApp):
             raise TypeError('Can only install app/tool/docker')
@@ -230,7 +230,7 @@ def find_image(client, repo, tag='latest'):
     return (images or [None])[0]
 
 
-def get_image(client, repo, tag, pull_attempts=1):
+def get_image(client, repo, tag='latest', pull_attempts=1):
     """
     Returns the image dict. If not found locally, will pull from the repository.
     :param client: docker.Client
