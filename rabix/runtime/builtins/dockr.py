@@ -99,7 +99,7 @@ class DockerRunner(Worker):
         return [os.path.join(MOUNT_POINT, i[len(cwd):]) for i in inp]
 
     def _fix_uid(self):
-        busybox = find_image(self.docker_client, 'busybox')
+        busybox = get_image(self.docker_client, 'busybox', 'latest')
         c = Container(self.docker_client, busybox['Id'])
         c.run(['chown', '-R', '%s' % os.getuid(), self.task.task_id])
         c.wait()

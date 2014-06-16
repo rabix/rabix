@@ -1,7 +1,7 @@
 VERSION = '0.1.0'
 CONFIG = {
     'scheduler': {
-        'class': 'rabix.runtime.scheduler.SequentialScheduler',
+        'class': 'rabix.runtime.scheduler.MultiprocessingScheduler',
         'ram_mb': 7 * 1024,
     },
     'workers': {
