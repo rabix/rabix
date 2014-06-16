@@ -150,9 +150,29 @@ class Pipeline(Model):
                             inp['list'] = False
         return inputs
 
+    @classmethod
+    def from_app(cls, app):
+        if isinstance(app, Pipeline):
+            return app
+        pipeline = cls({
+            'apps': app.apps,
+            'steps': [{
+                'id': app.apps.keys()[0],
+                'app': app.apps.values()[0],
+                'inputs': {inp['id']: inp['id'] for inp in app.schema.inputs},
+                'outputs': {out['id']: out['id'] for out in app.schema.outputs},
+            }]
+        })
+        pipeline.validate()
+        return pipeline
+
 
 class App(Model):
     schema = property(lambda self: self['schema'])
+    apps = property(lambda self: {'app': self})
+
+    def get_inputs(self):
+        return {inp['id']: inp for inp in self.schema.inputs}
 
 
 class AppSchema(Model):

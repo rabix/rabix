@@ -17,25 +17,25 @@ class Job(object):
     __str__ = __unicode__ = __repr__ = lambda self: '%s[%s]' % (self.__class__.__name__, self.job_id)
 
 
-class PipelineJob(Job):
-    def __init__(self, job_id, pipeline):
-        super(PipelineJob, self).__init__(job_id)
-        self.pipeline = pipeline
-        self.pipeline.validate()
+class AppJob(Job):
+    def __init__(self, job_id, app):
+        super(AppJob, self).__init__(job_id)
+        self.app = app
+        self.app.validate()
 
 
-class RunJob(PipelineJob):
-    def __init__(self, job_id, pipeline, inputs=None, params=None):
-        super(RunJob, self).__init__(job_id, pipeline)
+class RunJob(AppJob):
+    def __init__(self, job_id, app, inputs=None, params=None):
+        super(RunJob, self).__init__(job_id, app)
         self.inputs = inputs or {}
         self.params = params or {}
-        self.tasks.add_from_pipeline(pipeline, inputs)
+        self.tasks.add_from_app(app, inputs)
 
     def get_outputs(self):
         return self.tasks.get_outputs()
 
 
-class InstallJob(PipelineJob):
-    def __init__(self, job_id, pipeline):
-        super(InstallJob, self).__init__(job_id, pipeline)
-        self.tasks.add_install_tasks(pipeline)
+class InstallJob(AppJob):
+    def __init__(self, job_id, app):
+        super(InstallJob, self).__init__(job_id, app)
+        self.tasks.add_install_tasks(app)

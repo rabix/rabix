@@ -7,6 +7,7 @@ from docopt import docopt, DocoptExit
 from rabix import VERSION
 from rabix.common.util import rnd_name
 from rabix.runtime import from_url
+from rabix.runtime.models import Pipeline
 from rabix.runtime.engine import SequentialEngine, get_engine
 from rabix.runtime.jobs import RunJob, InstallJob
 
@@ -58,9 +59,8 @@ def present_outputs(outputs):
             print row_fmt.format(out_id, path, str(os.path.getsize(path)))
 
 
-def run():
-    path = sys.argv[2]
-    pipeline = from_url(path)
+def run(path):
+    pipeline = Pipeline.from_app(from_url(path))
     args = docopt(make_pipeline_usage_string(pipeline, path), version=VERSION)
     inputs = {i[len('--'):]: args[i] for i in args if i.startswith('--')}
     job_id = rnd_name()
@@ -73,6 +73,7 @@ def run():
 
 
 def install(pipeline):
+    pipeline = Pipeline.from_app(pipeline)
     job = InstallJob(rnd_name(), pipeline)
     SequentialEngine(before_task=before_task).run(job)
     if job.status == InstallJob.FAILED:
@@ -86,7 +87,7 @@ def main():
         args = docopt(USAGE, version=VERSION)
     except DocoptExit:
         if len(sys.argv) > 3:
-            return run()
+            return run(sys.argv[2])
         print USAGE
         return
     if args["run"]:

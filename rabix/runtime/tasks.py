@@ -5,6 +5,7 @@ import networkx as nx
 
 from rabix.common.protocol import WrapperJob, Outputs, Resources
 from rabix.common.util import rnd_name
+from rabix.runtime.models import Pipeline
 
 log = logging.getLogger(__name__)
 
@@ -179,6 +180,9 @@ class TaskDAG(object):
     def get_ready_tasks(self):
         return [task for task in self.iter_tasks() if self.update_status(task).status == Task.READY]
 
+    def add_from_app(self, app, inputs):
+        return self.add_from_pipeline(Pipeline.from_app(app), inputs)
+
     def add_from_pipeline(self, pipeline, inputs):
         inputs = inputs or {}
         for node_id, node in pipeline.nx.node.iteritems():
@@ -196,8 +200,8 @@ class TaskDAG(object):
                     self.connect('%s.%s' % (self.task_prefix, src_id), '%s.%s' % (self.task_prefix, dst_id),
                                  src_path, dst_path)
 
-    def add_install_tasks(self, pipeline):
-        for app_id, app in pipeline.apps.iteritems():
+    def add_install_tasks(self, pipeline_or_app):
+        for app_id, app in pipeline_or_app.apps.iteritems():
             self.add_task(AppInstallTask(app, task_name=app_id + '.install'))
 
     def get_outputs(self):
