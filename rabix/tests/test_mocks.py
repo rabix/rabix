@@ -1,5 +1,8 @@
 import os
 import tempfile
+import unittest
+import subprocess
+
 from nose.tools import nottest, assert_equals
 
 from rabix.common.protocol import Outputs, WrapperJob
@@ -80,9 +83,24 @@ def test_mock_pipeline_mp():
     test_pipeline('mock.pipeline.json', MultiprocessingScheduler)
 
 
+@nottest
 def test_mock_pipeline_rq():
     test_pipeline('mock.pipeline.json', RQScheduler)
 
 
 def test_mock_pipeline_remote_ref():
     test_pipeline('mock.pipeline.remote_ref.json')
+
+
+# noinspection PyClassicStyleClass
+class RQTest(unittest.TestCase):
+    def setUp(self):
+        self.proc1 = subprocess.Popen(['rqworker'])
+        self.proc2 = subprocess.Popen(['rqworker'])
+
+    def test_mock_pipeline_rq(self):
+        test_pipeline('mock.pipeline.json', RQScheduler)
+
+    def tearDown(self):
+        self.proc1.terminate()
+        self.proc2.terminate()
