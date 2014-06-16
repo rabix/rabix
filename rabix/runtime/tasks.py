@@ -3,7 +3,7 @@ import copy
 
 import networkx as nx
 
-from rabix.common.protocol import WrapperJob, Outputs
+from rabix.common.protocol import WrapperJob, Outputs, Resources
 from rabix.common.util import rnd_name
 
 log = logging.getLogger(__name__)
@@ -137,22 +137,20 @@ class TaskDAG(object):
         for node in self.dag.node.itervalues():
             yield node['task']
 
-    def resolve_task(self, task_or_id, resolution=Task.FINISHED, result=None):
+    def resolve_task(self, task):
         """
-        If successful, result is stored and propagated downstream. Downstream tasks may get READY status.
+        If successful, result is propagated downstream. Downstream tasks may get READY status.
         If result is a task, it is used as a replacement and dependency tasks are added to the graph.
         If failed, result should be an exception.
         If cancelled, result should be None.
         """
-        task = task_or_id if isinstance(task_or_id, Task) else self.get_task(task_or_id)
-        if resolution not in (Task.FINISHED, Task.CANCELED, Task.FAILED):
-            raise ValueError('Invalid resolution: %s' % resolution)
-        result = result or task.result
-        if isinstance(result, Outputs):
-            result = result.outputs
-        task.result = result
-        task.status = resolution
-        if isinstance(result, WrapperJob):
+        if task.status not in (Task.FINISHED, Task.CANCELED, Task.FAILED):
+            raise ValueError('Invalid resolution: %s' % task.status)
+        if task.status != task.FINISHED:
+            return
+        if isinstance(task.result, Outputs):
+            task.result = task.result.outputs
+        if isinstance(task.result, WrapperJob):
             replacement = self.add_task(task.replacement(resources=task.result.resources, arguments=task.result.args))
             for n in self.dag.neighbors(task.task_id):
                 self.dag.add_edge(replacement.task_id, n, **self.dag.get_edge_data(task.task_id, n))
@@ -170,7 +168,7 @@ class TaskDAG(object):
         dst.arguments = update_on_path(dst.arguments, dst_path, val)
 
     def update_status(self, task):
-        if task.status in (Task.CANCELED, Task.FAILED, Task.FINISHED):
+        if task.status != Task.QUEUED:
             return task
         dep_ids = self.dag.reverse(copy=True).neighbors(task.task_id)  # TODO: Do it without copying.
         deps = [self.get_task(dep_id) for dep_id in dep_ids]
@@ -241,7 +239,7 @@ def update_on_path(obj, path, val):
     return obj
 
 
-class Worker(object):
+class Runner(object):
     def __init__(self, task):
         if not isinstance(task, Task):
             raise TypeError('Expected Task, got %s' % type(task))
@@ -251,4 +249,11 @@ class Worker(object):
         return self.task.arguments
 
     def get_requirements(self):
-        return self.task.resources
+        return self.task.resources or Resources(200, Resources.CPU_NEGLIGIBLE)
+
+    def __call__(self):
+        try:
+            return self.run()
+        except:
+            log.exception('Task %s failed:', self.task)
+            raise

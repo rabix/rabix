@@ -1,11 +1,15 @@
 import os
 import tempfile
+import unittest
+import subprocess
+
 from nose.tools import nottest, assert_equals
 
 from rabix.common.protocol import Outputs, WrapperJob
 from rabix.common.util import rnd_name
 from rabix.runtime import from_url
-from rabix.runtime.scheduler import get_scheduler, RunJob
+from rabix.runtime.engine import get_engine, SequentialEngine, MultiprocessingEngine, RQEngine
+from rabix.runtime.jobs import RunJob
 
 
 def load(path):
@@ -55,20 +59,49 @@ def two_step_increment(job):
 
 
 @nottest
-def test_pipeline(pipeline_url, expected_result, output_id):
+def test_pipeline(pipeline_name, engine_cls=None):
     prefix = 'x-test-%s' % rnd_name(5)  # Be warned, all dirs with this prefix will be rm -rf on success
-    pipeline = from_url(pipeline_url)
+    pipeline = from_url(get_mock_pipeline(pipeline_name))
     job = RunJob(prefix, pipeline, inputs={'number': 'data:,1'})
-    get_scheduler().submit(job).run()
+    sch = engine_cls() if engine_cls else get_engine()
+    sch.run(job)
     assert_equals(job.status, RunJob.FINISHED)
-    with open(job.get_outputs()[output_id][0]) as fp:
-        assert_equals(fp.read(), expected_result)
-    os.system('rm -rf %s.*' % prefix)
+    with open(job.get_outputs()['incremented'][0]) as fp:
+        assert_equals(fp.read(), '4')
+    if prefix.startswith('x-test-'):
+        os.system('rm -rf %s.*' % prefix)
 
 
-def test_mock_pipeline():
-    test_pipeline(os.path.join(os.path.dirname(__file__), 'apps/mock.pipeline.json'), '4', 'incremented')
+def get_mock_pipeline(name):
+    return os.path.join(os.path.dirname(__file__), 'apps', name)
+
+
+def test_mock_pipeline_sequential():
+    test_pipeline('mock.pipeline.json', SequentialEngine)
+
+
+def test_mock_pipeline_mp():
+    test_pipeline('mock.pipeline.json', MultiprocessingEngine)
+
+
+@nottest
+def test_mock_pipeline_rq():
+    test_pipeline('mock.pipeline.json', RQEngine)
 
 
 def test_mock_pipeline_remote_ref():
-    test_pipeline(os.path.join(os.path.dirname(__file__), 'apps/mock.pipeline.remote_ref.json'), '4', 'incremented')
+    test_pipeline('mock.pipeline.remote_ref.json')
+
+
+# noinspection PyClassicStyleClass
+class RQTest(unittest.TestCase):
+    def setUp(self):
+        self.proc1 = subprocess.Popen(['rqworker'])
+        self.proc2 = subprocess.Popen(['rqworker'])
+
+    def test_mock_pipeline_rq(self):
+        test_pipeline('mock.pipeline.json', RQEngine)
+
+    def tearDown(self):
+        self.proc1.terminate()
+        self.proc2.terminate()

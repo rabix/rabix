@@ -1,4 +1,3 @@
-import pwd
 import logging
 import os
 import signal
@@ -6,12 +5,13 @@ import copy
 
 import docker
 
+from rabix import CONFIG
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import handle_signal
-from rabix.common.protocol import WrapperJob, Outputs, JobError
+from rabix.common.protocol import WrapperJob, Outputs, JobError, Resources
 from rabix.runtime import from_json, to_json
 from rabix.runtime.models import App, AppSchema
-from rabix.runtime.tasks import Worker, PipelineStepTask
+from rabix.runtime.tasks import Runner, PipelineStepTask
 
 log = logging.getLogger(__name__)
 MOUNT_POINT = '/rabix'
@@ -30,7 +30,7 @@ class DockerApp(App):
         self.schema.validate()
 
 
-class DockerRunner(Worker):
+class DockerRunner(Runner):
     """
     Runs docker apps. Instantiates a container from specified image, mounts the current directory and runs entry point.
     A directory is created for each job.
@@ -50,6 +50,9 @@ class DockerRunner(Worker):
         self.image_id = None
         self._docker_client = None
 
+    def get_requirements(self):
+        return Resources(200, Resources.CPU_NEGLIGIBLE)
+
     def run(self):
         self.image_id = get_image(self.docker_client, self.image_repo, self.image_tag)['Id']
         self.container = Container(self.docker_client, self.image_id, mount_point=MOUNT_POINT)
@@ -61,6 +64,7 @@ class DockerRunner(Worker):
         with open(in_file, 'w') as fp:
             to_json(wrp_job, fp)
         self.container.run_job('__in__.json', '__out__.json', cwd=task_dir)
+        self._fix_uid()
         if not os.path.isfile(out_file):
             raise JobError('Job failed.')
         with open(out_file) as fp:
@@ -94,14 +98,20 @@ class DockerRunner(Worker):
                 raise ValueError('Inputs and outputs must be passed as absolute paths. Got %s' % i)
         return [os.path.join(MOUNT_POINT, i[len(cwd):]) for i in inp]
 
+    def _fix_uid(self):
+        fixer_image_id = CONFIG['docker'].get('fixer_image_id') or get_image(self.docker_client, 'busybox')['Id']
+        c = Container(self.docker_client, fixer_image_id)
+        c.run(['chown', '-R', '%s' % os.getuid(), self.task.task_id])
+        c.wait()
+
     @property
     def docker_client(self):
         if self._docker_client is None:
-            self._docker_client = docker.Client(os.environ.get('DOCKER_HOST'))
+            self._docker_client = docker.Client()
         return self._docker_client
 
 
-class DockerAppInstaller(Worker):
+class DockerAppInstaller(Runner):
     def run(self):
         if not isinstance(self.task.app, DockerApp):
             raise TypeError('Can only install app/tool/docker')
@@ -186,7 +196,6 @@ class Container(object):
 
     def run(self, command):
         log.info("Running command %s", command)
-        self.config['User'] = '%d:%d' % (os.getuid(), pwd.getpwuid(os.getuid()).pw_gid)
         self.container = self.docker.create_container_from_config(dict(self.config, Cmd=command))
         self.docker.start(container=self.container, binds=self.binds)
 
@@ -221,7 +230,7 @@ def find_image(client, repo, tag='latest'):
     return (images or [None])[0]
 
 
-def get_image(client, repo, tag, pull_attempts=1):
+def get_image(client, repo, tag='latest', pull_attempts=1):
     """
     Returns the image dict. If not found locally, will pull from the repository.
     :param client: docker.Client
