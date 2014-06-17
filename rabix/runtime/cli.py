@@ -1,92 +1,107 @@
 import os
 import sys
 import logging
+
 from docopt import docopt, DocoptExit
+
+from rabix import VERSION
+from rabix.common.util import rnd_name
 from rabix.runtime import from_url
-from rabix.runtime.graph import JobGraph, RunFailed
-from rabix.runtime.runners import RUNNER_MAP
-from rabix.runtime.cli_helpers import before_job, after_job, present_outputs
+from rabix.runtime.models import Pipeline
+from rabix.runtime.engine import SequentialEngine, get_engine
+from rabix.runtime.jobs import RunJob, InstallJob
 
 log = logging.getLogger(__name__)
 
 
-class Runner(object):
-    usage_string = """Usage:
-    cli.py run <pipeline.json>"""
+USAGE = """
+Usage:
+  rabix run [-v] <file>
+  rabix install [-v] <file>
+  rabix -h | --help
+  rabix --version
 
-    def __init__(self):
-        self._pipeline = None
+Options:
+  -h --help        Display this message.
+  --version        Print version to standard output and quit.
+  -v --verbose     Log level set to DEBUG
+"""
 
-    def _load_pipeline(self, path):
-        """
-        Takes a string path and returns a pipeline object obtained by parsing
-        the JSON file indicated by the path
-        """
-        if self._pipeline:
-            return self._pipeline
-        if '://' in path:
-            print 'Currently can only use local pipeline files'
-            sys.exit(1)
-        if not os.path.isfile(path):
-            print 'Not a file', path
-            sys.exit(1)
-        self._pipeline = from_url(path)
-        return self._pipeline
+RUN_TPL = """
+Usage: rabix run [-v] {pipeline} {arguments}
 
-    def _make_pipeline_usage_string(self, pipeline_path):
-        """
-        Takes a pipeline path string and returns the usage string for it.
-        As this is the usage string for a given pipeline, <pipeline.json>
-        is replaced with the actual pipeline (for the 'run' cmd)
-        """
-        pipeline = self._load_pipeline(pipeline_path)
-        inputs = pipeline.get_inputs()
-        usage_str = self.usage_string.replace("run <pipeline.json>", "run " + pipeline_path) + " "
-        options = "\n\nOptions:\n"
-        for i in inputs.keys():
-            arg = "--" + i + "=" + (i + "_file").upper()
-            usage_str += arg if inputs[i]["required"] else "[" + arg + "]"
-            usage_str += "... " if inputs[i]["list"] else " "
-            options += '{0: <40}'.format(arg) + inputs[i]["description"] + "\n"
-        usage_str += options
-        return usage_str
+Options:
+  -v --verbose                            Log level set to DEBUG
+  {options}
+"""
 
-    def parse(self, argv=None):
-        """
-        Read the array of command line arguments and determine if
-        the user is requesting info about the pipeline or
-        just wants to run the pipeline or wants to do something else.
-        """
-        argv = argv if argv else sys.argv[1:]
-        try:
-            args = docopt(self.usage_string, argv=argv)
-            if args["run"] and args["<pipeline.json>"]:
-                # user requests info about the pipeline
-                print self._make_pipeline_usage_string(args["<pipeline.json>"])
-        except DocoptExit as e:
-            # user is attempting to run the pipeline
-            if len(argv) > 2 and argv[0] == "run":
-                args = docopt(self._make_pipeline_usage_string(argv[1]), argv=argv)
-                inputs = {}
-                for i in args:
-                    if i.startswith('--'):
-                        inputs[i[2:]] = args[i]
-                graph = JobGraph.from_pipeline(self._load_pipeline(argv[1]))
-                try:
-                    graph.simple_run(RUNNER_MAP, inputs, before_job=before_job, after_job=after_job)
-                except RunFailed, e:
-                    print 'Failed: %s' % e
-                    raise e
-                finally:
-                    present_outputs(graph.get_outputs())
-            else:
-                raise e
+
+def make_pipeline_usage_string(pipeline, path):
+    usage_str, options = [], []
+    for inp_id, inp_details in pipeline.get_inputs().iteritems():
+        arg = '--%s=<%s_file>' % (inp_id, inp_id) + ('...' if inp_details['list'] else '')
+        usage_str.append(arg if inp_details['required'] else '[%s]' % arg)
+        options.append('{0: <40}{1}'.format(arg, inp_details.get('description', '')))
+    return RUN_TPL.format(pipeline=path, arguments=' '.join(usage_str), options='\n  '.join(options))
+
+
+def before_task(task):
+    print 'Running', task.task_id
+    sys.stdout.flush()
+
+
+def present_outputs(outputs):
+    header = False
+    row_fmt = '{:<20}{:<80}{:>16}'
+    for out_id, file_list in outputs.iteritems():
+        for path in file_list:
+            if not header:
+                print row_fmt.format('Output ID', 'File path', 'File size')
+                header = True
+            print row_fmt.format(out_id, path, str(os.path.getsize(path)))
+
+
+def run(path):
+    pipeline = Pipeline.from_app(from_url(path))
+    args = docopt(make_pipeline_usage_string(pipeline, path), version=VERSION)
+    logging.root.setLevel(logging.DEBUG if args['--verbose'] else logging.WARN)
+    inputs = {i[len('--'):]: args[i] for i in args if i.startswith('--') and i != '--verbose'}
+    job_id = rnd_name()
+    job = RunJob(job_id, pipeline, inputs=inputs)
+    get_engine(before_task=before_task).run(job)
+    present_outputs(job.get_outputs())
+    if job.status == RunJob.FAILED:
+        print job.error_message or 'Job failed'
+        sys.exit(1)
+
+
+def install(pipeline):
+    pipeline = Pipeline.from_app(pipeline)
+    job = InstallJob(rnd_name(), pipeline)
+    SequentialEngine(before_task=before_task).run(job)
+    if job.status == InstallJob.FAILED:
+        print job.error_message
+        sys.exit(1)
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
-    r = Runner()
-    r.parse()
+    logging.basicConfig(level=logging.WARN)
+    try:
+        args = docopt(USAGE, version=VERSION)
+    except DocoptExit:
+        if len(sys.argv) > 3:
+            for a in sys.argv[2:]:
+                if not a.startswith('-'):
+                    return run(a)
+        print USAGE
+        return
+    logging.root.setLevel(logging.DEBUG if args['--verbose'] else logging.WARN)
+    if args["run"]:
+        pipeline_path = args['<file>']
+        pipeline = from_url(pipeline_path)
+        print make_pipeline_usage_string(pipeline, pipeline_path)
+    elif args["install"]:
+        install(from_url(args['<file>']))
 
 
 if __name__ == '__main__':

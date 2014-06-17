@@ -89,7 +89,7 @@
             }, 
             {
                 "category": "Algorithm options", 
-                "description": "Discard a MEM if it has more than INT occurence in the genome. This is an insensitive parameter. [default: 500]", 
+                "description": "Discard a MEM if it has more than INT occurrence in the genome. This is an insensitive parameter. [default: 500]",
                 "min": null, 
                 "default": 500, 
                 "max": null, 
@@ -97,7 +97,7 @@
                 "list": false, 
                 "step": null, 
                 "type": "integer", 
-                "id": "threshold_occurences", 
+                "id": "threshold_occurrences",
                 "condition": null, 
                 "name": "Skip seeds with more than INT occurrences."
             }, 
@@ -494,7 +494,7 @@
             }, 
             {
                 "category": "Input/output options", 
-                "description": "This option can be used to transfer read meta information (e.g. barcode) to the SAM output. Note that the FASTA/Q comment (the string after a space in the header line) must conform the SAM spec (e.g. BC:Z:CGTAC). Malformated comments lead to incorrect SAM output.", 
+                "description": "This option can be used to transfer read meta information (e.g. barcode) to the SAM output. Note that the FASTA/Q comment (the string after a space in the header line) must conform the SAM spec (e.g. BC:Z:CGTAC). Malformatted comments lead to incorrect SAM output.",
                 "default": false, 
                 "required": false, 
                 "list": false, 
