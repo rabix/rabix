@@ -6,6 +6,9 @@ import copy
 
 import docker
 
+from subprocess import Popen
+from sys import stdout
+
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import handle_signal
 from rabix.common.protocol import WrapperJob, Outputs, JobError
@@ -35,6 +38,7 @@ class DockerRunner(Worker):
     Runs docker apps. Instantiates a container from specified image, mounts the current directory and runs entry point.
     A directory is created for each job.
     """
+
     def __init__(self, task):
         super(DockerRunner, self).__init__(task)
         if not isinstance(task, PipelineStepTask):
@@ -44,14 +48,12 @@ class DockerRunner(Worker):
         docker_image_ref = task.app.image_ref
         self.image_repo = docker_image_ref.get('image_repo')
         self.image_tag = docker_image_ref.get('image_tag')
-        if not self.image_repo or not self.image_tag:
-            raise NotImplementedError('Currently, can only run images specified by repo+tag.')
         self.container = None
         self.image_id = None
         self._docker_client = None
 
     def run(self):
-        self.image_id = get_image(self.docker_client, self.image_repo, self.image_tag)['Id']
+        self.image_id = get_image(self.docker_client, self.task.app.image_ref)['Id']
         self.container = Container(self.docker_client, self.image_id, mount_point=MOUNT_POINT)
         args = self.task.arguments if self.task.is_replacement else self._fix_input_paths(self.task.arguments)
         wrp_job = WrapperJob(self.task.app.wrapper_id, self.task.task_id, args, self.task.resources)
@@ -105,8 +107,7 @@ class DockerAppInstaller(Worker):
     def run(self):
         if not isinstance(self.task.app, DockerApp):
             raise TypeError('Can only install app/tool/docker')
-        repo, tag = self.task.app.image_ref['image_repo'], self.task.app.image_ref['image_tag']
-        get_image(docker.Client(os.environ.get('DOCKER_HOST')), repo, tag)
+        get_image(docker.Client(os.environ.get('DOCKER_HOST')), self.task.app.image_ref)
 
 
 class Container(object):
@@ -114,6 +115,7 @@ class Container(object):
     Convenience wrapper around docker container.
     Instantiation of the class does not make the docker container. Call run methods to do that.
     """
+
     def __init__(self, docker_client, image_id, container_config=None, mount_point='/rabix'):
         self.docker = docker_client
         self.base_image_id = image_id
@@ -209,32 +211,51 @@ class Container(object):
         self.run_and_print(cmd)
 
 
-def find_image(client, repo, tag='latest'):
+def find_image(client, image_id, repo, tag='latest'):
     """
     Returns image dict if it exists locally, or None
     :param client: docker.Client
     :param repo: Docker repository name
     :param tag: Docker repository tag
+    :param image_id: Docker image ID
     """
-    images = client.images(repo)
-    images = filter(lambda x: (repo + ':' + tag) in x['RepoTags'], images)
-    return (images or [None])[0]
+    images = client.images()
+    img = filter(lambda x: image_id in x['Id'], images) if image_id else None
+    if not img:
+        img = filter(lambda x: (repo + ':' + tag) in x['RepoTags'], images) if repo and tag else None
+    return (img or [None])[0]
 
 
-def get_image(client, repo, tag, pull_attempts=1):
+def get_image(client, image_ref, pull_attempts=1):
     """
     Returns the image dict. If not found locally, will pull from the repository.
     :param client: docker.Client
-    :param repo: Docker repository name
-    :param tag: Docker repository tag
+    :param: task: need to be executed
     :param pull_attempts: Number of attempts to pull the repo+tag.
     """
-    img = find_image(client, repo, tag)
+    repo, tag, image_id = image_ref.get('image_repo', None), image_ref.get('image_tag', None), \
+                          image_ref.get('image_id', None)
+    if not image_id and not repo:
+        raise ResourceUnavailable("App don't have Docker repository name or image ID")
+    elif not image_id and not tag:
+        log.info('Searching for image: %s:latest ID: %s', repo, image_id)
+        pull = Popen(['docker', 'pull', repo], stdout=stdout)
+        pull.wait()
+        img = find_image(client, image_id, repo)
+        if not img:
+            raise ResourceUnavailable('Image not found: %s tag: %s' % (repo, 'latest'))
+    else:
+        log.info('Searching for image: %s:%s ID: %s', repo, tag, image_id)
+        img = find_image(client, image_id, repo, tag)
     if img:
-        log.debug('Image found: %s:%s', repo, tag)
         return img
+
     if pull_attempts < 1:
         raise ResourceUnavailable('Image not found: %s tag: %s' % (repo, tag))
+    if not repo:
+        raise ResourceUnavailable('Cannot search for image. No Docker repository name')
     log.info('No local image %s:%s. Downloading...', repo, tag)
-    client.pull(repo, tag)
-    return get_image(client, repo, tag, pull_attempts-1)
+    pull = Popen(['docker', 'pull', repo], stdout=stdout)
+    pull.wait()
+    return get_image(client, image_ref, pull_attempts - 1)
+
