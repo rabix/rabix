@@ -206,7 +206,7 @@ class MultiprocessingEngine(AsyncEngine):
 class RQEngine(AsyncEngine):
     def __init__(self, before_task=None, after_task=None):
         super(RQEngine, self).__init__(before_task, after_task)
-        self.queue = rq.Queue(connection=redis.Redis())
+        self.queue = rq.Queue(connection=redis.Redis(), default_timeout=-1)
         self.failed = rq.Queue('failed', connection=redis.Redis())
 
     def check_async_result_ready(self, async_result):
