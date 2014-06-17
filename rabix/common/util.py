@@ -62,7 +62,9 @@ class SignalContextProcessor(object):
         self.old_handlers = {}
 
     def __enter__(self):
-        self.old_handlers = {sig: signal.signal(sig, self.handler) for sig in self.signals}
+        self.old_handlers = {
+            sig: signal.signal(sig, self.handler) for sig in self.signals
+        }
 
     def __exit__(self, *_):
         for sig in self.signals:

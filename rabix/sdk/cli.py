@@ -16,7 +16,9 @@ def create_parser():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
-    sch = subparsers.add_parser('schema', help='Print schema for all wrappers on stdout')
+    sch = subparsers.add_parser(
+        'schema', help='Print schema for all wrappers on stdout'
+    )
     sch.set_defaults(cmd_func=cmd_schema)
     sch.add_argument('--package', help='Look for wrappers in this package.')
     sch.add_argument('--output', help='Print schema to this file.', default='')
@@ -24,8 +26,10 @@ def create_parser():
     run = subparsers.add_parser('run', help='Run wrapper job.')
     run.set_defaults(cmd_func=cmd_run)
     run.add_argument('--cwd', default='.', help='cd here before running job.')
-    run.add_argument('-i', '--input', default='__in__.json', help='JSON file that contains arguments for wrapper job.')
-    run.add_argument('-o', '--output', default='__out__.json', help='Where to write the job result.')
+    run.add_argument('-i', '--input', default='__in__.json',
+                     help='JSON file that contains arguments for wrapper job.')
+    run.add_argument('-o', '--output', default='__out__.json',
+                     help='Where to write the job result.')
 
     return parser
 
@@ -33,8 +37,14 @@ def create_parser():
 def get_wrapper_schema_list(package_name):
     package = import_name(package_name)
     package_contents = [getattr(package, var) for var in dir(package)]
-    wrapper_cls_list = [obj for obj in package_contents if isinstance(obj, type) and issubclass(obj, Wrapper)]
-    return [dict(schema=cls._get_schema(), wrapper_id=get_import_name(cls)) for cls in wrapper_cls_list]
+    wrapper_cls_list = [
+        obj for obj in package_contents
+        if isinstance(obj, type) and issubclass(obj, Wrapper)
+    ]
+    return [
+        dict(schema=cls._get_schema(), wrapper_id=get_import_name(cls))
+        for cls in wrapper_cls_list
+    ]
 
 
 def cmd_schema(package, output, **_):

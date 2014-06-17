@@ -73,12 +73,19 @@ class Wrapper(object):
             '$params': self.params.__json__(),
         }
         full_args.update(args or {})
-        return WrapperJob(wrapper_id=get_import_name(self.__class__),
-                          resources=requirements or _get_method_requirements(self, method) or Resources(),
-                          args=full_args)
+        return WrapperJob(
+            wrapper_id=get_import_name(self.__class__),
+            resources=(
+                requirements or _get_method_requirements(self, method) or
+                Resources()
+            ),
+            args=full_args
+        )
 
     def test(self):
-        test_exec_dir = tempfile.mkdtemp(prefix='test_%s_' % self.__class__.__name__, dir='.')
+        test_exec_dir = tempfile.mkdtemp(
+            prefix='test_%s_' % self.__class__.__name__, dir='.'
+        )
         os.chdir(test_exec_dir)
         try:
             self.inputs._validate(assert_=True)
@@ -102,7 +109,9 @@ class Wrapper(object):
             'GB': lambda b: b / 1024**3,
         }
         if units not in converter:
-            raise ValueError('Units argument must be one of: %s' % converter.keys())
+            raise ValueError(
+                'Units argument must be one of: %s' % converter.keys()
+            )
         return converter[units](self.resources.mem_mb * 1024**2)
 
 
@@ -110,7 +119,8 @@ def _get_method_requirements(wrapper, method_name):
     if not method_name:
         return getattr(wrapper, '_requirements', None)
     m = getattr(wrapper, method_name, None)
-    return getattr(m, '_requirements', None) or getattr(wrapper, '_requirements', None)
+    return (getattr(m, '_requirements', None) or
+            getattr(wrapper, '_requirements', None))
 
 
 class WrapperRunner(object):
@@ -136,7 +146,8 @@ class WrapperRunner(object):
                   resources=job.resources)
         result = wrp(job.args.pop('$method', None), job.args)
         log.debug('Job result: %s' % to_json(result))
-        return result if result is not None else Outputs(wrp.outputs.__json__())
+        return (result if result is not None
+                else Outputs(wrp.outputs.__json__()))
 
     def resolve(self, val):
         if isinstance(val, WrapperJob):

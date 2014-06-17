@@ -1,18 +1,28 @@
 from rabix.sdk.wrapper import Wrapper, _get_method_requirements
 from rabix.common.protocol import Resources
 
-_error = NotImplementedError('Methods split, work and merge must be overridden.')
+_error = NotImplementedError(
+    'Methods split, work and merge must be overridden.'
+)
 
 
 class ScatterGatherWrapper(Wrapper):
     def _entry_point(self):
-        return self.job(method='_split', requirements=self.get_split_requirements())
+        return self.job(method='_split',
+                        requirements=self.get_split_requirements())
 
     def _split(self):
         args_list = self.split()
-        jobs = [self.job(method='_work', requirements=self.get_work_requirements(args), args={'job': args})
-                for args in args_list]
-        return self.job(method='_merge', requirements=self.get_merge_requirements(), args={'job_results': jobs})
+        jobs = [
+            self.job(method='_work',
+                     requirements=self.get_work_requirements(args),
+                     args={'job': args})
+            for args in args_list
+        ]
+        return self.job(
+            method='_merge', requirements=self.get_merge_requirements(),
+            args={'job_results': jobs}
+        )
 
     def _work(self, job):
         return self.work(job)

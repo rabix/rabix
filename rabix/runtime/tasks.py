@@ -11,7 +11,9 @@ log = logging.getLogger(__name__)
 
 
 class Task(object):
-    QUEUED, READY, RUNNING, FINISHED, CANCELED, FAILED = 'queued', 'ready', 'running', 'finished', 'canceled', 'failed'
+    QUEUED, READY, RUNNING, FINISHED, CANCELED, FAILED = (
+        'queued', 'ready', 'running', 'finished', 'canceled', 'failed'
+    )
 
     def __init__(self, task_name='', resources=None, arguments=None):
         self.status = Task.QUEUED
@@ -22,7 +24,9 @@ class Task(object):
         self.result = None
         self.is_replacement = False
 
-    __str__ = __unicode__ = __repr__ = lambda self: '%s[%s]' % (self.__class__.__name__, self.task_id)
+    __str__ = __unicode__ = __repr__ = lambda self: (
+        '%s[%s]' % (self.__class__.__name__, self.task_id)
+    )
 
     def make_replacement(self, resources, arguments):
         replacement = copy.deepcopy(self)
@@ -35,26 +39,32 @@ class Task(object):
         return replacement
 
     def _replace_wrapper_job_with_task(self, obj):
-        """ Traverses arguments, creates replacement tasks in place of wrapper jobs """
+        """Traverses arguments, creates replacement tasks in place of wrapper
+        jobs
+        """
         if isinstance(obj, list):
             for ndx, item in enumerate(obj):
                 if isinstance(item, WrapperJob):
-                    obj[ndx] = self.make_replacement(resources=item.resources, arguments=item.args)
+                    obj[ndx] = self.make_replacement(resources=item.resources,
+                                                     arguments=item.args)
                 elif isinstance(obj, (dict, list)):
                     obj[ndx] = self._replace_wrapper_job_with_task(item)
         if isinstance(obj, dict):
             for key, val in obj.iteritems():
                 if isinstance(val, WrapperJob):
-                    obj[key] = self.make_replacement(resources=val.resources, arguments=val.args)
+                    obj[key] = self.make_replacement(resources=val.resources,
+                                                     arguments=val.args)
                 elif isinstance(val, (dict, list)):
                     obj[key] = self._replace_wrapper_job_with_task(val)
         return obj
 
     def iter_deps(self):
-        """ Yields (path, task) for all tasks somewhere in the arguments tree. """
+        """Yields (path, task) for all tasks somewhere in the arguments tree.
+        """
         if isinstance(self.arguments, Task):
             yield self.arguments
-        for path, job in filter(None, Task._recursive_traverse([], self.arguments)):
+        for path, job in filter(None,
+                                Task._recursive_traverse([], self.arguments)):
             yield path, job
 
     @staticmethod
@@ -81,13 +91,17 @@ class AppTask(Task):
 
 
 class PipelineStepTask(AppTask):
-    def __init__(self, app, step, task_name='', resources=None, arguments=None):
+    def __init__(self, app, step, task_name='', resources=None,
+                 arguments=None):
         super(PipelineStepTask, self).__init__(app, task_name, resources)
         self.step = step
         self.arguments = arguments
         if arguments is None:
             inputs = list(inp['id'] for inp in app.schema.inputs)
-            self.arguments = {'$inputs': {inp: [] for inp in inputs}, '$params': {}}
+            self.arguments = {
+                '$inputs': {inp: [] for inp in inputs},
+                '$params': {}
+            }
 
 
 class AppInstallTask(AppTask):
@@ -127,7 +141,8 @@ class TaskDAG(object):
     def connect(self, src_id, dst_id, src_path, dst_path):
         if src_id not in self.dag or dst_id not in self.dag:
             raise ValueError('Node does not exist.')
-        conns = self.dag.get_edge_data(src_id, dst_id, default={'conns': []})['conns']
+        conns = self.dag.get_edge_data(src_id, dst_id,
+                                       default={'conns': []})['conns']
         conns.append((src_path, dst_path))
         self.dag.add_edge(src_id, dst_id, conns=conns)
 
@@ -139,9 +154,10 @@ class TaskDAG(object):
             yield node['task']
 
     def resolve_task(self, task):
-        """
-        If successful, result is propagated downstream. Downstream tasks may get READY status.
-        If result is a task, it is used as a replacement and dependency tasks are added to the graph.
+        """If successful, result is propagated downstream. Downstream tasks
+        may get READY status.
+        If result is a task, it is used as a replacement and dependency tasks
+        are added to the graph.
         If failed, result should be an exception.
         If cancelled, result should be None.
         """
@@ -152,34 +168,44 @@ class TaskDAG(object):
         if isinstance(task.result, Outputs):
             task.result = task.result.outputs
         if isinstance(task.result, WrapperJob):
-            replacement = task.make_replacement(resources=task.result.resources, arguments=task.result.args)
+            replacement = task.make_replacement(
+                resources=task.result.resources, arguments=task.result.args
+            )
             self.add_task(replacement)
             for n in self.dag.neighbors(task.task_id):
-                self.dag.add_edge(replacement.task_id, n, **self.dag.get_edge_data(task.task_id, n))
+                self.dag.add_edge(replacement.task_id, n,
+                                  **self.dag.get_edge_data(task.task_id, n))
                 self.dag.remove_edge(task.task_id, n)
             return
         for dst_id in self.dag.neighbors(task.task_id):
             dst = self.get_task(dst_id)
-            for src_path, dst_path in self.dag.get_edge_data(task.task_id, dst_id)['conns']:
+            for src_path, dst_path in self.dag.get_edge_data(task.task_id,
+                                                             dst_id)['conns']:
                 self.propagate(task, dst, src_path, dst_path)
             self.update_status(dst)
 
     def propagate(self, src, dst, src_path, dst_path):
-        """" Propagates results. Possibly override to add shuttling tasks when multi node and no shared storage. """
+        """Propagates results. Possibly override to add shuttling tasks when
+        multi node and no shared storage.
+        """
         val = get_val_from_path(src.result, src_path)
         dst.arguments = update_on_path(dst.arguments, dst_path, val)
 
     def update_status(self, task):
         if task.status != Task.QUEUED:
             return task
-        dep_ids = self.dag.reverse(copy=True).neighbors(task.task_id)  # TODO: Do it without copying.
+        # TODO: Do it without copying.
+        dep_ids = self.dag.reverse(copy=True).neighbors(task.task_id)
         deps = [self.get_task(dep_id) for dep_id in dep_ids]
         if not deps or all(dep.status == Task.FINISHED for dep in deps):
             task.status = Task.READY
         return task
 
     def get_ready_tasks(self):
-        return [task for task in self.iter_tasks() if self.update_status(task).status == Task.READY]
+        return [
+            task for task in self.iter_tasks()
+            if self.update_status(task).status == Task.READY
+        ]
 
     def add_from_app(self, app, inputs):
         return self.add_from_pipeline(Pipeline.from_app(app), inputs)
@@ -188,17 +214,24 @@ class TaskDAG(object):
         inputs = inputs or {}
         for node_id, node in pipeline.nx.node.iteritems():
             if node['app'] == '$$input':
-                self.add_task(InputTask(node_id, arguments=inputs.get(node_id, [])))
+                self.add_task(
+                    InputTask(node_id, arguments=inputs.get(node_id, []))
+                )
             elif node['app'] == '$$output':
                 self.add_task(OutputTask(node_id))
             else:
-                self.add_task(PipelineStepTask(node['app'], node['step'], task_name=node_id))
+                self.add_task(
+                    PipelineStepTask(
+                        node['app'], node['step'], task_name=node_id
+                    )
+                )
         for src_id, destinations in pipeline.nx.edge.iteritems():
             for dst_id, data in destinations.iteritems():
                 for out_id, inp_id in data['conns']:
                     src_path = [out_id] if out_id else []
                     dst_path = ['$inputs', inp_id] if inp_id else []
-                    self.connect('%s.%s' % (self.task_prefix, src_id), '%s.%s' % (self.task_prefix, dst_id),
+                    self.connect('%s.%s' % (self.task_prefix, src_id),
+                                 '%s.%s' % (self.task_prefix, dst_id),
                                  src_path, dst_path)
 
     def add_install_tasks(self, pipeline_or_app):
@@ -206,7 +239,10 @@ class TaskDAG(object):
             self.add_task(AppInstallTask(app, task_name=app_id + '.install'))
 
     def get_outputs(self):
-        return {task.task_name: task.result or [] for task in self.iter_tasks() if isinstance(task, OutputTask)}
+        return {
+            task.task_name: task.result or []
+            for task in self.iter_tasks() if isinstance(task, OutputTask)
+        }
 
 
 def get_val_from_path(obj, path, default=None):
