@@ -5,7 +5,9 @@ log = logging.getLogger(__name__)
 
 
 class Job(object):
-    QUEUED, RUNNING, FINISHED, CANCELED, FAILED = 'queued', 'running', 'finished', 'canceled', 'failed'
+    QUEUED, RUNNING, FINISHED, CANCELED, FAILED = (
+        'queued', 'running', 'finished', 'canceled', 'failed'
+    )
 
     def __init__(self, job_id):
         self.status = Job.QUEUED
@@ -14,7 +16,9 @@ class Job(object):
         self.error_message = None
         self.warnings = []
 
-    __str__ = __unicode__ = __repr__ = lambda self: '%s[%s]' % (self.__class__.__name__, self.job_id)
+    __str__ = __unicode__ = __repr__ = lambda self: (
+        '{0.__class__.__name__}[{0.job_id}]'.format(self)
+    )
 
 
 class AppJob(Job):

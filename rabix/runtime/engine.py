@@ -21,7 +21,9 @@ class Engine(object):
         self.before_task = before_task or (lambda t: None)
         self.after_task = after_task or (lambda t: None)
 
-    __str__ = __unicode__ = __repr__ = lambda self: '%s[%s jobs]' % (self.__class__.__name__, len(self.jobs))
+    __str__ = __unicode__ = __repr__ = lambda self: (
+        '%s[%s jobs]' % (self.__class__.__name__, len(self.jobs))
+    )
 
     def get_runner(self, task):
         runner_cfg = CONFIG['runners'][task.__class__.__name__]
@@ -29,7 +31,8 @@ class Engine(object):
             return import_name(runner_cfg)(task)
         if isinstance(runner_cfg, dict):
             return import_name(runner_cfg[task.app.TYPE])(task)
-        raise TypeError('Runner config must be string or dict. Got %s' % type(runner_cfg))
+        raise TypeError('Runner config must be string or dict. Got %s' %
+                        type(runner_cfg))
 
     def run(self, *jobs):
         for job in jobs:
@@ -71,7 +74,10 @@ class SequentialEngine(Engine):
                 self.before_task(task)
                 self.run_task(task)
                 if task.status == Task.FAILED:
-                    raise JobError('Task %s failed. Reason: %s' % (task.task_id, task.result))
+                    raise JobError(
+                        'Task %s failed. Reason: %s' %
+                        (task.task_id, task.result)
+                    )
                 self.after_task(task)
                 job.tasks.resolve_task(task)
             ready = job.tasks.get_ready_tasks()
@@ -88,15 +94,20 @@ class AsyncEngine(Engine):
         self.multi_cpu_lock = False
 
     def _res(self):
-        return '%s/%s%s;%s/%s' % (self.available_cpu, self.total_cpu, 'L' if self.multi_cpu_lock else '',
-                                  self.available_ram, self.total_ram)
+        return '%s/%s%s;%s/%s' % (
+            self.available_cpu, self.total_cpu, 'L'
+            if self.multi_cpu_lock else '',
+            self.available_ram, self.total_ram
+        )
 
     def acquire_resources(self, task):
         res = task.resources
-        log.debug('[resources: %s] Acquiring %s for %s', self._res(), res, task)
+        log.debug('[resources: %s] Acquiring %s for %s',
+                  self._res(), res, task)
         if res.mem_mb > self.available_ram:
             return False
-        if res.cpu == res.CPU_ALL and (self.multi_cpu_lock or self.available_cpu != self.total_cpu):
+        if res.cpu == res.CPU_ALL and (
+                self.multi_cpu_lock or self.available_cpu != self.total_cpu):
             return False
         if res.cpu > self.available_cpu:
             return False
@@ -109,7 +120,8 @@ class AsyncEngine(Engine):
 
     def release_resources(self, task):
         res = task.resources
-        log.debug('[resources: %s] Releasing %s from %s', self._res(), res, task)
+        log.debug('[resources: %s] Releasing %s from %s',
+                  self._res(), res, task)
         self.available_ram += res.mem_mb
         if res.cpu == res.CPU_ALL:
             self.multi_cpu_lock = False
@@ -165,7 +177,8 @@ class AsyncEngine(Engine):
                 has_ready = True
                 continue
             else:
-                if filter(lambda t: t.status != Task.FINISHED, job.tasks.iter_tasks()):
+                if filter(lambda t: t.status != Task.FINISHED,
+                          job.tasks.iter_tasks()):
                     job.status = Job.FAILED
                 else:
                     job.status = Job.FINISHED
@@ -180,7 +193,9 @@ class AsyncEngine(Engine):
                     self.process_result(*item)
                     to_remove.append(ndx)
             if to_remove:
-                self.running = [x for n, x in enumerate(self.running) if n not in to_remove]
+                self.running = [
+                    x for n, x in enumerate(self.running) if n not in to_remove
+                ]
                 has_ready = self._update_jobs_check_ready()
                 if not self.running and not has_ready:
                     return
@@ -220,7 +235,9 @@ class RQEngine(AsyncEngine):
 
     def run_task_async(self, runner):
         cls = runner.__class__
-        return self.queue.enqueue(rq_work, '.'.join([cls.__module__, cls.__name__]), runner.task)
+        return self.queue.enqueue(
+            rq_work, '.'.join([cls.__module__, cls.__name__]), runner.task
+        )
 
 
 def rq_work(importable, task):

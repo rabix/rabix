@@ -62,7 +62,9 @@ class SignalContextProcessor(object):
         self.old_handlers = {}
 
     def __enter__(self):
-        self.old_handlers = {sig: signal.signal(sig, self.handler) for sig in self.signals}
+        self.old_handlers = {
+            sig: signal.signal(sig, self.handler) for sig in self.signals
+        }
 
     def __exit__(self, *_):
         for sig in self.signals:
@@ -71,6 +73,13 @@ class SignalContextProcessor(object):
 handle_signal = SignalContextProcessor
 
 
-rnd_str = lambda length: ''.join(random.choice(map(chr, range(ord('a'), ord('z')+1))) for _ in range(length))
-rnd_name = lambda n=5: ''.join(itertools.chain(*zip(
-    (random.choice('bcdfghjklmnpqrstvwxz') for _ in range(n)), (random.choice('aeiou') for _ in range(n)))))
+def rnd_str(length):
+    return ''.join(random.choice(map(chr, range(ord('a'), ord('z')+1)))
+                   for _ in range(length))
+
+
+def rnd_name(n=5):
+    return ''.join(itertools.chain(*zip((random.choice('bcdfghjklmnpqrstvwxz')
+                                         for _ in range(n)),
+                                        (random.choice('aeiou')
+                                         for _ in range(n)))))

@@ -18,8 +18,12 @@ class MockApp(App):
         chunks = self['importable'].split('.')
         assert len(chunks) > 1, 'importable cannot be a module'
         for chunk in chunks:
-            assert not keyword.iskeyword(chunk), '"%s" is a Python keyword' % chunk
-            assert re.match('^[A-Za-z_][A-Za-z0-9_]*$', chunk), '"%s" is not a valid Python identifier' % chunk
+            assert not keyword.iskeyword(chunk), (
+                '"%s" is a Python keyword' % chunk
+            )
+            assert re.match('^[A-Za-z_][A-Za-z0-9_]*$', chunk), (
+                '"%s" is not a valid Python identifier' % chunk
+            )
 
 
 class MockRunner(Runner):
@@ -28,7 +32,8 @@ class MockRunner(Runner):
     """
     def run(self):
         func = import_name(self.task.app.importable)
-        job = WrapperJob(None, self.task.task_id, self.task.arguments, self.task.resources, None)
+        job = WrapperJob(None, self.task.task_id, self.task.arguments,
+                         self.task.resources, None)
         cwd = os.path.abspath('.')
         task_dir = self.task.task_id
         os.mkdir(task_dir)
