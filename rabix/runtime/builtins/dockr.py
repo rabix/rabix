@@ -66,7 +66,7 @@ class DockerRunner(Runner):
         in_file, out_file = os.path.join(task_dir, '__in__.json'), os.path.join(task_dir, '__out__.json')
         with open(in_file, 'w') as fp:
             to_json(wrp_job, fp)
-        self.container.run_job('__in__.json', '__out__.json', cwd=task_dir)
+        self.container.run_job('__in__.json', '__out__.json', cwd=task_dir).remove(success_only=True)
         self._fix_uid()
         if not os.path.isfile(out_file):
             raise JobError('Job failed.')
@@ -104,11 +104,10 @@ class DockerRunner(Runner):
     def _fix_uid(self):
         fixer_image_id = CONFIG['docker'].get('fixer_image_id') or \
             get_image(self.docker_client, repo='busybox', tag='latest')['Id']
+        prefix = self.task.task_id.split('.')[0]
+        cmd = ['/bin/sh', '-c', 'chown -R %s:%s %s' % (os.getuid(), os.getegid(), prefix + '.*')]
         c = Container(self.docker_client, fixer_image_id)
-        c.run(['/bin/sh', '-c', 'chown -R %s:%s %s' % (os.getuid(), os.getegid(),
-                                                       self.task.task_id.split('.')[0] + '.*')])
-        c.wait()
-        c.remove()
+        c.run(cmd).wait().remove(success_only=True)
 
     @property
     def docker_client(self):
@@ -173,20 +172,23 @@ class Container(object):
 
         with handle_signal(handler, *kill_on):
             self.docker.wait(self.container)
+        return self
 
     def is_success(self):
         self._check_container_ready()
-        self.wait()
-        return self.inspect()['State']['ExitCode'] == 0
+        return self.wait().inspect()['State']['ExitCode'] == 0
 
-    def remove(self):
+    def remove(self, success_only=False):
         self._check_container_ready()
         self.wait()
-        self.docker.remove_container(self.container)
+        if not success_only or self.is_success():
+            self.docker.remove_container(self.container)
+        return self
 
     def stop(self, nice=False):
         self._check_container_ready()
-        return self.docker.stop(self.container) if nice else self.docker.kill(self.container)
+        self.docker.stop(self.container) if nice else self.docker.kill(self.container)
+        return self
 
     def print_log(self):
         self._check_container_ready()
@@ -195,46 +197,46 @@ class Container(object):
                 print out.rstrip()
         else:
             print self.docker.logs(self.container)
+        return self
 
     def commit(self, message=None, conf=None):
         self._check_container_ready()
         self.image = self.docker.commit(self.container['Id'], message=message, conf=conf)
+        return self
 
     def run(self, command):
         log.info("Running command %s", command)
         self.container = self.docker.create_container_from_config(dict(self.config, Cmd=command))
         self.docker.start(container=self.container, binds=self.binds)
+        return self
 
     def run_and_print(self, command):
         self.run(command)
         self.wait()  # TODO: Remove this line when streaming works.
-        self.print_log()
+        return self.print_log()
 
     def run_job(self, input_path, output_path, cwd=None):
         cmd = self.base_cmd + ['run', '-i', input_path, '-o', output_path]
         if cwd:
             cmd += ['--cwd', cwd]
-        self.run(cmd)
-        if self.is_success():
-            pass
-            self.remove()
+        return self.run(cmd)
 
     def schema(self, output=None):
         cmd = self.base_cmd + ['schema']
         cmd += ['--output', output] if output else []
-        self.run_and_print(cmd)
+        return self.run_and_print(cmd)
 
 
-def find_image(client, image_id, repo, tag='latest'):
+def find_image(client, image_id, repo=None, tag='latest'):
     """
     Returns image dict if it exists locally, or None
     :param client: docker.Client
+    :param image_id: Docker image ID
     :param repo: Docker repository name
     :param tag: Docker repository tag
-    :param image_id: Docker image ID
     """
     images = client.images()
-    img = filter(lambda x: image_id in x['Id'], images) if image_id else None
+    img = filter(lambda x: x['Id'].startswith(image_id), images) if image_id else None
     if not img:
         img = filter(lambda x: (repo + ':' + tag) in x['RepoTags'], images) if repo and tag else None
     return (img or [None])[0]
