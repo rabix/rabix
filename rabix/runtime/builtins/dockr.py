@@ -226,15 +226,14 @@ def find_image(client, image_id, repo, tag='latest'):
     return (img or [None])[0]
 
 
-def get_image(client, image_ref, pull_attempts=1):
+def get_image(client, ref, pull_attempts=1):
     """
     Returns the image dict. If not found locally, will pull from the repository.
     :param client: docker.Client
     :param: task: need to be executed
     :param pull_attempts: Number of attempts to pull the repo+tag.
     """
-    repo, tag, image_id = image_ref.get('image_repo', None), image_ref.get('image_tag', None), \
-                          image_ref.get('image_id', None)
+    repo, tag, image_id = ref.get('image_repo', None), ref.get('image_tag', None), ref.get('image_id', None)
     if not image_id and not repo:
         raise ResourceUnavailable("App don't have Docker repository name or image ID")
     elif not image_id and not tag:
@@ -257,5 +256,4 @@ def get_image(client, image_ref, pull_attempts=1):
     log.info('No local image %s:%s. Downloading...', repo, tag)
     pull = Popen(['docker', 'pull', repo], stdout=stdout)
     pull.wait()
-    return get_image(client, image_ref, pull_attempts - 1)
-
+    return get_image(client, ref, pull_attempts - 1)
