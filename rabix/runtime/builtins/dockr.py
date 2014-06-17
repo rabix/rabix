@@ -102,10 +102,12 @@ class DockerRunner(Runner):
         return [os.path.join(MOUNT_POINT, i[len(cwd):]) for i in inp]
 
     def _fix_uid(self):
-        fixer_image_id = CONFIG['docker'].get('fixer_image_id') or get_image(self.docker_client, 'busybox')['Id']
+        fixer_image_id = CONFIG['docker'].get('fixer_image_id') or \
+            get_image(self.docker_client, repo='busybox', tag='latest')['Id']
         c = Container(self.docker_client, fixer_image_id)
-        c.run(['chown', '-R', '%s' % os.getuid(), self.task.task_id])
+        c.run(['/bin/sh', '-c', 'chown -R %s:%s %s' % (os.getuid(), os.getegid(), self.task.task_id.split('.')[0] + '.*')])
         c.wait()
+        c.remove()
 
     @property
     def docker_client(self):
@@ -213,6 +215,7 @@ class Container(object):
             cmd += ['--cwd', cwd]
         self.run(cmd)
         if self.is_success():
+            pass
             self.remove()
 
     def schema(self, output=None):
@@ -236,14 +239,15 @@ def find_image(client, image_id, repo, tag='latest'):
     return (img or [None])[0]
 
 
-def get_image(client, ref, pull_attempts=1):
+def get_image(client, ref=None, repo=None, tag=None, id=None, pull_attempts=1):
     """
     Returns the image dict. If not found locally, will pull from the repository.
     :param client: docker.Client
     :param: ref: Image ref. Contains image ID, Docker repository name and image tag
     :param pull_attempts: Number of attempts to pull the repo+tag.
     """
-    repo, tag, image_id = ref.get('image_repo', None), ref.get('image_tag', None), ref.get('image_id', None)
+    ref = ref or {}
+    repo, tag, image_id = ref.get('image_repo', repo), ref.get('image_tag', tag), ref.get('image_id', id)
     if not image_id and not repo:
         raise ResourceUnavailable("App don't have Docker repository name or image ID")
     elif not image_id and not tag:
