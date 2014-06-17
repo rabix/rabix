@@ -39,10 +39,15 @@ Options:
 def make_pipeline_usage_string(pipeline, path):
     usage_str, options = [], []
     for inp_id, inp_details in pipeline.get_inputs().iteritems():
-        arg = '--%s=<%s_file>' % (inp_id, inp_id) + ('...' if inp_details['list'] else '')
+        arg = '--%s=<%s_file>%s' % (
+            inp_id, inp_id, '...' if inp_details['list'] else ''
+        )
         usage_str.append(arg if inp_details['required'] else '[%s]' % arg)
-        options.append('{0: <40}{1}'.format(arg, inp_details.get('description', '')))
-    return RUN_TPL.format(pipeline=path, arguments=' '.join(usage_str), options='\n  '.join(options))
+        options.append('{0: <40}{1}'.format(
+            arg, inp_details.get('description', ''))
+        )
+    return RUN_TPL.format(pipeline=path, arguments=' '.join(usage_str),
+                          options='\n  '.join(options))
 
 
 def before_task(task):
@@ -65,7 +70,10 @@ def run(path):
     pipeline = Pipeline.from_app(from_url(path))
     args = docopt(make_pipeline_usage_string(pipeline, path), version=VERSION)
     logging.root.setLevel(logging.DEBUG if args['--verbose'] else logging.WARN)
-    inputs = {i[len('--'):]: args[i] for i in args if i.startswith('--') and i != '--verbose'}
+    inputs = {
+        i[len('--'):]: args[i]
+        for i in args if i.startswith('--') and i != '--verbose'
+    }
     job_id = rnd_name()
     job = RunJob(job_id, pipeline, inputs=inputs)
     get_engine(before_task=before_task).run(job)

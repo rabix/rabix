@@ -13,7 +13,9 @@ log = logging.getLogger(__name__)
 
 
 class InputRunner(Runner):
-    """ Will handle local files, 'data:,' URLs (for tests) and delegate other URLs to requests.get() """
+    """Will handle local files, 'data:,' URLs (for tests) and delegate other
+    URLs to requests.get()
+    """
     def __init__(self, task):
         super(InputRunner, self).__init__(task)
         self.urls = task.arguments or []
@@ -93,5 +95,7 @@ class InputRunner(Runner):
         if not os.path.isfile(path):
             raise ResourceUnavailable('Not a file: %s' % path)
         if not os.path.abspath(path).startswith(os.path.abspath('.')):
-            raise NotImplementedError('File must be in current dir or subdirs. Got %s' % path)
+            raise NotImplementedError(
+                'File must be in current dir or subdirs. Got %s' % path
+            )
         return path
