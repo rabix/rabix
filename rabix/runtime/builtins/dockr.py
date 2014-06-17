@@ -105,7 +105,8 @@ class DockerRunner(Runner):
         fixer_image_id = CONFIG['docker'].get('fixer_image_id') or \
             get_image(self.docker_client, repo='busybox', tag='latest')['Id']
         c = Container(self.docker_client, fixer_image_id)
-        c.run(['/bin/sh', '-c', 'chown -R %s:%s %s' % (os.getuid(), os.getegid(), self.task.task_id.split('.')[0] + '.*')])
+        c.run(['/bin/sh', '-c', 'chown -R %s:%s %s' % (os.getuid(), os.getegid(),
+                                                       self.task.task_id.split('.')[0] + '.*')])
         c.wait()
         c.remove()
 
