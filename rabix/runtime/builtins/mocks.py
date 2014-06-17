@@ -3,7 +3,7 @@ import os
 import keyword
 
 from rabix.runtime.models import App
-from rabix.runtime.tasks import Worker
+from rabix.runtime.tasks import Runner
 from rabix.common.util import import_name
 from rabix.common.protocol import WrapperJob
 
@@ -22,7 +22,7 @@ class MockApp(App):
             assert re.match('^[A-Za-z_][A-Za-z0-9_]*$', chunk), '"%s" is not a valid Python identifier' % chunk
 
 
-class MockRunner(Worker):
+class MockRunner(Runner):
     """
     Runs the app/mock/python jobs. A directory is created for each job.
     """
