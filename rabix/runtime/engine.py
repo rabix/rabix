@@ -6,7 +6,7 @@ import rq
 import redis
 
 from rabix import CONFIG
-from rabix.common.util import import_name
+from rabix.common.util import import_name, get_import_name
 from rabix.common.protocol import JobError
 from rabix.runtime.tasks import Task
 from rabix.runtime.jobs import Job
@@ -27,9 +27,7 @@ class Engine(object):
         runner_cfg = CONFIG['runners'][task.__class__.__name__]
         if isinstance(runner_cfg, basestring):
             return import_name(runner_cfg)(task)
-        if isinstance(runner_cfg, dict):
-            return import_name(runner_cfg[task.app.TYPE])(task)
-        raise TypeError('Runner config must be string or dict. Got %s' % type(runner_cfg))
+        return import_name(runner_cfg[task.app.TYPE])(task)
 
     def run(self, *jobs):
         for job in jobs:
@@ -219,8 +217,7 @@ class RQEngine(AsyncEngine):
         return self.queue.fetch_job(async_result.get_id()).result
 
     def run_task_async(self, runner):
-        cls = runner.__class__
-        return self.queue.enqueue(rq_work, '.'.join([cls.__module__, cls.__name__]), runner.task)
+        return self.queue.enqueue(rq_work, get_import_name(runner.__class__), runner.task)
 
 
 def rq_work(importable, task):
@@ -233,6 +230,5 @@ def get_engine(**kwargs):
     if engine:
         return engine
     options = CONFIG['engine'].get('options', {})
-    options.update(**kwargs)
-    engine = import_name(CONFIG['engine']['class'])(**options)
+    engine = import_name(CONFIG['engine']['class'])(**dict(options, **kwargs))
     return engine

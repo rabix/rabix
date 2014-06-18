@@ -5,6 +5,7 @@ import time
 import itertools
 import functools
 import select
+import collections
 from subprocess import Popen, PIPE
 
 log = logging.getLogger(__name__)
@@ -74,29 +75,24 @@ def _get_stdin_popen_param(proc):
         return DEVNULL
     if isinstance(proc.stdin, basestring):
         return open(proc.stdin)
-    if isinstance(proc.stdin, (list, tuple)):
+    if isinstance(proc.stdin, collections.Iterable):
         return PIPE
-    raise Exception('Bad stdin: %s', proc.stdin)
+    raise TypeError('Bad stdin type: %s.' % type(proc.stdin))
 
 
 class Process(object):
-    """ Use this class to run external processes. Example:
+    """
+    Use this class to run external processes. Example:
     >>> p = Process('python', '-c', 'x,y=input(),input(); print x+y', stdin=['2', '2']).run()
     >>> p.stdout.get_string()
-    4
-
-    Passing positional arguments to __init__ is same as using add_arg(*args).
-
-    kwargs: stdin
-    >>> Process('wc', stdin='/path/to/file').run() # /path/to/file will be streamed to wc stdin
-    >>> Process('wc', stdin=['first line', 'second line']) # pass list to stdin line by line
-
-    kwargs: stdout and stderr
-    >>> money_lines = []
-    >>> Process('grep', r'\$\d+', stdin='file.txt', stdout=lambda line: money_lines.append(line)).run() # pass callable
-    >>> Process('wc', 'file.txt', stderr='errors.log')
+    '4\\n'
+    >>> doctests, this_file = [], os.path.abspath(__file__)
+    >>> p = Process('grep', '>>>', stdin=this_file, stdout=lambda line: doctests.append(line)).run()  # pass callable
+    >>> len(p.stdout.get_lines()) > 5
+    True
 
     You can also set these using process.[stdout|stderr].line_parser and process.[stdout|stderr].file_path
+    Passing positional arguments to __init__ is same as using add_arg(*args).
     """
     _ids = itertools.count(0)
 
@@ -184,7 +180,7 @@ class Process(object):
 
     @property
     def cmd_line(self):
-        """ Get the command line that can be used to rerun the process. """
+        """ A print-friendly command line """
         return ' '.join(map(print_prepare, self.args))
 
     @property
@@ -199,7 +195,7 @@ class Process(object):
     def add_arg(self, *args, **kwargs):
         """ Append arguments to the argument list. For supplied kwargs, add_narg is called. """
         if self.popen is not None:
-            raise Exception('Cannot add arguments once process has been executed.')
+            raise RuntimeError('Cannot add arguments once process has been executed.')
         for arg in args:
             if arg not in (None, ''):
                 self.args.append(unicode(arg).strip())
@@ -207,10 +203,13 @@ class Process(object):
             self.add_narg(key, val)
 
     def add_narg(self, key, value):
-        """ Add named arguments to the argument list. Examples:
+        """
+        Add named arguments to the argument list. Examples:
         >>> p = Process('python')
-        >>> p.add_narg('c', 'print 2*2') # Same as p.add_arg('-c', 'print 2*2')
-        >>> p.add_narg('3', True) # Same as p.add_arg('-3'). For bool values, only key is added or nothing if False.
+        >>> p.add_narg('3', True)  # Same as p.add_arg('-3'). For bool values, only key is added or nothing if False.
+        >>> p.add_narg('c', 'print 2*2')  # Same as p.add_arg('-c', 'print 2*2')
+        >>> p.run().stdout.get_string().strip('\\n') == '4'
+        True
         """
         if value in (None, '') or value is False:
             return
@@ -222,16 +221,17 @@ class Process(object):
             self.add_arg(key, value)
 
 
-def process_fails(exit_code, str_to_search=""):
+def process_fails(exit_code, assert_this_str_in_stderr=''):
     """ Decorator for testing """
     def decorator(func):
         @functools.wraps(func)
         def wrapped():
             try:
                 func()
-                assert False, "SubprocessError expected, but not raised!"
+                assert False, 'SubprocessError expected, but not raised!'
             except SubprocessError as e:
                 assert exit_code == e.proc.exit_code, 'Wrong exit code (%s). Got %s' % (exit_code, e.proc.exit_code)
-                assert str_to_search in e.proc.stderr.get_string(), 'string "%s" was not found.' % str_to_search
+                assert assert_this_str_in_stderr in e.proc.stderr.get_string(), \
+                    'string "%s" was not found.' % assert_this_str_in_stderr
         return wrapped
     return decorator

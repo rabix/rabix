@@ -9,6 +9,11 @@ from rabix.sdk import require
 class SimpleParallelWrapper(Wrapper):
     for_each = '', ''
 
+    def __init__(self, *args, **kwargs):
+        super(SimpleParallelWrapper, self).__init__(*args, **kwargs)
+        if not all(attr.list for attr in self.outputs):
+            raise TypeError('All outputs must be declared as lists when using SPW.')
+
     def _entry_point(self):
         return self.job('split')
 
@@ -37,7 +42,7 @@ class SimpleParallelWrapper(Wrapper):
         self.execute()
         self.outputs._save_meta()
 
-        # Serialize outputs to job result
+        # Return dict as job result
         return self.outputs.__json__()
 
     @require(100, require.CPU_NEGLIGIBLE)
@@ -45,11 +50,8 @@ class SimpleParallelWrapper(Wrapper):
         for result in job_results:
             for output_id, files in result.iteritems():
                 out = getattr(self.outputs, output_id)
-                if isinstance(files, basestring):
-                    setattr(self.outputs, output_id, files)
-                else:
-                    for file_path in files:
-                        out.add_file(file_path)._load_meta()
+                for file_path in files:
+                    out.add_file(file_path)._load_meta()
 
 
 S = '__!__'
@@ -100,9 +102,11 @@ def rtrim_iterable(iterable_):
 
 def zipmatch(a, b):
     """
-    >>> zipmatch([1, 2, 0], [1, 2])
+    >>> zipmatch([1, 2, 0], [1, 2, 3])
     True
-    >>> zipmatch([1, 2, 3], [1, 2])
+    >>> zipmatch([1, 2, 3], [1, 2, 3])
+    True
+    >>> zipmatch([1, 2, 3], [1, 2, 4])
     False
     """
     return all(x[0] == x[1] for x in zip(rtrim_iterable(a), rtrim_iterable(b)))

@@ -24,7 +24,7 @@ class Task(object):
 
     __str__ = __unicode__ = __repr__ = lambda self: '%s[%s]' % (self.__class__.__name__, self.task_id)
 
-    def replacement(self, resources, arguments):
+    def make_replacement(self, resources, arguments):
         replacement = copy.deepcopy(self)
         replacement.status = Task.QUEUED
         replacement.resources = resources
@@ -39,13 +39,13 @@ class Task(object):
         if isinstance(obj, list):
             for ndx, item in enumerate(obj):
                 if isinstance(item, WrapperJob):
-                    obj[ndx] = self.replacement(resources=item.resources, arguments=item.args)
+                    obj[ndx] = self.make_replacement(resources=item.resources, arguments=item.args)
                 elif isinstance(obj, (dict, list)):
                     obj[ndx] = self._replace_wrapper_job_with_task(item)
         if isinstance(obj, dict):
             for key, val in obj.iteritems():
                 if isinstance(val, WrapperJob):
-                    obj[key] = self.replacement(resources=val.resources, arguments=val.args)
+                    obj[key] = self.make_replacement(resources=val.resources, arguments=val.args)
                 elif isinstance(val, (dict, list)):
                     obj[key] = self._replace_wrapper_job_with_task(val)
         return obj
@@ -152,7 +152,8 @@ class TaskDAG(object):
         if isinstance(task.result, Outputs):
             task.result = task.result.outputs
         if isinstance(task.result, WrapperJob):
-            replacement = self.add_task(task.replacement(resources=task.result.resources, arguments=task.result.args))
+            replacement = task.make_replacement(resources=task.result.resources, arguments=task.result.args)
+            self.add_task(replacement)
             for n in self.dag.neighbors(task.task_id):
                 self.dag.add_edge(replacement.task_id, n, **self.dag.get_edge_data(task.task_id, n))
                 self.dag.remove_edge(task.task_id, n)

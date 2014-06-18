@@ -12,10 +12,10 @@ from rabix import CONFIG
 
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import handle_signal
-from rabix.common.protocol import WrapperJob, Outputs, JobError, Resources
+from rabix.common.protocol import WrapperJob, Outputs, JobError
 from rabix.runtime import from_json, to_json
 from rabix.runtime.models import App, AppSchema
-from rabix.runtime.tasks import Runner, PipelineStepTask
+from rabix.runtime.tasks import Runner
 
 log = logging.getLogger(__name__)
 MOUNT_POINT = '/rabix'
@@ -36,29 +36,19 @@ class DockerApp(App):
 
 class DockerRunner(Runner):
     """
-    Runs docker apps. Instantiates a container from specified image, mounts the current directory and runs entry point.
+    Runs docker apps.
+    Instantiates a container from specified image, mounts the current directory and runs entry point.
     A directory is created for each job.
     """
 
     def __init__(self, task):
         super(DockerRunner, self).__init__(task)
-        if not isinstance(task, PipelineStepTask):
-            raise TypeError('Can only run pipeline step tasks.')
-        if not isinstance(task.app, DockerApp):
-            raise TypeError('Can only run app/tool/docker.')
-        docker_image_ref = task.app.image_ref
-        self.image_repo = docker_image_ref.get('image_repo')
-        self.image_tag = docker_image_ref.get('image_tag')
         self.container = None
-        self.image_id = None
         self._docker_client = None
 
-    def get_requirements(self):
-        return Resources(200, Resources.CPU_NEGLIGIBLE)
-
     def run(self):
-        self.image_id = get_image(self.docker_client, self.task.app.image_ref)['Id']
-        self.container = Container(self.docker_client, self.image_id, mount_point=MOUNT_POINT)
+        image_id = get_image(self.docker_client, self.task.app.image_ref)['Id']
+        self.container = Container(self.docker_client, image_id, mount_point=MOUNT_POINT)
         args = self.task.arguments if self.task.is_replacement else self._fix_input_paths(self.task.arguments)
         wrp_job = WrapperJob(self.task.app.wrapper_id, self.task.task_id, args, self.task.resources)
         task_dir = self.task.task_id
@@ -106,7 +96,7 @@ class DockerRunner(Runner):
             get_image(self.docker_client, repo='busybox', tag='latest')['Id']
         prefix = self.task.task_id.split('.')[0]
         cmd = ['/bin/sh', '-c', 'chown -R %s:%s %s' % (os.getuid(), os.getegid(), prefix + '.*')]
-        c = Container(self.docker_client, fixer_image_id)
+        c = Container(self.docker_client, fixer_image_id, mount_point=MOUNT_POINT)
         c.run(cmd).wait().remove(success_only=True)
 
     @property
@@ -118,8 +108,6 @@ class DockerRunner(Runner):
 
 class DockerAppInstaller(Runner):
     def run(self):
-        if not isinstance(self.task.app, DockerApp):
-            raise TypeError('Can only install app/tool/docker')
         get_image(docker.Client(os.environ.get('DOCKER_HOST')), self.task.app.image_ref)
 
 

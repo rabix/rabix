@@ -5,7 +5,7 @@ import uuid
 
 from rabix.common.errors import ValidationError
 from rabix.common.protocol import WrapperJob, Resources, Outputs
-from rabix.common.util import import_name
+from rabix.common.util import import_name, get_import_name
 from rabix.common import to_json
 from rabix.sdk.schema import SchemaBased, IODef
 
@@ -59,6 +59,7 @@ class Wrapper(object):
     @classmethod
     def _get_schema(cls):
         return {
+            '$$type': 'schema/app/sbgsdk',
             'inputs': cls.Inputs._get_schema(),
             'outputs': cls.Outputs._get_schema(),
             'params': cls.Params._get_schema(),
@@ -71,7 +72,7 @@ class Wrapper(object):
             '$params': self.params.__json__(),
         }
         full_args.update(args)
-        return WrapperJob(wrapper_id='.'.join([self.__class__.__module__, self.__class__.__name__]),
+        return WrapperJob(wrapper_id=get_import_name(self.__class__),
                           resources=requirements or _get_method_requirements(self, method) or Resources(),
                           args=full_args)
 

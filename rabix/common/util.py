@@ -4,7 +4,7 @@ import random
 import itertools
 
 
-def wrap_in_list(val, *args):
+def wrap_in_list(val, *append_these):
     """
     >>> wrap_in_list(1, 2)
     [1, 2]
@@ -14,7 +14,7 @@ def wrap_in_list(val, *args):
     [1, 2, [3, 4]]
     """
     wrapped = val if isinstance(val, list) else [val]
-    return wrapped + list(args)
+    return wrapped + list(append_these)
 
 
 def import_name(name):
@@ -71,6 +71,11 @@ class SignalContextProcessor(object):
 handle_signal = SignalContextProcessor
 
 
-rnd_str = lambda length: ''.join(random.choice(map(chr, range(ord('a'), ord('z')+1))) for _ in range(length))
-rnd_name = lambda n=5: ''.join(itertools.chain(*zip(
-    (random.choice('bcdfghjklmnpqrstvwxz') for _ in range(n)), (random.choice('aeiou') for _ in range(n)))))
+def get_import_name(cls):
+    return '.'.join([cls.__module__, cls.__name__])
+
+
+def rnd_name(syllables=5):
+    return ''.join(itertools.chain(*zip(
+        (random.choice('bcdfghjklmnpqrstvwxz') for _ in range(syllables)),
+        (random.choice('aeiou') for _ in range(syllables)))))

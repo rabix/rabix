@@ -1,4 +1,3 @@
-import pkg_resources
 import argparse
 import os
 import sys
@@ -6,7 +5,7 @@ import logging
 
 from rabix.common import from_json, to_json
 from rabix.common.protocol import WrapperJob, JobError
-from rabix.common.util import import_name
+from rabix.common.util import import_name, get_import_name
 from rabix.common.errors import ResourceUnavailable
 from rabix.sdk.wrapper import Wrapper, WrapperRunner
 
@@ -31,31 +30,20 @@ def create_parser():
     return parser
 
 
-def get_wrapper_schemas(package=None):
-    group = 'sbgsdk.wrappers'
-    map_id_class = {}
-    classname = lambda cls: '.'.join([cls.__module__, cls.__name__])
-    if package:
-        pkg = import_name(package)
-        for var in dir(pkg):
-            obj = getattr(pkg, var)
-            if isinstance(obj, type) and issubclass(obj, Wrapper):
-                map_id_class[classname(obj)] = obj
-
-    for entry_point in pkg_resources.iter_entry_points(group=group):
-        wrp_cls = entry_point.load()
-        full_class_name = classname(wrp_cls)
-        map_id_class[full_class_name] = wrp_cls
-    return [dict(schema=v._get_schema(), wrapper_id=k) for k, v in map_id_class.iteritems()]
+def get_wrapper_schema_list(package_name):
+    package = import_name(package_name)
+    package_contents = [getattr(package, var) for var in dir(package)]
+    wrapper_cls_list = [obj for obj in package_contents if isinstance(obj, type) and issubclass(obj, Wrapper)]
+    return [dict(schema=cls._get_schema(), wrapper_id=get_import_name(cls)) for cls in wrapper_cls_list]
 
 
-def cmd_schema(output, **kwargs):
-    sch = get_wrapper_schemas(kwargs.pop('package', None))
+def cmd_schema(package, output, **_):
+    schema_list = get_wrapper_schema_list(package)
     if output:
         with open(output, 'w') as fp:
-            to_json(sch, fp)
+            to_json(schema_list, fp)
     else:
-        print(to_json(sch))
+        print(to_json(schema_list))
 
 
 def cmd_run(cwd, input, output, **_):
@@ -68,11 +56,12 @@ def cmd_run(cwd, input, output, **_):
     with open(input) as fp:
         job = from_json(fp)
     if not isinstance(job, WrapperJob):
-        raise ValueError('Input JSON must describe a job.')
+        raise TypeError('Input JSON must describe a job.')
 
     try:
         result = WrapperRunner(job).exec_wrapper_job(job)
     except Exception as e:
+        log.exception('Job failed:')
         result = JobError(e.message or unicode(e))
 
     with open(output, 'w') as fp:
@@ -85,7 +74,7 @@ def main():
     try:
         args['cmd_func'](**args)
     except Exception:
-        logging.exception("Internal error: %s", args)
+        log.exception("Internal error: %s", args)
         return 1
     return 0
 
