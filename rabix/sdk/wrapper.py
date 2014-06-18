@@ -6,7 +6,7 @@ import uuid
 from rabix.common.errors import ValidationError
 from rabix.common.protocol import WrapperJob, Resources, Outputs
 from rabix.common.util import import_name
-from rabix.common.loadsave import to_json
+from rabix.common import to_json
 from rabix.sdk.schema import SchemaBased, IODef
 
 log = logging.getLogger(__name__)

@@ -1,4 +1,4 @@
-from copy import deepcopy
+import copy
 import signal
 import random
 import itertools
@@ -42,7 +42,7 @@ class DotAccessDict(dict):
         return self.__class__(self)
 
     def __deepcopy__(self, memo):
-        return self.__class__(deepcopy(dict(self), memo))
+        return self.__class__(copy.deepcopy(dict(self), memo))
 
 
 def intersect_dicts(d1, d2):

@@ -4,7 +4,12 @@ import os
 import hashlib
 import json
 import urlparse
-import requests
+
+# requests is not used if installing as sdk-lib.
+try:
+    import requests
+except ImportError:
+    requests = None
 
 from rabix.common.errors import ResourceUnavailable, ValidationError
 from rabix.common.protocol import MAPPINGS

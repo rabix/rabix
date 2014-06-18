@@ -4,7 +4,7 @@ import os
 import sys
 import logging
 
-from rabix.common.loadsave import from_json, to_json
+from rabix.common import from_json, to_json
 from rabix.common.protocol import WrapperJob, JobError
 from rabix.common.util import import_name
 from rabix.common.errors import ResourceUnavailable
