@@ -1,0 +1,27 @@
+{
+    "$$type": "job",
+
+    "wrapper_id": "sbgsdk.tests.test_wrappers.red_adder.RedAdder",
+
+    "args":{
+       "$inputs":{
+          "a":"random_a.data",
+          "b":"random_b.data"
+       },
+       "$method":"add",
+       "$params":{
+          "n":1
+       },
+       "files":[
+          "part_a_0.data",
+          "part_b_0.data"
+       ]
+    },
+
+   "resources":{
+      "high_io":false,
+      "$$type":"resources",
+      "cpu":1,
+      "mem_mb":500
+   }
+}

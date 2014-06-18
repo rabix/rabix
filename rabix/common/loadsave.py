@@ -9,6 +9,7 @@ import requests
 from rabix.common.errors import ResourceUnavailable, ValidationError
 from rabix.common.protocol import MAPPINGS
 
+
 log = logging.getLogger(__name__)
 
 
@@ -18,7 +19,8 @@ def object_hook(obj, resolve_refs=True, parent_url='.'):
         return obj
     if obj.get('$$type', '').startswith('ref/'):
         return resolve_ref(obj, parent_url) if resolve_refs else obj
-    return MAPPINGS[obj.pop('$$type')].from_dict(obj)
+    type = obj.pop('$$type')
+    return MAPPINGS[type].from_dict(obj)
 
 
 def from_json(str_or_fp, resolve_refs=True, parent_url='.'):

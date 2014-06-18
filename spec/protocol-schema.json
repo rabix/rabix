@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+
+  "id": "http://example.com/schema/protocol#",
+
+  "definitions": {
+    "resources": {
+      "type": "object",
+      "properties": {
+        "$$type":       {"enum": ["resources"]},
+        "cpu":          { "type": "integer" },
+        "mem_mb":       { "type": "number" },
+        "io_bound":     { "type": "boolean" }
+      },
+      "required": ["$$type"]
+    },
+    "job": {
+      "type": "object",
+      "properties": {
+        "$$type":       {"enum": ["job"]},
+        "wrapper_id":   { "type": "string" },
+        "resources":    { "$ref": "#/definitions/resources" },
+        "args":         { "type": "object" }
+      },
+      "required": ["$$type", "wrapper_id", "args", "resources"]
+    },
+    "outputs": {
+      "type": "object",
+      "properties": {
+        "$$type":       {"enum": ["outputs"]},
+        "outputs":      { "type": "object" }
+      },
+      "required": ["$$type", "outputs"]
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "$$type":       {"enum": ["error"]},
+        "message":      { "type": "string" }
+      },
+      "required": ["$$type", "message"]
+    }
+  },
+
+  "type": "object",
+
+  "oneOf": [
+    { "$ref": "#/definitions/job" },
+    { "$ref": "#/definitions/outputs" },
+    { "$ref": "#/definitions/error" }
+  ]
+}

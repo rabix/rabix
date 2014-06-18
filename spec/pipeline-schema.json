@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+
+  "definitions": {
+    "step": {
+      "type": "object",
+      "properties": {
+        "inputs": {"type": "object"},
+        "app": {"type": "string", "format": "uri"},
+        "id": {"type": "string"},
+        "parameters": {"type": "object"},
+        "output": {"type": "object"}
+      },
+      "required": ["inputs", "app", "id", "output"]
+    }
+
+  },
+
+  "type": "object",
+  
+  "properties":{
+    "$$type": "app/pipeline",
+    "apps": {"type": "array", "items": {"$ref": "#/definitions/step"}},
+    "steps": {"type": "array", "items": {"$ref": "app-schema.json#"}}
+  },
+  
+  "required": ["$$type", "steps"]
+}
