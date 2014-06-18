@@ -57,7 +57,7 @@ class _ProcOutput(object):
             self._r_handle.close()
 
     def _callback(self, ready_handle_list):
-        if not self._r_handle in ready_handle_list:
+        if self._r_handle not in ready_handle_list:
             return
         lines = self._r_handle.read().splitlines(True)
         if not lines:
