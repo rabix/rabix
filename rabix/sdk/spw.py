@@ -12,7 +12,9 @@ class SimpleParallelWrapper(Wrapper):
     def __init__(self, *args, **kwargs):
         super(SimpleParallelWrapper, self).__init__(*args, **kwargs)
         if not all(attr.list for attr in self.outputs):
-            raise TypeError('All outputs must be declared as lists when using SPW.')
+            raise TypeError(
+                'All outputs must be declared as lists when using SPW.'
+            )
 
     def _entry_point(self):
         return self.job('split')
@@ -24,13 +26,17 @@ class SimpleParallelWrapper(Wrapper):
 
         if metadata_key.startswith('params.'):
             metadata_key = getattr(self.params, metadata_key[len('params.'):])
-        if metadata_key not in ('sample_group', 'sample', 'library', 'platform_unit', 'chunk', 'file', None):
+        if metadata_key not in ('sample_group', 'sample', 'library',
+                                'platform_unit', 'chunk', 'file', None):
             raise ValueError('Invalid metadata_key')
 
         groups = group_inputs(inp, metadata_key)
         reqs = self.get_requirements()
-        jobs = [self.job('work', requirements=reqs, args={'group_id': k, 'files': files})
-                for k, files in groups.iteritems()]
+        jobs = [
+            self.job('work', requirements=reqs,
+                     args={'group_id': k, 'files': files})
+            for k, files in groups.iteritems()
+        ]
         return self.job('merge', args={'job_results': jobs})
 
     def work(self, _, files):
@@ -71,7 +77,10 @@ def make_rg_id(metadata_key, io_obj):
         'platform_unit': rg[:4],
         'chunk': rg[:5],
     }
-    return S.join(rg_map[metadata_key]) if metadata_key in rg_map else getattr(io_obj.meta, metadata_key)
+    return (
+        S.join(rg_map[metadata_key]) if metadata_key in rg_map
+        else getattr(io_obj.meta, metadata_key)
+    )
 
 
 def group_inputs(inp, metadata_key):
@@ -81,7 +90,10 @@ def group_inputs(inp, metadata_key):
         return {f: [f] for f in inp}
     key_getter = functools.partial(make_rg_id, metadata_key)
     files = sorted(inp, key=key_getter)
-    return {key: [f.file for f in val] for key, val in itertools.groupby(files, key_getter)}
+    return {
+        key: [f.file for f in val]
+        for key, val in itertools.groupby(files, key_getter)
+    }
 
 
 def match(io_obj, job_id):
@@ -97,7 +109,8 @@ def rtrim_iterable(iterable_):
     >>> rtrim_iterable([1, 2, 0, 0])
     [1, 2]
     """
-    return list(reversed(list(itertools.dropwhile(operator.not_, reversed(iterable_)))))
+    return list(reversed(list(itertools.dropwhile(operator.not_,
+                                                  reversed(iterable_)))))
 
 
 def zipmatch(a, b):

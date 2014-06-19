@@ -21,7 +21,9 @@ class Engine(object):
         self.before_task = before_task or (lambda t: None)
         self.after_task = after_task or (lambda t: None)
 
-    __str__ = __unicode__ = __repr__ = lambda self: '%s[%s jobs]' % (self.__class__.__name__, len(self.jobs))
+    __str__ = __unicode__ = __repr__ = lambda self: (
+        '%s[%s jobs]' % (self.__class__.__name__, len(self.jobs))
+    )
 
     def get_runner(self, task):
         runner_cfg = CONFIG['runners'][task.__class__.__name__]
@@ -69,7 +71,8 @@ class SequentialEngine(Engine):
                 self.before_task(task)
                 self.run_task(task)
                 if task.status == Task.FAILED:
-                    raise JobError('Task %s failed. Reason: %s' % (task.task_id, task.result))
+                    raise JobError('Task %s failed. Reason: %s' %
+                                   (task.task_id, task.result))
                 self.after_task(task)
                 job.tasks.resolve_task(task)
             ready = job.tasks.get_ready_tasks()
@@ -86,15 +89,21 @@ class AsyncEngine(Engine):
         self.multi_cpu_lock = False
 
     def _res(self):
-        return '%s/%s%s;%s/%s' % (self.available_cpu, self.total_cpu, 'L' if self.multi_cpu_lock else '',
-                                  self.available_ram, self.total_ram)
+        return '%s/%s%s;%s/%s' % (
+            self.available_cpu,
+            self.total_cpu, 'L' if self.multi_cpu_lock else '',
+            self.available_ram,
+            self.total_ram
+        )
 
     def acquire_resources(self, task):
         res = task.resources
-        log.debug('[resources: %s] Acquiring %s for %s', self._res(), res, task)
+        log.debug('[resources: %s] Acquiring %s for %s',
+                  self._res(), res, task)
         if res.mem_mb > self.available_ram:
             return False
-        if res.cpu == res.CPU_ALL and (self.multi_cpu_lock or self.available_cpu != self.total_cpu):
+        if (res.cpu == res.CPU_ALL and
+                (self.multi_cpu_lock or self.available_cpu != self.total_cpu)):
             return False
         if res.cpu > self.available_cpu:
             return False
@@ -107,7 +116,8 @@ class AsyncEngine(Engine):
 
     def release_resources(self, task):
         res = task.resources
-        log.debug('[resources: %s] Releasing %s from %s', self._res(), res, task)
+        log.debug('[resources: %s] Releasing %s from %s',
+                  self._res(), res, task)
         self.available_ram += res.mem_mb
         if res.cpu == res.CPU_ALL:
             self.multi_cpu_lock = False
@@ -163,10 +173,10 @@ class AsyncEngine(Engine):
                 has_ready = True
                 continue
             else:
-                if filter(lambda t: t.status != Task.FINISHED, job.tasks.iter_tasks()):
-                    job.status = Job.FAILED
-                else:
-                    job.status = Job.FINISHED
+                failed = any([
+                    t.status != Task.FINISHED for t in job.tasks.iter_tasks()
+                ])
+                job.status = Job.FAILED if failed else Job.FINISHED
         return has_ready
 
     def run_all(self):
@@ -178,7 +188,9 @@ class AsyncEngine(Engine):
                     self.process_result(*item)
                     to_remove.append(ndx)
             if to_remove:
-                self.running = [x for n, x in enumerate(self.running) if n not in to_remove]
+                self.running = [
+                    x for n, x in enumerate(self.running) if n not in to_remove
+                ]
                 has_ready = self._update_jobs_check_ready()
                 if not self.running and not has_ready:
                     return
@@ -217,7 +229,9 @@ class RQEngine(AsyncEngine):
         return self.queue.fetch_job(async_result.get_id()).result
 
     def run_task_async(self, runner):
-        return self.queue.enqueue(rq_work, get_import_name(runner.__class__), runner.task)
+        return self.queue.enqueue(
+            rq_work, get_import_name(runner.__class__), runner.task
+        )
 
 
 def rq_work(importable, task):

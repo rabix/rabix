@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 
 def object_hook(obj, resolve_refs=True, parent_url='.'):
-    """ Used as json.load(s) object_hook for {"$type": "<type>", ...} dicts """
+    """Used as json.load(s) object_hook for {"$type": "<type>", ...} dicts"""
     if '$$type' not in obj:
         return obj
     if obj.get('$$type', '').startswith('ref/'):
@@ -27,15 +27,17 @@ def object_hook(obj, resolve_refs=True, parent_url='.'):
 
 
 def from_json(str_or_fp, resolve_refs=True, parent_url='.'):
-    """ Load json and make classes from certain dicts (see classify() docs) """
-    hook = functools.partial(object_hook, resolve_refs=resolve_refs, parent_url=parent_url)
+    """Load json and make classes from certain dicts (see classify() docs)"""
+    hook = functools.partial(object_hook, resolve_refs=resolve_refs,
+                             parent_url=parent_url)
     if isinstance(str_or_fp, basestring):
         return json.loads(str_or_fp, object_hook=hook)
     return json.load(str_or_fp, object_hook=hook)
 
 
 def to_json(obj, fp=None):
-    default = lambda o: o.__json__() if callable(getattr(o, '__json__', None)) else unicode(o)
+    default = lambda o: (o.__json__() if callable(getattr(o, '__json__', None))
+                         else unicode(o))
     kwargs = dict(default=default, indent=2, sort_keys=True)
     return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
 
@@ -55,7 +57,9 @@ def resolve_ref(obj, parent_url='.'):
         return check_ref(r.text, checksum, url, parent_url)
     if '://' not in url:
         if not os.path.isfile(url):
-            raise ResourceUnavailable('File not found: %s' % os.path.abspath(url))
+            raise ResourceUnavailable(
+                'File not found: %s' % os.path.abspath(url)
+            )
         with open(url) as fp:
             contents = fp.read()
         return check_ref(contents, checksum, url, parent_url)
@@ -73,7 +77,9 @@ def from_url(url):
         url = url[len('file://'):]
     if '://' not in url:
         if not os.path.isfile(url):
-            raise ResourceUnavailable('File not found: %s' % os.path.abspath(url))
+            raise ResourceUnavailable(
+                'File not found: %s' % os.path.abspath(url)
+            )
         with open(url) as fp:
             contents = fp.read()
         return from_json(contents, parent_url=url)

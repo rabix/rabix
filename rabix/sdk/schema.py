@@ -34,7 +34,12 @@ def validate_type(val, t_tuple, **_):
     if val is None:
         return
     if not isinstance(val, t_tuple):
-        raise ValueError('Expected %s, got %s' % (' or '.join([t.__name__ for t in t_tuple]), type(val).__name__))
+        raise ValueError(
+            'Expected %s, got %s' % (
+                ' or '.join([t.__name__ for t in t_tuple]),
+                type(val).__name__
+            )
+        )
 
 
 @validator
@@ -54,7 +59,9 @@ def validate_pattern(val, pattern, **_):
     if val is None or pattern is None:
         return
     if not re.match(pattern, val):
-        raise ValueError('Value "%s" does not match pattern "%s."' % (val, pattern))
+        raise ValueError(
+            'Value "%s" does not match pattern "%s."' % (val, pattern)
+        )
 
 
 @validator
@@ -62,7 +69,8 @@ def validate_enum(val, valid_vals, **_):
     if val is None:
         return
     if val not in valid_vals:
-        raise ValueError('Invalid value. Expected %s. Got %s.' % (' or '.join(valid_vals), val))
+        raise ValueError('Invalid value. Expected %s. Got %s.' %
+                         (' or '.join(valid_vals), val))
 
 
 @validator
@@ -71,7 +79,8 @@ def validate_file_type(val, types, **_):
         return
     file_type, types = val.meta.file_type, types
     if types and file_type not in types:
-        raise ValueError('File type is %s. Expected %s' % (file_type, ' or '.join(types)))
+        raise ValueError('File type is %s. Expected %s' %
+                         (file_type, ' or '.join(types)))
 
 
 @validator
@@ -94,7 +103,8 @@ def validate_struct(val, **_):
 class BaseAttr(object):
     _count = itertools.count(0)  # Total number of schema attributes defined
 
-    def __init__(self, name=None, description='', required=False, list=False, **extra):
+    def __init__(self, name=None, description='', required=False, list=False,
+                 **extra):
         self._order = BaseAttr._count.next()
         self.name = name
         self.description = description
@@ -108,7 +118,10 @@ class BaseAttr(object):
 
     def __call__(self, attr_name, data=None):
         if attr_name.startswith('_'):
-            raise ValueError('Input, output and parameter IDs cannot start with "_" (%s)' % attr_name)
+            raise ValueError(
+                'Input, output and parameter IDs cannot start with "_" (%s)' %
+                attr_name
+            )
         if not self.name:
             self.name = default_attr_name(attr_name)
         if not self.description:
@@ -126,12 +139,17 @@ class BaseAttr(object):
             raise ValueError('You must specify a value.')
 
     def get_schema(self):
-        get_value = lambda val: val._get_schema() if callable(getattr(val, '_get_schema', None)) else val
-        return dict([(k, get_value(v)) for k, v in self.__dict__.iteritems() if k[0] != '_'])
+        get_value = (lambda val: val._get_schema()
+                     if callable(getattr(val, '_get_schema', None)) else val)
+        return {
+            k: get_value(v)
+            for k, v in self.__dict__.iteritems() if k[0] != '_'
+        }
 
 
 class BaseParam(BaseAttr):
-    def __init__(self, name=None, description='', required=False, default=None, category=None, list=False, **extra):
+    def __init__(self, name=None, description='', required=False, default=None,
+                 category=None, list=False, **extra):
         BaseAttr.__init__(self, name, description, required, list, **extra)
         default = [] if list and default is None else default
         self.default = default() if callable(default) else default
@@ -146,9 +164,11 @@ class BaseParam(BaseAttr):
 
 
 class IntAttr(BaseParam):
-    def __init__(self, name=None, description='', required=False, default=None, category=None,
-                 list=False, min=None, max=None, step=None, **extra):
-        BaseParam.__init__(self, name, description, required, default, category, list, **extra)
+    def __init__(self, name=None, description='', required=False, default=None,
+                 category=None, list=False, min=None, max=None, step=None,
+                 **extra):
+        BaseParam.__init__(self, name, description, required, default,
+                           category, list, **extra)
         self.type = 'integer'
         self.min = min
         self.max = max
@@ -161,9 +181,11 @@ class IntAttr(BaseParam):
 
 
 class RealAttr(BaseParam):
-    def __init__(self, name=None, description='', required=False, default=None, category=None,
-                 list=False, min=None, max=None, step=None, **extra):
-        BaseParam.__init__(self, name, description, required, default, category, list, **extra)
+    def __init__(self, name=None, description='', required=False, default=None,
+                 category=None, list=False, min=None, max=None, step=None,
+                 **extra):
+        BaseParam.__init__(self, name, description, required, default,
+                           category, list, **extra)
         self.type = 'float'
         self.min = min
         self.max = max
@@ -176,9 +198,10 @@ class RealAttr(BaseParam):
 
 
 class StringAttr(BaseParam):
-    def __init__(self, name=None, description='', required=False, default=None, category=None,
-                 list=False, pattern=None, **extra):
-        BaseParam.__init__(self, name, description, required, default, category, list, **extra)
+    def __init__(self, name=None, description='', required=False, default=None,
+                 category=None, list=False, pattern=None, **extra):
+        BaseParam.__init__(self, name, description, required, default,
+                           category, list, **extra)
         self.type = 'string'
         self.pattern = pattern
 
@@ -189,9 +212,10 @@ class StringAttr(BaseParam):
 
 
 class BoolAttr(BaseParam):
-    def __init__(self, name=None, description='', required=False, default=None, category=None,
-                 list=False, **extra):
-        BaseParam.__init__(self, name, description, required, default, category, list, **extra)
+    def __init__(self, name=None, description='', required=False, default=None,
+                 category=None, list=False, **extra):
+        BaseParam.__init__(self, name, description, required, default,
+                           category, list, **extra)
         self.type = 'boolean'
 
     def validate(self, instance):
@@ -200,14 +224,17 @@ class BoolAttr(BaseParam):
 
 
 class EnumAttr(BaseParam):
-    def __init__(self,  values, name=None, description='', required=False, default=None, category=None,
-                 list=False, **extra):
-        BaseParam.__init__(self, name, description, required, default, category, list, **extra)
+    def __init__(self,  values, name=None, description='', required=False,
+                 default=None, category=None, list=False, **extra):
+        BaseParam.__init__(self, name, description, required, default,
+                           category, list, **extra)
         self.type = 'enum'
         self.values = [self._expand_value(v) for v in values]
 
     def _expand_value(self, val):
-        error = ValueError('Please specify a 3-tuple with id, name and description.')
+        error = ValueError(
+            'Please specify a 3-tuple with id, name and description.'
+        )
         d = default_attr_name
         if not isinstance(val, (tuple, list)):
             return val, d(val), d(val)
@@ -221,7 +248,8 @@ class EnumAttr(BaseParam):
                 raise error
             return val[0], val[1], d(val[0])
         elif l == 3:
-            if not isinstance(val[1], basestring) or not isinstance(val[2], basestring):
+            if (not isinstance(val[1], basestring) or
+                    not isinstance(val[2], basestring)):
                 raise error
             return val
         else:
@@ -233,9 +261,11 @@ class EnumAttr(BaseParam):
 
 
 class StructAttr(BaseParam):
-    def __init__(self, schema, item_label=None, name=None, description='', required=False, default=None, category=None,
-                 list=False, **extra):
-        BaseParam.__init__(self, name, description, required, default, category, list, **extra)
+    def __init__(self, schema, item_label=None, name=None, description='',
+                 required=False, default=None, category=None, list=False,
+                 **extra):
+        BaseParam.__init__(self, name, description, required, default,
+                           category, list, **extra)
         self.schema = schema
         self.item_label = item_label or schema.__name__
         self.type = 'struct'
@@ -273,7 +303,9 @@ class SchemaBased(object):
     def _get_schema(cls):
         schema = []
         attr_defs = cls._attr_defs().items()
-        for attr, attr_def in sorted(attr_defs, cmp=lambda x, y: cmp(x[1]._order, y[1]._order)):
+        for attr, attr_def in sorted(
+                attr_defs, cmp=lambda x, y: cmp(x[1]._order, y[1]._order)
+        ):
             attr_def(attr)  # Set default name and desc if none supplied.
             attr_schema = dict(attr_def.get_schema(), id=attr)
             schema.append(attr_schema)
@@ -301,7 +333,11 @@ class SchemaBased(object):
         return result
 
     def __json__(self):
-        return dict([(k, v) for k, v in self.__dict__.iteritems() if k[0] != '_' and v is not None])
+        return {
+            k: v
+            for k, v in self.__dict__.iteritems()
+            if k[0] != '_' and v is not None
+        }
 
     __unicode__ = __repr__ = __str__ = lambda self: str(self.__json__())
 
@@ -317,7 +353,9 @@ class IODef(SchemaBased):
     def __setattr__(self, key, value):
         attr_def = getattr(self.__class__, key)
         if not attr_def:
-            raise AttributeError('%s does not define %s' % (self.__class__.__name__, key))
+            raise AttributeError(
+                '%s does not define %s' % (self.__class__.__name__, key)
+            )
         if value is None:
             return object.__setattr__(self, key, None)
         if attr_def.list and isinstance(value, list):
@@ -347,7 +385,8 @@ class IOValue(unicode):
         if isinstance(value, list):
             value = value[0] if value else ''
         value = os.path.abspath(value) if value else value
-        obj = unicode.__new__(cls) if not value else unicode.__new__(cls, value)
+        obj = (unicode.__new__(cls) if not value
+               else unicode.__new__(cls, value))
         obj.meta = DotAccessDict()
         return obj
 
@@ -396,8 +435,10 @@ class IOValue(unicode):
 
 
 class IOAttr(BaseAttr):
-    def __init__(self, name=None, description='', file_types=None, required=False, list=False, **extra):
-        BaseAttr.__init__(self, name, description, required, list=list, **extra)
+    def __init__(self, name=None, description='', file_types=None,
+                 required=False, list=False, **extra):
+        BaseAttr.__init__(self, name, description, required, list=list,
+                          **extra)
         self.types = file_types or []
 
     def __call__(self, attr_name, data=None):
@@ -435,18 +476,22 @@ class IOList(object):
     __str__ = __unicode__ = __repr__ = lambda self: str(self._values)
 
     def add_file(self, path=None):
-        """ Add new file to list of outputs and return the object. """
+        """Add new file to list of outputs and return the object."""
         value = IOValue(path)
         self._values.append(value)
         return value
 
     def make_metadata(self, **kwargs):
-        """ Intersect metadata dictionaries of each file in list and returns the new metadata object. """
+        """Intersect metadata dictionaries of each file in list and returns the
+        new metadata object.
+        """
         if not self._values:
             return DotAccessDict(**kwargs)
         if len(self._values) == 1:
             return self[0].make_metadata(**kwargs)
-        return DotAccessDict(reduce(intersect_dicts, [v.meta for v in self._values]), **kwargs)
+        return DotAccessDict(
+            reduce(intersect_dicts, [v.meta for v in self._values]), **kwargs
+        )
 
     def _save_meta(self):
         for val in self:

@@ -17,7 +17,7 @@ def print_prepare(arg):
 
 
 class SubprocessError(RuntimeError):
-    """ Raised by the Process class if subprocess finished with exit_code != 0
+    """Raised by the Process class if subprocess finished with exit_code != 0
     User error message is constructed from cmd_line and stderr or stdout.
     """
     def __init__(self, proc, *args, **kwargs):
@@ -83,15 +83,20 @@ def _get_stdin_popen_param(proc):
 class Process(object):
     """
     Use this class to run external processes. Example:
-    >>> p = Process('python', '-c', 'x,y=input(),input(); print x+y', stdin=['2', '2']).run()
+    >>> p = Process('python', '-c', 'x,y=input(),input(); print x+y',
+    ...             stdin=['2', '2']).run()
     >>> p.stdout.get_string()
     '4\\n'
     >>> doctests, this_file = [], os.path.abspath(__file__)
-    >>> p = Process('grep', '>>>', stdin=this_file, stdout=lambda line: doctests.append(line)).run()  # pass callable
+
+    Or pass a callable as the stdout parameter
+    >>> p = Process('grep', '>>>', stdin=this_file,
+    ...             stdout=lambda line: doctests.append(line)).run()
     >>> len(p.stdout.get_lines()) > 5
     True
 
-    You can also set these using process.[stdout|stderr].line_parser and process.[stdout|stderr].file_path
+    You can also set these using process.[stdout|stderr].line_parser and
+    process.[stdout|stderr].file_path
     Passing positional arguments to __init__ is same as using add_arg(*args).
     """
     _ids = itertools.count(0)
@@ -108,26 +113,32 @@ class Process(object):
         self.stderr = _ProcOutput()
         stderr = kwargs.get('stderr', True)
         if stderr:
-            self.stderr.file_path = stderr if isinstance(stderr, basestring) else '%s.err' % self.id
+            self.stderr.file_path = (stderr if isinstance(stderr, basestring)
+                                     else '%s.err' % self.id)
             if callable(stderr):
                 self.stderr.line_callback = stderr
 
         self.stdout = _ProcOutput()
         stdout = kwargs.get('stdout', True)
         if stdout:
-            self.stdout.file_path = stdout if isinstance(stdout, basestring) else '%s.out' % self.id
+            self.stdout.file_path = (stdout if isinstance(stdout, basestring)
+                                     else '%s.out' % self.id)
             if callable(stdout):
                 self.stdout.line_callback = stdout
 
     def run(self, wait=True):
-        """ Run the process. If wait is true, wait for it to finish and parse output if line parsers are supplied. """
+        """Run the process. If wait is true, wait for it to finish and parse
+        output if line parsers are supplied.
+        """
         try:
             stdout = self.stdout._get_popen_param()
             stderr = self.stderr._get_popen_param()
             stdin = _get_stdin_popen_param(self)
-            log.info('Executing: %s\n\tcmd_line: %s\n\tstdin: %s\n\tstdout: %s\n\tstderr: %s\n',
-                     self.id, self.cmd_line, unicode(stdin), unicode(stdout), unicode(stderr))
-            self.popen = Popen(self.args, stdin=stdin, stdout=stdout, stderr=stderr, cwd=self.cwd)
+            log.info('Executing: %s\n\tcmd_line: %s\n\tstdin: %s\n\t'
+                     'stdout: %s\n\tstderr: %s\n', self.id, self.cmd_line,
+                     unicode(stdin), unicode(stdout), unicode(stderr))
+            self.popen = Popen(self.args, stdin=stdin, stdout=stdout,
+                               stderr=stderr, cwd=self.cwd)
             if stdin == PIPE:
                 time.sleep(.1)
                 for line in self.stdin:
@@ -140,7 +151,9 @@ class Process(object):
         return self.wait() if wait else self
 
     def wait(self):
-        """ Wait for the process to finish and parse output if line parsers are supplied. """
+        """Wait for the process to finish and parse output if line parsers are
+        supplied.
+        """
         try:
             rlist = []
             if self.stdout.line_callback:
@@ -160,7 +173,9 @@ class Process(object):
                         self.stdout._callback(ready)
                         self.stderr._callback(ready)
             level = logging.WARN if self.exit_code else logging.INFO
-            message = 'Process finished with exit code %s: %s' % (self.exit_code, self.cmd_line)
+            message = 'Process finished with exit code %s: %s' % (
+                self.exit_code, self.cmd_line
+            )
             log.log(level, message)
             if self.exit_code:
                 raise SubprocessError(self, message)
@@ -180,12 +195,12 @@ class Process(object):
 
     @property
     def cmd_line(self):
-        """ A print-friendly command line """
+        """A print-friendly command line"""
         return ' '.join(map(print_prepare, self.args))
 
     @property
     def exit_code(self):
-        """ Exit code returned by the process. None if process not finished. """
+        """Exit code returned by the process. None if process not finished."""
         return None if self.popen is None else self.popen.poll()
 
     @property
@@ -193,9 +208,13 @@ class Process(object):
         return self.popen is not None and self.exit_code is None
 
     def add_arg(self, *args, **kwargs):
-        """ Append arguments to the argument list. For supplied kwargs, add_narg is called. """
+        """Append arguments to the argument list. For supplied kwargs,
+        add_narg is called.
+        """
         if self.popen is not None:
-            raise RuntimeError('Cannot add arguments once process has been executed.')
+            raise RuntimeError(
+                'Cannot add arguments once process has been executed.'
+            )
         for arg in args:
             if arg not in (None, ''):
                 self.args.append(unicode(arg).strip())
@@ -203,11 +222,14 @@ class Process(object):
             self.add_narg(key, val)
 
     def add_narg(self, key, value):
-        """
-        Add named arguments to the argument list. Examples:
+        """Add named arguments to the argument list. Examples:
+
         >>> p = Process('python')
-        >>> p.add_narg('3', True)  # Same as p.add_arg('-3'). For bool values, only key is added or nothing if False.
-        >>> p.add_narg('c', 'print 2*2')  # Same as p.add_arg('-c', 'print 2*2')
+        >>> # Same as p.add_arg('-3'). For bool values, only key is added or
+        >>> # nothing if False.
+        >>> p.add_narg('3', True)
+        >>> # Same as p.add_arg('-c', 'print 2*2')
+        >>> p.add_narg('c', 'print 2*2')
         >>> p.run().stdout.get_string().strip('\\n') == '4'
         True
         """
@@ -230,8 +252,12 @@ def process_fails(exit_code, assert_this_str_in_stderr=''):
                 func()
                 assert False, 'SubprocessError expected, but not raised!'
             except SubprocessError as e:
-                assert exit_code == e.proc.exit_code, 'Wrong exit code (%s). Got %s' % (exit_code, e.proc.exit_code)
-                assert assert_this_str_in_stderr in e.proc.stderr.get_string(), \
+                p = e.proc
+                assert exit_code == p.exit_code, (
+                    'Wrong exit code (%s). Got %s' % (exit_code, p.exit_code)
+                )
+                assert assert_this_str_in_stderr in p.stderr.get_string(), (
                     'string "%s" was not found.' % assert_this_str_in_stderr
+                )
         return wrapped
     return decorator
