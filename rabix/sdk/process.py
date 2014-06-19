@@ -1,10 +1,11 @@
-import json
-import logging
 import os
+import six
+import json
 import time
+import select
+import logging
 import itertools
 import functools
-import select
 import collections
 from subprocess import Popen, PIPE
 
@@ -73,7 +74,7 @@ class _ProcOutput(object):
 def _get_stdin_popen_param(proc):
     if not proc.stdin:
         return DEVNULL
-    if isinstance(proc.stdin, basestring):
+    if isinstance(proc.stdin, six.string_types):
         return open(proc.stdin)
     if isinstance(proc.stdin, collections.Iterable):
         return PIPE
@@ -102,7 +103,7 @@ class Process(object):
     _ids = itertools.count(0)
 
     def __init__(self, *args, **kwargs):
-        self.id = kwargs.get('id') or 'process_%s' % Process._ids.next()
+        self.id = kwargs.get('id') or 'process_%s' % next(Process._ids)
         self.popen = None
         self.cwd = kwargs.get('cwd')
         self.args = []
@@ -113,16 +114,20 @@ class Process(object):
         self.stderr = _ProcOutput()
         stderr = kwargs.get('stderr', True)
         if stderr:
-            self.stderr.file_path = (stderr if isinstance(stderr, basestring)
-                                     else '%s.err' % self.id)
+            self.stderr.file_path = (
+                stderr if isinstance(stderr, six.string_types)
+                else '%s.err' % self.id
+            )
             if callable(stderr):
                 self.stderr.line_callback = stderr
 
         self.stdout = _ProcOutput()
         stdout = kwargs.get('stdout', True)
         if stdout:
-            self.stdout.file_path = (stdout if isinstance(stdout, basestring)
-                                     else '%s.out' % self.id)
+            self.stdout.file_path = (
+                stdout if isinstance(stdout, six.string_types)
+                else '%s.out' % self.id
+            )
             if callable(stdout):
                 self.stdout.line_callback = stdout
 
@@ -136,7 +141,8 @@ class Process(object):
             stdin = _get_stdin_popen_param(self)
             log.info('Executing: %s\n\tcmd_line: %s\n\tstdin: %s\n\t'
                      'stdout: %s\n\tstderr: %s\n', self.id, self.cmd_line,
-                     unicode(stdin), unicode(stdout), unicode(stderr))
+                     six.text_type(stdin), six.text_type(stdout),
+                     six.text_type(stderr))
             self.popen = Popen(self.args, stdin=stdin, stdout=stdout,
                                stderr=stderr, cwd=self.cwd)
             if stdin == PIPE:
@@ -196,7 +202,7 @@ class Process(object):
     @property
     def cmd_line(self):
         """A print-friendly command line"""
-        return ' '.join(map(print_prepare, self.args))
+        return ' '.join([print_prepare(x) for x in self.args])
 
     @property
     def exit_code(self):
@@ -217,8 +223,8 @@ class Process(object):
             )
         for arg in args:
             if arg not in (None, ''):
-                self.args.append(unicode(arg).strip())
-        for key, val in kwargs.iteritems():
+                self.args.append(six.text_type(arg).strip())
+        for key, val in six.iteritems(kwargs):
             self.add_narg(key, val)
 
     def add_narg(self, key, value):

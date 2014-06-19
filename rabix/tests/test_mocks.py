@@ -1,4 +1,5 @@
 import os
+import six
 import tempfile
 import unittest
 import subprocess
@@ -21,15 +22,15 @@ def load(path):
 def save(val):
     result = tempfile.mktemp(dir='.')
     with open(result, 'w') as fp:
-        fp.write(unicode(val))
+        fp.write(six.text_type(val))
     return os.path.abspath(result)
 
 
 def get_inp(d, inp, unpack=False, cast=None):
     # val = map(load, d.get('$inputs', {}).get(inp, []))
-    val = map(load, d['$inputs'][inp])
+    val = [load(x) for x in d['$inputs'][inp]]
     if cast:
-        val = map(cast, val)
+        val = [cast(x) for x in val]
     if unpack:
         val = val[0]
     return val

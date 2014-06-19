@@ -1,5 +1,8 @@
+from __future__ import print_function
+
 import os
 import sys
+import six
 import logging
 
 from docopt import docopt, DocoptExit
@@ -38,7 +41,7 @@ Options:
 
 def make_pipeline_usage_string(pipeline, path):
     usage_str, options = [], []
-    for inp_id, inp_details in pipeline.get_inputs().iteritems():
+    for inp_id, inp_details in six.iteritems(pipeline.get_inputs()):
         arg = '--%s=<%s_file>%s' % (
             inp_id, inp_id, '...' if inp_details['list'] else ''
         )
@@ -51,19 +54,19 @@ def make_pipeline_usage_string(pipeline, path):
 
 
 def before_task(task):
-    print 'Running', task.task_id
+    print('Running', task.task_id)
     sys.stdout.flush()
 
 
 def present_outputs(outputs):
     header = False
     row_fmt = '{:<20}{:<80}{:>16}'
-    for out_id, file_list in outputs.iteritems():
+    for out_id, file_list in six.iteritems(outputs):
         for path in file_list:
             if not header:
-                print row_fmt.format('Output ID', 'File path', 'File size')
+                print(row_fmt.format('Output ID', 'File path', 'File size'))
                 header = True
-            print row_fmt.format(out_id, path, str(os.path.getsize(path)))
+            print(row_fmt.format(out_id, path, str(os.path.getsize(path))))
 
 
 def run(path):
@@ -79,7 +82,7 @@ def run(path):
     get_engine(before_task=before_task).run(job)
     present_outputs(job.get_outputs())
     if job.status == RunJob.FAILED:
-        print job.error_message or 'Job failed'
+        print(job.error_message or 'Job failed')
         sys.exit(1)
 
 
@@ -88,7 +91,7 @@ def install(pipeline):
     job = InstallJob(rnd_name(), pipeline)
     SequentialEngine(before_task=before_task).run(job)
     if job.status == InstallJob.FAILED:
-        print job.error_message
+        print(job.error_message)
         sys.exit(1)
 
 
@@ -101,13 +104,13 @@ def main():
             for a in sys.argv[2:]:
                 if not a.startswith('-'):
                     return run(a)
-        print USAGE
+        print(USAGE)
         return
     logging.root.setLevel(logging.DEBUG if args['--verbose'] else logging.WARN)
     if args["run"]:
         pipeline_path = args['<file>']
         pipeline = from_url(pipeline_path)
-        print make_pipeline_usage_string(pipeline, pipeline_path)
+        print(make_pipeline_usage_string(pipeline, pipeline_path))
     elif args["install"]:
         install(from_url(args['<file>']))
 

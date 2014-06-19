@@ -1,3 +1,4 @@
+import six
 import copy
 import signal
 import random
@@ -52,7 +53,7 @@ def intersect_dicts(d1, d2):
     >>> intersect_dicts({'a': 1, 'b': 2}, {'a': 0})
     {}
     """
-    return {k: v for k, v in d1.iteritems() if v == d2.get(k)}
+    return {k: v for k, v in six.iteritems(d1) if v == d2.get(k)}
 
 
 class SignalContextProcessor(object):

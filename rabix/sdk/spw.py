@@ -1,3 +1,4 @@
+import six
 import functools
 import itertools
 import operator
@@ -35,14 +36,14 @@ class SimpleParallelWrapper(Wrapper):
         jobs = [
             self.job('work', requirements=reqs,
                      args={'group_id': k, 'files': files})
-            for k, files in groups.iteritems()
+            for k, files in six.iteritems(groups)
         ]
         return self.job('merge', args={'job_results': jobs})
 
     def work(self, _, files):
         # Remove files from input_id that are not in job
         inp = getattr(self.inputs, self.for_each[0])
-        inp._values = filter(lambda f: f.file in files, inp._values)
+        inp._values = [v for v in inp._values if v.file in files]
 
         # Call wrapper
         self.execute()
@@ -54,7 +55,7 @@ class SimpleParallelWrapper(Wrapper):
     @require(100, require.CPU_NEGLIGIBLE)
     def merge(self, job_results):
         for result in job_results:
-            for output_id, files in result.iteritems():
+            for output_id, files in six.iteritems(result):
                 out = getattr(self.outputs, output_id)
                 for file_path in files:
                     out.add_file(file_path)._load_meta()

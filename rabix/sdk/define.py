@@ -1,5 +1,5 @@
 from rabix.sdk import schema as _
-from wrapper import Wrapper
+from rabix.sdk.wrapper import Wrapper
 
 Inputs = _.IODef
 input = _.IOAttr

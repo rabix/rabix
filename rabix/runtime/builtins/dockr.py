@@ -1,7 +1,10 @@
-import logging
+from __future__ import print_function
+
 import os
-import signal
+import six
 import copy
+import signal
+import logging
 
 import docker
 
@@ -29,7 +32,7 @@ class DockerApp(App):
 
     def _validate(self):
         self._check_field('docker_image_ref', dict, null=False)
-        self._check_field('wrapper_id', basestring, null=False)
+        self._check_field('wrapper_id', six.string_types, null=False)
         self._check_field('schema', AppSchema, null=False)
         self.schema.validate()
 
@@ -78,7 +81,7 @@ class DockerRunner(Runner):
     def _fix_output_paths(self, result):
         mount_point = (MOUNT_POINT if MOUNT_POINT.endswith('/')
                        else MOUNT_POINT + '/')
-        for k, v in result.outputs.iteritems():
+        for k, v in six.iteritems(result.outputs):
             v = [
                 os.path.abspath(os.path.join(mount_point,
                                              self.task.task_id, out))
@@ -95,7 +98,7 @@ class DockerRunner(Runner):
         args = copy.deepcopy(args)
         args['$inputs'] = {
             k: self._transform_input(v)
-            for k, v in args.get('$inputs', {}).iteritems()
+            for k, v in six.iteritems(args.get('$inputs', {}))
         }
         return args
 
@@ -211,9 +214,9 @@ class Container(object):
         if self.is_running():
             for out in self.docker.attach(container=self.container,
                                           stream=True):
-                print out.rstrip()
+                print(out.rstrip())
         else:
-            print self.docker.logs(self.container)
+            print(self.docker.logs(self.container))
         return self
 
     def commit(self, message=None, conf=None):
@@ -256,10 +259,10 @@ def find_image(client, image_id, repo=None, tag='latest'):
     :param tag: Docker repository tag
     """
     images = client.images()
-    img = (filter(lambda x: x['Id'].startswith(image_id), images)
+    img = ([i for i in images if i['Id'].startswith(image_id)]
            if image_id else None)
     if not img:
-        img = (filter(lambda x: (repo + ':' + tag) in x['RepoTags'], images)
+        img = ([i for i in images if (repo + ':' + tag) in i['RepoTags']]
                if repo and tag else None)
     return (img or [None])[0]
 

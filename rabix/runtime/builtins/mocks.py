@@ -1,5 +1,6 @@
 import re
 import os
+import six
 import keyword
 
 from rabix.runtime.models import App
@@ -14,7 +15,7 @@ class MockApp(App):
     importable = property(lambda self: self['importable'])
 
     def _validate(self):
-        self._check_field('importable', basestring, null=False)
+        self._check_field('importable', six.string_types, null=False)
         chunks = self['importable'].split('.')
         assert len(chunks) > 1, 'importable cannot be a module'
         for chunk in chunks:

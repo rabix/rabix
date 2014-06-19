@@ -6,6 +6,7 @@ import logging
 import tempfile
 import shutil
 import copy
+import six
 
 from rabix.common.util import DotAccessDict, intersect_dicts
 
@@ -13,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 def default_attr_name(name):
-    if not isinstance(name, basestring):
+    if not isinstance(name, six.string_types):
         name = str(name)
     if name.startswith('-') or name.isupper():
         return name
@@ -105,7 +106,7 @@ class BaseAttr(object):
 
     def __init__(self, name=None, description='', required=False, list=False,
                  **extra):
-        self._order = BaseAttr._count.next()
+        self._order = next(BaseAttr._count)
         self.name = name
         self.description = description
         self.required = required
@@ -143,7 +144,7 @@ class BaseAttr(object):
                      if callable(getattr(val, '_get_schema', None)) else val)
         return {
             k: get_value(v)
-            for k, v in self.__dict__.iteritems() if k[0] != '_'
+            for k, v in six.iteritems(self.__dict__) if k[0] != '_'
         }
 
 
@@ -176,7 +177,7 @@ class IntAttr(BaseParam):
 
     def validate(self, instance):
         BaseParam.validate(self, instance)
-        validate_type(instance, (int, long), list=self.list)
+        validate_type(instance, six.integer_types, list=self.list)
         validate_range(instance, self.min, self.max, self.step, list=self.list)
 
 
@@ -193,7 +194,7 @@ class RealAttr(BaseParam):
 
     def validate(self, instance):
         BaseParam.validate(self, instance)
-        validate_type(instance, (float, int, long), list=self.list)
+        validate_type(instance, (float,) + six.integer_types, list=self.list)
         validate_range(instance, self.min, self.max, self.step, list=self.list)
 
 
@@ -207,7 +208,7 @@ class StringAttr(BaseParam):
 
     def validate(self, instance):
         BaseParam.validate(self, instance)
-        validate_type(instance, (basestring,), list=self.list)
+        validate_type(instance, (six.string_types,), list=self.list)
         validate_pattern(instance, self.pattern, list=self.list)
 
 
@@ -244,12 +245,12 @@ class EnumAttr(BaseParam):
         elif l == 1:
             return val[0], d(val[0]), d(val[0])
         elif l == 2:
-            if not isinstance(val[1], basestring):
+            if not isinstance(val[1], six.string_types):
                 raise error
             return val[0], val[1], d(val[0])
         elif l == 3:
-            if (not isinstance(val[1], basestring) or
-                    not isinstance(val[2], basestring)):
+            if (not isinstance(val[1], six.string_types) or
+                    not isinstance(val[2], six.string_types)):
                 raise error
             return val
         else:
@@ -287,7 +288,7 @@ class StructAttr(BaseParam):
 
 class SchemaBased(object):
     def __init__(self, **kwargs):
-        for attr, attr_def in self._attr_defs().iteritems():
+        for attr, attr_def in six.iteritems(self._attr_defs()):
             setattr(self, attr, attr_def(attr, kwargs.get(attr)))
 
     @classmethod
@@ -302,7 +303,7 @@ class SchemaBased(object):
     @classmethod
     def _get_schema(cls):
         schema = []
-        attr_defs = cls._attr_defs().items()
+        attr_defs = list(cls._attr_defs().items())
         for attr, attr_def in sorted(
                 attr_defs, cmp=lambda x, y: cmp(x[1]._order, y[1]._order)
         ):
@@ -313,7 +314,7 @@ class SchemaBased(object):
 
     def _validate(self, assert_=False):
         errors = {}
-        for attr, attr_def in self._attr_defs().iteritems():
+        for attr, attr_def in six.iteritems(self._attr_defs()):
             try:
                 attr_def.validate(getattr(self, attr))
             except (ValueError, TypeError) as e:
@@ -325,7 +326,7 @@ class SchemaBased(object):
 
     def _definitions(self):
         result = {}
-        for id, attr in self.__class__._attr_defs().iteritems():
+        for id, attr in six.iteritems(self.__class__._attr_defs()):
             new = copy.deepcopy(attr)
             new.value = getattr(self, id)
             new.id = id
@@ -335,14 +336,14 @@ class SchemaBased(object):
     def __json__(self):
         return {
             k: v
-            for k, v in self.__dict__.iteritems()
+            for k, v in six.iteritems(self.__dict__)
             if k[0] != '_' and v is not None
         }
 
     __unicode__ = __repr__ = __str__ = lambda self: str(self.__json__())
 
     def __iter__(self):
-        for k, v in self._definitions().iteritems():
+        for k, v in six.iteritems(self._definitions()):
             yield v
 
     def __getitem__(self, item):
@@ -378,15 +379,15 @@ class IODef(SchemaBased):
                 val._load_meta()
 
 
-class IOValue(unicode):
+class IOValue(six.text_type):
     meta = None
 
     def __new__(cls, value=None):
         if isinstance(value, list):
             value = value[0] if value else ''
         value = os.path.abspath(value) if value else value
-        obj = (unicode.__new__(cls) if not value
-               else unicode.__new__(cls, value))
+        obj = (six.text_type.__new__(cls) if not value
+               else six.text_type.__new__(cls, value))
         obj.meta = DotAccessDict()
         return obj
 
@@ -457,7 +458,7 @@ class IOAttr(BaseAttr):
 class IOList(object):
     def __init__(self, value=None):
         value = value or []
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             value = [value]
         self._values = [IOValue(v) for v in value or []]
 

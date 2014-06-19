@@ -1,5 +1,6 @@
-import logging
+import six
 import copy
+import logging
 
 import networkx as nx
 
@@ -50,7 +51,7 @@ class Task(object):
                 elif isinstance(obj, (dict, list)):
                     obj[ndx] = self._replace_wrapper_job_with_task(item)
         if isinstance(obj, dict):
-            for key, val in obj.iteritems():
+            for key, val in six.iteritems(obj):
                 if isinstance(val, WrapperJob):
                     obj[key] = self.make_replacement(resources=val.resources,
                                                      arguments=val.args)
@@ -63,21 +64,24 @@ class Task(object):
         """
         if isinstance(self.arguments, Task):
             yield self.arguments
-        for path, job in filter(None,
-                                Task._recursive_traverse([], self.arguments)):
+        for path, job in [
+            t for t in Task._recursive_traverse([], self.arguments) if t
+        ]:
             yield path, job
 
     @staticmethod
     def _recursive_traverse(path, obj):
         if not isinstance(obj, (dict, list)):
             return
-        gen = obj.iteritems() if isinstance(obj, dict) else enumerate(obj)
+        gen = six.iteritems(obj) if isinstance(obj, dict) else enumerate(obj)
         for k, v in gen:
             child_path = path + [k]
             if isinstance(v, Task):
                 yield child_path, v
             elif isinstance(v, (dict, list)):
-                tasks = filter(None, Task._recursive_traverse(child_path, v))
+                tasks = [
+                    t for t in Task._recursive_traverse(child_path, v) if t
+                ]
                 for task in tasks:
                     yield task
             else:
@@ -150,7 +154,7 @@ class TaskDAG(object):
         return self.dag.node[task_id]['task']
 
     def iter_tasks(self):
-        for node in self.dag.node.itervalues():
+        for node in six.itervalues(self.dag.node):
             yield node['task']
 
     def resolve_task(self, task):
@@ -212,7 +216,7 @@ class TaskDAG(object):
 
     def add_from_pipeline(self, pipeline, inputs):
         inputs = inputs or {}
-        for node_id, node in pipeline.nx.node.iteritems():
+        for node_id, node in six.iteritems(pipeline.nx.node):
             if node['app'] == '$$input':
                 self.add_task(
                     InputTask(node_id, arguments=inputs.get(node_id, []))
@@ -225,8 +229,8 @@ class TaskDAG(object):
                         node['app'], node['step'], task_name=node_id
                     )
                 )
-        for src_id, destinations in pipeline.nx.edge.iteritems():
-            for dst_id, data in destinations.iteritems():
+        for src_id, destinations in six.iteritems(pipeline.nx.edge):
+            for dst_id, data in six.iteritems(destinations):
                 for out_id, inp_id in data['conns']:
                     src_path = [out_id] if out_id else []
                     dst_path = ['$inputs', inp_id] if inp_id else []
@@ -235,7 +239,7 @@ class TaskDAG(object):
                                  src_path, dst_path)
 
     def add_install_tasks(self, pipeline_or_app):
-        for app_id, app in pipeline_or_app.apps.iteritems():
+        for app_id, app in six.iteritems(pipeline_or_app.apps):
             self.add_task(AppInstallTask(app, task_name=app_id + '.install'))
 
     def get_outputs(self):

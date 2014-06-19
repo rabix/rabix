@@ -1,7 +1,8 @@
+import os
+import six
+import uuid
 import logging
 import tempfile
-import os
-import uuid
 
 from rabix.common.errors import ValidationError
 from rabix.common.protocol import WrapperJob, Resources, Outputs
@@ -54,7 +55,7 @@ class Wrapper(object):
         errors = self.inputs._validate()
         errors.update(self.params._validate())
         if errors:
-            raise ValidationError(unicode(errors))
+            raise ValidationError(six.text_type(errors))
         return self.job('execute', requirements=self.get_requirements())
 
     @classmethod
@@ -110,7 +111,7 @@ class Wrapper(object):
         }
         if units not in converter:
             raise ValueError(
-                'Units argument must be one of: %s' % converter.keys()
+                'Units argument must be one of: %s' % list(converter.keys())
             )
         return converter[units](self.resources.mem_mb * 1024**2)
 
@@ -130,7 +131,7 @@ class WrapperRunner(object):
     def exec_full(self, job):
         if not job.job_id:
             job.job_id = uuid.uuid4()
-        for key, val in job.args.iteritems():
+        for key, val in six.iteritems(job.args):
             job.args[key] = self.resolve(val)
         result = self.exec_wrapper_job(job)
         if isinstance(result, WrapperJob):
@@ -155,5 +156,8 @@ class WrapperRunner(object):
         if isinstance(val, list):
             return [self.resolve(item) for item in val]
         if isinstance(val, dict):
-            return {k: self.resolve(v) for k, v in val.iteritems()}
+            return {
+                k: self.resolve(v)
+                for k, v in six.iteritems(val)
+            }
         return val
