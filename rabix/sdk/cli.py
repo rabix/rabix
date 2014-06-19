@@ -1,7 +1,8 @@
-import argparse
 import os
 import sys
+import six
 import logging
+import argparse
 
 from rabix.common import from_json, to_json
 from rabix.common.protocol import WrapperJob, JobError
@@ -72,7 +73,7 @@ def cmd_run(cwd, input, output, **_):
         result = WrapperRunner(job).exec_wrapper_job(job)
     except Exception as e:
         log.exception('Job failed:')
-        result = JobError(e.message or unicode(e))
+        result = JobError(e.message or six.text_type(e))
 
     with open(output, 'w') as fp:
         to_json(result, fp)

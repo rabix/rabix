@@ -1,6 +1,7 @@
+import six
+import time
 import logging
 import multiprocessing
-import time
 
 import rq
 import redis
@@ -27,7 +28,7 @@ class Engine(object):
 
     def get_runner(self, task):
         runner_cfg = CONFIG['runners'][task.__class__.__name__]
-        if isinstance(runner_cfg, basestring):
+        if isinstance(runner_cfg, six.string_types):
             return import_name(runner_cfg)(task)
         return import_name(runner_cfg[task.app.TYPE])(task)
 
@@ -46,20 +47,20 @@ class SequentialEngine(Engine):
         try:
             task.result = self.get_runner(task).run()
             task.status = Task.FINISHED
-        except Exception, e:
+        except Exception as e:
             log.exception('Task error (%s)', task.task_id)
             task.status = Task.FAILED
             task.result = e
 
     def run_all(self):
-        for job in self.jobs.itervalues():
+        for job in six.itervalues(self.jobs):
             if job.status != Job.QUEUED:
                 continue
             job.status = Job.RUNNING
             try:
                 self._run_job(job)
                 job.status = Job.FINISHED
-            except JobError, e:
+            except JobError as e:
                 job.status = Job.FAILED
                 job.error_message = str(e)
 
@@ -139,7 +140,7 @@ class AsyncEngine(Engine):
             task.status = Task.FINISHED
             log.info('Finished: %s', task)
             log.debug('Result: %s', task.result)
-        except Exception, e:
+        except Exception as e:
             log.error('Failed: %s', task.task_id)
             task.status = Task.FAILED
             task.result = e
@@ -148,7 +149,7 @@ class AsyncEngine(Engine):
         job.tasks.resolve_task(task)
 
     def _iter_ready(self):
-        for job in self.jobs.itervalues():
+        for job in six.itervalues(self.jobs):
             for task in job.tasks.get_ready_tasks():
                 yield job, task
 
@@ -168,7 +169,7 @@ class AsyncEngine(Engine):
 
     def _update_jobs_check_ready(self):
         has_ready = False
-        for job in self.jobs.itervalues():
+        for job in six.itervalues(self.jobs):
             if job.tasks.get_ready_tasks():
                 has_ready = True
                 continue

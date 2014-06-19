@@ -1,7 +1,7 @@
 import os
 import tempfile
-import urlparse
 import logging
+from six.moves.urllib import parse as urlparse
 
 import requests
 
@@ -31,7 +31,10 @@ class InputRunner(Runner):
         return self._task_dir
 
     def run(self):
-        return map(os.path.abspath, (self._download(url) for url in self.urls))
+        return [
+            os.path.abspath(x)
+            for x in (self._download(url) for url in self.urls)
+        ]
 
     def _download(self, url):
         if url.startswith('data:,'):
@@ -45,7 +48,7 @@ class InputRunner(Runner):
         r = requests.get(url)
         try:
             r.raise_for_status()
-        except Exception, e:
+        except Exception as e:
             raise ResourceUnavailable(str(e))
         dest = self._get_dest_for_url(url)
         with open(dest, 'wb') as fp:

@@ -1,3 +1,4 @@
+import six
 import logging
 
 log = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ class Outputs(object):
     def __init__(self, outputs_dict=None):
         self.outputs = outputs_dict
         for k, v in self.outputs.items():
-            if isinstance(v, basestring):
+            if isinstance(v, six.string_types):
                 self.outputs[k] = [v]
             elif v is None:
                 self.outputs[k] = []

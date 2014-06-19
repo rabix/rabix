@@ -1,9 +1,10 @@
+import os
+import six
+import json
+import hashlib
 import logging
 import functools
-import os
-import hashlib
-import json
-import urlparse
+from six.moves.urllib import parse as urlparse
 
 # requests is not used if installing as sdk-lib.
 try:
@@ -30,14 +31,14 @@ def from_json(str_or_fp, resolve_refs=True, parent_url='.'):
     """Load json and make classes from certain dicts (see classify() docs)"""
     hook = functools.partial(object_hook, resolve_refs=resolve_refs,
                              parent_url=parent_url)
-    if isinstance(str_or_fp, basestring):
+    if isinstance(str_or_fp, six.string_types):
         return json.loads(str_or_fp, object_hook=hook)
     return json.load(str_or_fp, object_hook=hook)
 
 
 def to_json(obj, fp=None):
     default = lambda o: (o.__json__() if callable(getattr(o, '__json__', None))
-                         else unicode(o))
+                         else six.text_type(o))
     kwargs = dict(default=default, indent=2, sort_keys=True)
     return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
 
@@ -67,7 +68,7 @@ def resolve_ref(obj, parent_url='.'):
 
 
 def check_ref(text, checksum, url, parent_url):
-    if checksum and hashlib.md5(text).hexdigest() != checksum:
+    if checksum and hashlib.md5(text.encode('utf-8')).hexdigest() != checksum:
         raise ValidationError('Checksum not a match for url %s' % url)
     return from_json(text, resolve_refs=True, parent_url=parent_url)
 
