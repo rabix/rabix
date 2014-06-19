@@ -38,13 +38,15 @@ def validate_type(val, t_tuple, **_):
 
 
 @validator
-def validate_range(val, min=None, max=None, **_):
+def validate_range(val, min=None, max=None, step=None, **_):
     if val is None:
         return
     if min is not None and val < min:
         raise ValueError('Value cannot be less than %s. Got %s.' % (min, val))
     if max is not None and val > max:
         raise ValueError('Value cannot be more than %s. Got %s.' % (max, val))
+    if step is not None and val-min % step:
+        raise ValueError('%s - %s mod %s is not 0.' % (val, min, step))
 
 
 @validator

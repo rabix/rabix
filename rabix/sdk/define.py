@@ -1,10 +1,10 @@
 from rabix.sdk import schema as _
 from wrapper import Wrapper
 
-Inputs = _.SchemaBased
+Inputs = _.IODef
 input = _.IOAttr
 
-Outputs = _.SchemaBased
+Outputs = _.IODef
 output = _.IOAttr
 
 Params = _.SchemaBased

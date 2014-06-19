@@ -23,8 +23,8 @@ class Wrapper(object):
         pass
 
     def __init__(self, inputs, params, context=None, resources=None):
-        self.inputs = inputs if isinstance(inputs, IODef) else self.Inputs(**inputs)
-        self.params = params if isinstance(params, SchemaBased) else self.Params(**params)
+        self.inputs = self.Inputs(**inputs)
+        self.params = self.Params(**params)
         self.outputs = self.Outputs()
         self.context = context or {}
         self.resources = resources or Resources()
@@ -51,7 +51,8 @@ class Wrapper(object):
         return _get_method_requirements(self, 'execute') or Resources()
 
     def _entry_point(self):
-        errors = self.inputs._validate() + self.params._validate()
+        errors = self.inputs._validate()
+        errors.update(self.params._validate())
         if errors:
             raise ValidationError(unicode(errors))
         return self.job('execute', requirements=self.get_requirements())
@@ -71,7 +72,7 @@ class Wrapper(object):
             '$inputs': self.inputs.__json__(),
             '$params': self.params.__json__(),
         }
-        full_args.update(args)
+        full_args.update(args or {})
         return WrapperJob(wrapper_id=get_import_name(self.__class__),
                           resources=requirements or _get_method_requirements(self, method) or Resources(),
                           args=full_args)
@@ -120,7 +121,7 @@ class WrapperRunner(object):
         if not job.job_id:
             job.job_id = uuid.uuid4()
         for key, val in job.args.iteritems():
-            job.resolved_args[key] = self.resolve(val)
+            job.args[key] = self.resolve(val)
         result = self.exec_wrapper_job(job)
         if isinstance(result, WrapperJob):
             return self.exec_full(result)
