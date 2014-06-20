@@ -1,12 +1,13 @@
+import six
+import time
 import logging
 import multiprocessing
-import time
 
 import rq
 import redis
 
 from rabix import CONFIG
-from rabix.common.util import import_name
+from rabix.common.util import import_name, get_import_name
 from rabix.common.protocol import JobError
 from rabix.runtime.tasks import Task
 from rabix.runtime.jobs import Job
@@ -21,15 +22,15 @@ class Engine(object):
         self.before_task = before_task or (lambda t: None)
         self.after_task = after_task or (lambda t: None)
 
-    __str__ = __unicode__ = __repr__ = lambda self: '%s[%s jobs]' % (self.__class__.__name__, len(self.jobs))
+    __str__ = __unicode__ = __repr__ = lambda self: (
+        '%s[%s jobs]' % (self.__class__.__name__, len(self.jobs))
+    )
 
     def get_runner(self, task):
         runner_cfg = CONFIG['runners'][task.__class__.__name__]
-        if isinstance(runner_cfg, basestring):
+        if isinstance(runner_cfg, six.string_types):
             return import_name(runner_cfg)(task)
-        if isinstance(runner_cfg, dict):
-            return import_name(runner_cfg[task.app.TYPE])(task)
-        raise TypeError('Runner config must be string or dict. Got %s' % type(runner_cfg))
+        return import_name(runner_cfg[task.app.TYPE])(task)
 
     def run(self, *jobs):
         for job in jobs:
@@ -46,20 +47,20 @@ class SequentialEngine(Engine):
         try:
             task.result = self.get_runner(task).run()
             task.status = Task.FINISHED
-        except Exception, e:
+        except Exception as e:
             log.exception('Task error (%s)', task.task_id)
             task.status = Task.FAILED
             task.result = e
 
     def run_all(self):
-        for job in self.jobs.itervalues():
+        for job in six.itervalues(self.jobs):
             if job.status != Job.QUEUED:
                 continue
             job.status = Job.RUNNING
             try:
                 self._run_job(job)
                 job.status = Job.FINISHED
-            except JobError, e:
+            except JobError as e:
                 job.status = Job.FAILED
                 job.error_message = str(e)
 
@@ -71,7 +72,8 @@ class SequentialEngine(Engine):
                 self.before_task(task)
                 self.run_task(task)
                 if task.status == Task.FAILED:
-                    raise JobError('Task %s failed. Reason: %s' % (task.task_id, task.result))
+                    raise JobError('Task %s failed. Reason: %s' %
+                                   (task.task_id, task.result))
                 self.after_task(task)
                 job.tasks.resolve_task(task)
             ready = job.tasks.get_ready_tasks()
@@ -88,15 +90,21 @@ class AsyncEngine(Engine):
         self.multi_cpu_lock = False
 
     def _res(self):
-        return '%s/%s%s;%s/%s' % (self.available_cpu, self.total_cpu, 'L' if self.multi_cpu_lock else '',
-                                  self.available_ram, self.total_ram)
+        return '%s/%s%s;%s/%s' % (
+            self.available_cpu,
+            self.total_cpu, 'L' if self.multi_cpu_lock else '',
+            self.available_ram,
+            self.total_ram
+        )
 
     def acquire_resources(self, task):
         res = task.resources
-        log.debug('[resources: %s] Acquiring %s for %s', self._res(), res, task)
+        log.debug('[resources: %s] Acquiring %s for %s',
+                  self._res(), res, task)
         if res.mem_mb > self.available_ram:
             return False
-        if res.cpu == res.CPU_ALL and (self.multi_cpu_lock or self.available_cpu != self.total_cpu):
+        if (res.cpu == res.CPU_ALL and
+                (self.multi_cpu_lock or self.available_cpu != self.total_cpu)):
             return False
         if res.cpu > self.available_cpu:
             return False
@@ -109,7 +117,8 @@ class AsyncEngine(Engine):
 
     def release_resources(self, task):
         res = task.resources
-        log.debug('[resources: %s] Releasing %s from %s', self._res(), res, task)
+        log.debug('[resources: %s] Releasing %s from %s',
+                  self._res(), res, task)
         self.available_ram += res.mem_mb
         if res.cpu == res.CPU_ALL:
             self.multi_cpu_lock = False
@@ -131,7 +140,7 @@ class AsyncEngine(Engine):
             task.status = Task.FINISHED
             log.info('Finished: %s', task)
             log.debug('Result: %s', task.result)
-        except Exception, e:
+        except Exception as e:
             log.error('Failed: %s', task.task_id)
             task.status = Task.FAILED
             task.result = e
@@ -140,7 +149,7 @@ class AsyncEngine(Engine):
         job.tasks.resolve_task(task)
 
     def _iter_ready(self):
-        for job in self.jobs.itervalues():
+        for job in six.itervalues(self.jobs):
             for task in job.tasks.get_ready_tasks():
                 yield job, task
 
@@ -160,15 +169,15 @@ class AsyncEngine(Engine):
 
     def _update_jobs_check_ready(self):
         has_ready = False
-        for job in self.jobs.itervalues():
+        for job in six.itervalues(self.jobs):
             if job.tasks.get_ready_tasks():
                 has_ready = True
                 continue
             else:
-                if filter(lambda t: t.status != Task.FINISHED, job.tasks.iter_tasks()):
-                    job.status = Job.FAILED
-                else:
-                    job.status = Job.FINISHED
+                failed = any([
+                    t.status != Task.FINISHED for t in job.tasks.iter_tasks()
+                ])
+                job.status = Job.FAILED if failed else Job.FINISHED
         return has_ready
 
     def run_all(self):
@@ -180,7 +189,9 @@ class AsyncEngine(Engine):
                     self.process_result(*item)
                     to_remove.append(ndx)
             if to_remove:
-                self.running = [x for n, x in enumerate(self.running) if n not in to_remove]
+                self.running = [
+                    x for n, x in enumerate(self.running) if n not in to_remove
+                ]
                 has_ready = self._update_jobs_check_ready()
                 if not self.running and not has_ready:
                     return
@@ -219,8 +230,9 @@ class RQEngine(AsyncEngine):
         return self.queue.fetch_job(async_result.get_id()).result
 
     def run_task_async(self, runner):
-        cls = runner.__class__
-        return self.queue.enqueue(rq_work, '.'.join([cls.__module__, cls.__name__]), runner.task)
+        return self.queue.enqueue(
+            rq_work, get_import_name(runner.__class__), runner.task
+        )
 
 
 def rq_work(importable, task):
@@ -233,6 +245,5 @@ def get_engine(**kwargs):
     if engine:
         return engine
     options = CONFIG['engine'].get('options', {})
-    options.update(**kwargs)
-    engine = import_name(CONFIG['engine']['class'])(**options)
+    engine = import_name(CONFIG['engine']['class'])(**dict(options, **kwargs))
     return engine

@@ -1,4 +1,5 @@
 import os
+import six
 import tempfile
 import unittest
 import subprocess
@@ -8,7 +9,8 @@ from nose.tools import nottest, assert_equals
 from rabix.common.protocol import Outputs, WrapperJob
 from rabix.common.util import rnd_name
 from rabix.runtime import from_url
-from rabix.runtime.engine import get_engine, SequentialEngine, MultiprocessingEngine, RQEngine
+from rabix.runtime.engine import (get_engine, SequentialEngine,
+                                  MultiprocessingEngine, RQEngine)
 from rabix.runtime.jobs import RunJob
 
 
@@ -20,15 +22,15 @@ def load(path):
 def save(val):
     result = tempfile.mktemp(dir='.')
     with open(result, 'w') as fp:
-        fp.write(unicode(val))
+        fp.write(six.text_type(val))
     return os.path.abspath(result)
 
 
 def get_inp(d, inp, unpack=False, cast=None):
     # val = map(load, d.get('$inputs', {}).get(inp, []))
-    val = map(load, d['$inputs'][inp])
+    val = [load(x) for x in d['$inputs'][inp]]
     if cast:
-        val = map(cast, val)
+        val = [cast(x) for x in val]
     if unpack:
         val = val[0]
     return val
@@ -49,7 +51,14 @@ def two_step_increment(job):
     step = args.get('$step', 0)
     if step == 0:
         num = get_inp(args, 'to_increment', True, int) or 0
-        return WrapperJob(args={'$step': 2, 'sum': [num, WrapperJob(args={'$step': 1}), WrapperJob(args={'$step': 1})]})
+        return WrapperJob(args={
+            '$step': 2,
+            'sum': [
+                num,
+                WrapperJob(args={'$step': 1}),
+                WrapperJob(args={'$step': 1})
+            ]
+        })
     elif step == 1:
         return 1
     elif step == 2:
@@ -60,7 +69,8 @@ def two_step_increment(job):
 
 @nottest
 def test_pipeline(pipeline_name, engine_cls=None):
-    prefix = 'x-test-%s' % rnd_name(5)  # Be warned, all dirs with this prefix will be rm -rf on success
+    # Be warned, all dirs with this prefix will be rm -rf on success
+    prefix = 'x-test-%s' % rnd_name(5)
     pipeline = from_url(get_mock_pipeline(pipeline_name))
     job = RunJob(prefix, pipeline, inputs={'number': 'data:,1'})
     sch = engine_cls() if engine_cls else get_engine()

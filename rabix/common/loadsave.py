@@ -1,10 +1,16 @@
+import os
+import six
+import json
+import hashlib
 import logging
 import functools
-import os
-import hashlib
-import json
-import urlparse
-import requests
+from six.moves.urllib import parse as urlparse
+
+# requests is not used if installing as sdk-lib.
+try:
+    import requests
+except ImportError:
+    requests = None
 
 from rabix.common.errors import ResourceUnavailable, ValidationError
 from rabix.common.protocol import MAPPINGS
@@ -13,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 def object_hook(obj, resolve_refs=True, parent_url='.'):
-    """ Used as json.load(s) object_hook for {"$type": "<type>", ...} dicts """
+    """Used as json.load(s) object_hook for {"$type": "<type>", ...} dicts"""
     if '$$type' not in obj:
         return obj
     if obj.get('$$type', '').startswith('ref/'):
@@ -22,15 +28,17 @@ def object_hook(obj, resolve_refs=True, parent_url='.'):
 
 
 def from_json(str_or_fp, resolve_refs=True, parent_url='.'):
-    """ Load json and make classes from certain dicts (see classify() docs) """
-    hook = functools.partial(object_hook, resolve_refs=resolve_refs, parent_url=parent_url)
-    if isinstance(str_or_fp, basestring):
+    """Load json and make classes from certain dicts (see classify() docs)"""
+    hook = functools.partial(object_hook, resolve_refs=resolve_refs,
+                             parent_url=parent_url)
+    if isinstance(str_or_fp, six.string_types):
         return json.loads(str_or_fp, object_hook=hook)
     return json.load(str_or_fp, object_hook=hook)
 
 
 def to_json(obj, fp=None):
-    default = lambda o: o.__json__() if callable(getattr(o, '__json__', None)) else unicode(o)
+    default = lambda o: (o.__json__() if callable(getattr(o, '__json__', None))
+                         else six.text_type(o))
     kwargs = dict(default=default, indent=2, sort_keys=True)
     return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
 
@@ -50,7 +58,9 @@ def resolve_ref(obj, parent_url='.'):
         return check_ref(r.text, checksum, url, parent_url)
     if '://' not in url:
         if not os.path.isfile(url):
-            raise ResourceUnavailable('File not found: %s' % os.path.abspath(url))
+            raise ResourceUnavailable(
+                'File not found: %s' % os.path.abspath(url)
+            )
         with open(url) as fp:
             contents = fp.read()
         return check_ref(contents, checksum, url, parent_url)
@@ -58,7 +68,7 @@ def resolve_ref(obj, parent_url='.'):
 
 
 def check_ref(text, checksum, url, parent_url):
-    if checksum and hashlib.md5(text).hexdigest() != checksum:
+    if checksum and hashlib.md5(text.encode('utf-8')).hexdigest() != checksum:
         raise ValidationError('Checksum not a match for url %s' % url)
     return from_json(text, resolve_refs=True, parent_url=parent_url)
 
@@ -68,7 +78,9 @@ def from_url(url):
         url = url[len('file://'):]
     if '://' not in url:
         if not os.path.isfile(url):
-            raise ResourceUnavailable('File not found: %s' % os.path.abspath(url))
+            raise ResourceUnavailable(
+                'File not found: %s' % os.path.abspath(url)
+            )
         with open(url) as fp:
             contents = fp.read()
         return from_json(contents, parent_url=url)

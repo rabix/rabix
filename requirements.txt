@@ -5,3 +5,4 @@ requests==2.2.1
 networkx==1.9rc1
 pep8==1.5.7
 rq==0.4.6
+six==1.6.1

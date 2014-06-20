@@ -1,3 +1,4 @@
+import six
 import logging
 
 log = logging.getLogger(__name__)
@@ -21,7 +22,9 @@ class Resources(object):
         self.cpu = cpu
         self.high_io = high_io
 
-    __str__ = __unicode__ = __repr__ = lambda self: 'Resources(%s, %s, %s)' % (self.mem_mb, self.cpu, self.high_io)
+    __str__ = __unicode__ = __repr__ = lambda self: (
+        'Resources(%s, %s, %s)' % (self.mem_mb, self.cpu, self.high_io)
+    )
 
     def __call__(self, obj):
         obj._requirements = self
@@ -44,14 +47,16 @@ class Outputs(object):
     def __init__(self, outputs_dict=None):
         self.outputs = outputs_dict
         for k, v in self.outputs.items():
-            if isinstance(v, basestring):
+            if isinstance(v, six.string_types):
                 self.outputs[k] = [v]
             elif v is None:
                 self.outputs[k] = []
             else:
                 self.outputs[k] = list(v)
 
-    __str__ = __unicode__ = __repr__ = lambda self: 'Outputs[%s]' % self.outputs
+    __str__ = __unicode__ = __repr__ = lambda self: (
+        'Outputs[%s]' % self.outputs
+    )
 
     def __json__(self):
         return {
@@ -65,14 +70,17 @@ class Outputs(object):
 
 
 class WrapperJob(object):
-    def __init__(self, wrapper_id=None, job_id=None, args=None, resources=None, context=None):
+    def __init__(self, wrapper_id=None, job_id=None, args=None, resources=None,
+                 context=None):
         self.wrapper_id = wrapper_id
         self.job_id = job_id
         self.args = args or {}
         self.resources = resources or Resources()
         self.context = context or {}
 
-    __str__ = __unicode__ = __repr__ = lambda self: 'WrapperJob[%s, %s]' % (self.wrapper_id, self.job_id)
+    __str__ = __unicode__ = __repr__ = lambda self: (
+        'WrapperJob[%s, %s]' % (self.wrapper_id, self.job_id)
+    )
 
     def __json__(self):
         return {
