@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import os
 import sys
 import six
@@ -8,7 +6,7 @@ import logging
 from docopt import docopt, DocoptExit
 
 from rabix import VERSION
-from rabix.common.util import rnd_name
+from rabix.common.util import rnd_name, update_config
 from rabix.runtime import from_url
 from rabix.runtime.models import Pipeline
 from rabix.runtime.engine import get_engine
@@ -54,7 +52,7 @@ def make_pipeline_usage_string(pipeline, path):
 
 
 def before_task(task):
-    print('Running', task.task_id)
+    print('Running %s', task.task_id)
     sys.stdout.flush()
 
 
@@ -97,6 +95,9 @@ def install(pipeline):
 
 def main():
     logging.basicConfig(level=logging.WARN)
+    if os.path.isfile('rabix.conf'):
+        update_config()
+
     try:
         args = docopt(USAGE, version=VERSION)
     except DocoptExit:
