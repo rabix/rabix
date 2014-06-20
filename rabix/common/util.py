@@ -1,3 +1,5 @@
+import six
+import copy
 import signal
 import random
 import itertools
@@ -5,13 +7,12 @@ import json
 import collections
 import logging
 
-from copy import deepcopy
 from os.path import isfile
 from rabix import CONFIG
 
 log = logging.getLogger(__name__)
 
-def wrap_in_list(val, *args):
+def wrap_in_list(val, *append_these):
     """
     >>> wrap_in_list(1, 2)
     [1, 2]
@@ -21,7 +22,7 @@ def wrap_in_list(val, *args):
     [1, 2, [3, 4]]
     """
     wrapped = val if isinstance(val, list) else [val]
-    return wrapped + list(args)
+    return wrapped + list(append_these)
 
 
 def import_name(name):
@@ -85,7 +86,7 @@ class DotAccessDict(dict):
         return self.__class__(self)
 
     def __deepcopy__(self, memo):
-        return self.__class__(deepcopy(dict(self), memo))
+        return self.__class__(copy.deepcopy(dict(self), memo))
 
 
 def intersect_dicts(d1, d2):
@@ -95,7 +96,7 @@ def intersect_dicts(d1, d2):
     >>> intersect_dicts({'a': 1, 'b': 2}, {'a': 0})
     {}
     """
-    return {k: v for k, v in d1.iteritems() if v == d2.get(k)}
+    return {k: v for k, v in six.iteritems(d1) if v == d2.get(k)}
 
 
 class SignalContextProcessor(object):
@@ -105,7 +106,9 @@ class SignalContextProcessor(object):
         self.old_handlers = {}
 
     def __enter__(self):
-        self.old_handlers = {sig: signal.signal(sig, self.handler) for sig in self.signals}
+        self.old_handlers = {
+            sig: signal.signal(sig, self.handler) for sig in self.signals
+        }
 
     def __exit__(self, *_):
         for sig in self.signals:
@@ -114,6 +117,11 @@ class SignalContextProcessor(object):
 handle_signal = SignalContextProcessor
 
 
-rnd_str = lambda length: ''.join(random.choice(map(chr, range(ord('a'), ord('z')+1))) for _ in range(length))
-rnd_name = lambda n=5: ''.join(itertools.chain(*zip(
-    (random.choice('bcdfghjklmnpqrstvwxz') for _ in range(n)), (random.choice('aeiou') for _ in range(n)))))
+def get_import_name(cls):
+    return '.'.join([cls.__module__, cls.__name__])
+
+
+def rnd_name(syllables=5):
+    return ''.join(itertools.chain(*zip(
+        (random.choice('bcdfghjklmnpqrstvwxz') for _ in range(syllables)),
+        (random.choice('aeiou') for _ in range(syllables)))))
