@@ -1,16 +1,18 @@
-from distutils.core import setup
-import sys
 import os
+import sys
+from setuptools import setup
 
 sys.path.append(os.path.dirname(__file__))
 from rabix import VERSION
-
 
 setup(
     name="rabix-lib",
     version=VERSION,
     packages=['rabix', 'rabix.common', 'rabix.sdk'],
-    scripts=['scripts/rabix-adapter'],
+    install_requires=['six==1.6.1'],
+    entry_points={
+        'console_scripts': ['rabix-adapter = rabix.sdk.cli:main'],
+    },
     long_description="",
     license='AGPLv3',
     classifiers=[
