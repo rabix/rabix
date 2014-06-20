@@ -139,7 +139,7 @@ class Pipeline(Model):
 
     def get_app_for_step(self, step_or_id):
         if isinstance(step_or_id, six.string_types):
-            step_or_id = filter(lambda s: s['id'] == step_or_id, self.steps)[0]
+            step_or_id = [s for s in self.steps if s['id'] == step_or_id][0]
         return self['apps'][step_or_id['app']]
 
     def get_inputs(self):
@@ -163,9 +163,9 @@ class Pipeline(Model):
                         continue
                     # look in the app to get the schema for this input
                     app_inputs = self['apps'][step['app']].schema.inputs
-                    schema = filter(
-                        lambda i: i['id'] == app_inp_id, app_inputs
-                    )[0]
+                    schema = [
+                        i for i in app_inputs if i['id'] == app_inp_id
+                    ][0]
                     if conn not in inputs:
                         inputs[conn] = copy.deepcopy(schema)
                     else:
