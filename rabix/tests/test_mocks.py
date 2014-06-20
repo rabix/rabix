@@ -3,15 +3,22 @@ import six
 import tempfile
 import unittest
 import subprocess
+import logging
 
 from nose.tools import nottest, assert_equals
 
+from rabix import CONFIG
 from rabix.common.protocol import Outputs, WrapperJob
 from rabix.common.util import rnd_name
 from rabix.runtime import from_url
-from rabix.runtime.engine import (get_engine, SequentialEngine,
-                                  MultiprocessingEngine, RQEngine)
+from rabix.runtime.engine import get_engine
+from rabix.runtime.engine.base import SequentialEngine
+from rabix.runtime.engine.async import MultiprocessingEngine, RQEngine
+from rabix.runtime.engine.multinode import MultiNodeRQ
 from rabix.runtime.jobs import RunJob
+
+log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 
 def load(path):
@@ -94,11 +101,6 @@ def test_mock_pipeline_mp():
     test_pipeline('mock.pipeline.json', MultiprocessingEngine)
 
 
-@nottest
-def test_mock_pipeline_rq():
-    test_pipeline('mock.pipeline.json', RQEngine)
-
-
 def test_mock_pipeline_remote_ref():
     test_pipeline('mock.pipeline.remote_ref.json')
 
@@ -115,3 +117,25 @@ class RQTest(unittest.TestCase):
     def tearDown(self):
         self.proc1.terminate()
         self.proc2.terminate()
+
+
+# noinspection PyClassicStyleClass
+class MultiNodeRQTest(unittest.TestCase):
+    def setUp(self):
+        cmd = 'python -m rabix.runtime.run_workers --node-id x-test'
+        if os.system(cmd):
+            raise RuntimeError('Worker startup failed.')
+
+    def test_mock_pipeline_rq(self):
+        CONFIG['nodes'] = [{
+            'node_id': 'x-test',
+            'ram_mb': 500,
+            'cpu': 2,
+        }]
+        test_pipeline('mock.pipeline.json', MultiNodeRQ)
+        os.remove('supervisord.log')
+        os.system('rm x-test-*')
+
+    def tearDown(self):
+        os.remove('supervisord.conf')
+        os.system('kill $(cat supervisord.pid)')

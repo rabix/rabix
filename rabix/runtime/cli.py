@@ -11,7 +11,7 @@ from rabix import VERSION
 from rabix.common.util import rnd_name
 from rabix.runtime import from_url
 from rabix.runtime.models import Pipeline
-from rabix.runtime.engine import SequentialEngine, get_engine
+from rabix.runtime.engine import get_engine
 from rabix.runtime.jobs import RunJob, InstallJob
 
 log = logging.getLogger(__name__)
@@ -89,7 +89,7 @@ def run(path):
 def install(pipeline):
     pipeline = Pipeline.from_app(pipeline)
     job = InstallJob(rnd_name(), pipeline)
-    SequentialEngine(before_task=before_task).run(job)
+    get_engine(before_task=before_task).run(job)
     if job.status == InstallJob.FAILED:
         print(job.error_message)
         sys.exit(1)
