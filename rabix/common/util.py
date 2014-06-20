@@ -12,6 +12,7 @@ from rabix import CONFIG
 
 log = logging.getLogger(__name__)
 
+
 def wrap_in_list(val, *append_these):
     """
     >>> wrap_in_list(1, 2)
