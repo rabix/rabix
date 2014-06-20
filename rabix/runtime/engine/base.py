@@ -3,17 +3,13 @@ import time
 import logging
 import multiprocessing
 
-import rq
-import redis
-
 from rabix import CONFIG
-from rabix.common.util import import_name, get_import_name
+from rabix.common.util import import_name
 from rabix.common.protocol import JobError
 from rabix.runtime.tasks import Task
 from rabix.runtime.jobs import Job
 
 log = logging.getLogger(__name__)
-engine = None
 
 
 class Engine(object):
@@ -39,6 +35,24 @@ class Engine(object):
 
     def run_all(self):
         pass
+
+    def _iter_ready(self):
+        for job in six.itervalues(self.jobs):
+            for task in job.tasks.get_ready_tasks():
+                yield job, task
+
+    def _update_jobs_check_ready(self):
+        has_ready = False
+        for job in six.itervalues(self.jobs):
+            if job.tasks.get_ready_tasks():
+                has_ready = True
+                continue
+            else:
+                failed = any([
+                    t.status != Task.FINISHED for t in job.tasks.iter_tasks()
+                ])
+                job.status = Job.FAILED if failed else Job.FINISHED
+        return has_ready
 
 
 class SequentialEngine(Engine):
@@ -79,9 +93,10 @@ class SequentialEngine(Engine):
             ready = job.tasks.get_ready_tasks()
 
 
-class AsyncEngine(Engine):
+class MultiprocessingEngine(Engine):
     def __init__(self, before_task=None, after_task=None):
-        super(AsyncEngine, self).__init__(before_task, after_task)
+        super(MultiprocessingEngine, self).__init__(before_task, after_task)
+        self.pool = multiprocessing.Pool()
         self.running = []
         self.total_ram = CONFIG['engine']['ram_mb']
         self.total_cpu = multiprocessing.cpu_count()
@@ -125,15 +140,6 @@ class AsyncEngine(Engine):
         else:
             self.available_cpu += res.cpu
 
-    def get_result_or_raise_error(self, async_result):
-        raise NotImplementedError()
-
-    def run_task_async(self, runner):
-        raise NotImplementedError()
-
-    def check_async_result_ready(self, async_result):
-        raise NotImplementedError()
-
     def process_result(self, job, task, async_result):
         try:
             task.result = self.get_result_or_raise_error(async_result)
@@ -148,11 +154,6 @@ class AsyncEngine(Engine):
         self.release_resources(task)
         job.tasks.resolve_task(task)
 
-    def _iter_ready(self):
-        for job in six.itervalues(self.jobs):
-            for task in job.tasks.get_ready_tasks():
-                yield job, task
-
     def _run_ready_tasks(self):
         for job, task in self._iter_ready():
             runner = self.get_runner(task)
@@ -166,19 +167,6 @@ class AsyncEngine(Engine):
             log.debug('Arguments: %s', task.arguments)
             result = self.run_task_async(runner)
             self.running.append([job, task, result])
-
-    def _update_jobs_check_ready(self):
-        has_ready = False
-        for job in six.itervalues(self.jobs):
-            if job.tasks.get_ready_tasks():
-                has_ready = True
-                continue
-            else:
-                failed = any([
-                    t.status != Task.FINISHED for t in job.tasks.iter_tasks()
-                ])
-                job.status = Job.FAILED if failed else Job.FINISHED
-        return has_ready
 
     def run_all(self):
         while True:
@@ -198,12 +186,6 @@ class AsyncEngine(Engine):
             else:
                 time.sleep(1)
 
-
-class MultiprocessingEngine(AsyncEngine):
-    def __init__(self, before_task=None, after_task=None):
-        super(MultiprocessingEngine, self).__init__(before_task, after_task)
-        self.pool = multiprocessing.Pool()
-
     def get_result_or_raise_error(self, async_result):
         return async_result.get()
 
@@ -212,38 +194,3 @@ class MultiprocessingEngine(AsyncEngine):
 
     def check_async_result_ready(self, async_result):
         return async_result.ready()
-
-
-class RQEngine(AsyncEngine):
-    def __init__(self, before_task=None, after_task=None):
-        super(RQEngine, self).__init__(before_task, after_task)
-        self.queue = rq.Queue(connection=redis.Redis(), default_timeout=-1)
-        self.failed = rq.Queue('failed', connection=redis.Redis())
-
-    def check_async_result_ready(self, async_result):
-        async_result.refresh()
-        return async_result.get_status() in ['finished', 'failed']
-
-    def get_result_or_raise_error(self, async_result):
-        if async_result.get_id() in self.failed.job_ids:
-            raise RuntimeError('Task failed.')
-        return self.queue.fetch_job(async_result.get_id()).result
-
-    def run_task_async(self, runner):
-        return self.queue.enqueue(
-            rq_work, get_import_name(runner.__class__), runner.task
-        )
-
-
-def rq_work(importable, task):
-    runner = import_name(importable)
-    return runner(task).run()
-
-
-def get_engine(**kwargs):
-    global engine
-    if engine:
-        return engine
-    options = CONFIG['engine'].get('options', {})
-    engine = import_name(CONFIG['engine']['class'])(**dict(options, **kwargs))
-    return engine

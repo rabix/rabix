@@ -31,6 +31,7 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7'
         'Topic :: Scientific/Engineering :: Bio-Informatics',
-        'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)'
+        'License :: OSI Approved :: ' +
+            'GNU Affero General Public License v3 or later (AGPLv3+)'
     ]
 )

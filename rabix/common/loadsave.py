@@ -4,6 +4,7 @@ import json
 import hashlib
 import logging
 import functools
+# noinspection PyUnresolvedReferences
 from six.moves.urllib import parse as urlparse
 
 # requests is not used if installing as sdk-lib.
