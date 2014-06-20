@@ -51,7 +51,7 @@ def cmd_test():
 
 def cmd_init(path, base_image, force=False):
     dst = abspath(join(getcwd(), path).rstrip('/'))
-    init(dst, base_image)
+    init(dst, base_image, force)
 
 
 def main():

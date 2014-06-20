@@ -1,10 +1,12 @@
-from os import makedirs, getenv
+from os import makedirs, getenv, chmod
 from os.path import exists, join, basename, isdir
 
+import os
 import docker
 import subprocess
 import re
 import keyword
+import stat
 
 from rabix import VERSION
 
@@ -15,7 +17,7 @@ FROM {base}
 ENV HOME /root
 RUN mkdir /wrappers
 ADD . /wrappers
-RUN /build/build.sh
+RUN /wrappers/build/build.sh
 
 ENTRYPOINT /usr/local/bin/rabix-adapter
 """
@@ -92,6 +94,7 @@ def init(work_dir, base_image, force=False):
 
     with open(build_sh_path, "w") as build_sh:
         build_sh.write(BUILD_SH)
+    chmod_plus(build_sh_path, stat.S_IEXEC)
     # fetch_deps(work_dir)
 
 
@@ -115,3 +118,8 @@ def sanitize_name(name):
         raise RuntimeError("Invalid name. " +
                            "Project name must be a valid Python identifier")
     return sanitized
+
+
+def chmod_plus(path, mod):
+    st = os.stat(path)
+    chmod(path, st.st_mode | mod)
