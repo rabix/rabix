@@ -25,8 +25,6 @@ def create_parser():
         'test', help='Run wrapper job.')
     run.set_defaults(cmd_func=cmd_test)
     run.add_argument('--cwd', default='.', help='cd here before running job.')
-    run.add_argument('-i', '--input', default='__in__.json', help='JSON file that contains arguments for wrapper job.')
-    run.add_argument('-o', '--output', default='__out__.json', help='Where to write the job result.')
 
     return parser
 
