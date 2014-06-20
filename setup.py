@@ -1,9 +1,10 @@
-import os
 import io
 import sys
+
+from os.path import dirname
 from setuptools import setup, find_packages
 
-sys.path.append(os.path.dirname(__file__))
+sys.path.append(dirname(__file__))
 from rabix import __version__
 
 
