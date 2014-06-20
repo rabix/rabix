@@ -1,10 +1,8 @@
-import psutil
-
 VERSION = '0.2.0'
 CONFIG = {
     'engine': {
         'class': 'rabix.runtime.engine.async.MultiprocessingEngine',
-        'ram_mb': psutil.virtual_memory().total / 1024**2,
+        'ram_mb': 2*1024,
     },
     'runners': {
         'InputTask': 'rabix.runtime.builtins.io.InputRunner',
