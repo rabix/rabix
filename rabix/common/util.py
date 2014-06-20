@@ -41,7 +41,7 @@ def import_name(name):
 
 
 def update_dict(cfg, new_cfg):
-    for key, val in new_cfg.iteritems():
+    for key, val in six.iteritems(new_cfg):
         t = cfg
         if '.' in key:
             for k in key.split('.'):
@@ -68,7 +68,7 @@ def update_config(cfg=CONFIG, path='config.json'):
         with open(path) as f:
             try:
                 f_cfg = json.load(f)
-            except ValueError, e:
+            except ValueError as e:
                 log.info('Invalid json %s: %s', path, e)
             else:
                 update_dict(cfg, f_cfg)
