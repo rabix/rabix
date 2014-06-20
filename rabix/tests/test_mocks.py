@@ -13,8 +13,8 @@ from rabix.common.util import rnd_name
 from rabix.runtime import from_url
 from rabix.runtime.engine import get_engine
 from rabix.runtime.engine.base import SequentialEngine
-from rabix.runtime.engine.async import MultiprocessingEngine, RQEngine
-from rabix.runtime.engine.multinode import MultiNodeRQ
+from rabix.runtime.engine.base import MultiprocessingEngine
+from rabix.runtime.engine.rqengine import RQEngine
 from rabix.runtime.jobs import RunJob
 
 log = logging.getLogger(__name__)
@@ -106,21 +106,7 @@ def test_mock_pipeline_remote_ref():
 
 
 # noinspection PyClassicStyleClass
-class RQTest(unittest.TestCase):
-    def setUp(self):
-        self.proc1 = subprocess.Popen(['rqworker'])
-        self.proc2 = subprocess.Popen(['rqworker'])
-
-    def test_mock_pipeline_rq(self):
-        test_pipeline('mock.pipeline.json', RQEngine)
-
-    def tearDown(self):
-        self.proc1.terminate()
-        self.proc2.terminate()
-
-
-# noinspection PyClassicStyleClass
-class MultiNodeRQTest(unittest.TestCase):
+class RQEngineTest(unittest.TestCase):
     def setUp(self):
         cmd = 'python -m rabix.runtime.run_workers --node-id x-test'
         if os.system(cmd):
@@ -132,7 +118,7 @@ class MultiNodeRQTest(unittest.TestCase):
             'ram_mb': 500,
             'cpu': 2,
         }]
-        test_pipeline('mock.pipeline.json', MultiNodeRQ)
+        test_pipeline('mock.pipeline.json', RQEngine)
         os.remove('supervisord.log')
         os.system('rm x-test-*')
 

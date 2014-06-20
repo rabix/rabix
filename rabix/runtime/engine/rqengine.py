@@ -96,9 +96,9 @@ def rq_work(importable, task):
     return import_name(importable)(task).run()
 
 
-class MultiNodeRQ(Engine):
+class RQEngine(Engine):
     def __init__(self, config=None, before_task=None, after_task=None):
-        super(MultiNodeRQ, self).__init__(before_task, after_task)
+        super(RQEngine, self).__init__(before_task, after_task)
         self.nodes = {}
         config = config or CONFIG
         redis_conf = config.get('redis', {})

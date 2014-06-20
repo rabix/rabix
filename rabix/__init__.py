@@ -1,7 +1,7 @@
 VERSION = '0.2.0'
 CONFIG = {
     'engine': {
-        'class': 'rabix.runtime.engine.async.MultiprocessingEngine',
+        'class': 'rabix.runtime.engine.base.MultiprocessingEngine',
         'ram_mb': 2*1024,
     },
     'runners': {
