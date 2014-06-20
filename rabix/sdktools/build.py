@@ -92,8 +92,7 @@ def init(work_dir, base_image, force=False):
 
     with open(build_sh_path, "w") as build_sh:
         build_sh.write(BUILD_SH)
-
-    #fetch_deps(work_dir)
+    # fetch_deps(work_dir)
 
 
 def fetch_deps(work_dir):
