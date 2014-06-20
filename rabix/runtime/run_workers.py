@@ -39,7 +39,7 @@ identifier=rabix
 nocleanup=true
 
 [inet_http_server]
-port=:9001
+port=127.0.0.1:9001
 username=rabix
 {password_line}
 
