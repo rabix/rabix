@@ -1,8 +1,15 @@
-from copy import deepcopy
 import signal
 import random
 import itertools
+import json
+import collections
+import logging
 
+from copy import deepcopy
+from os.path import isfile
+from rabix import CONFIG
+
+log = logging.getLogger(__name__)
 
 def wrap_in_list(val, *args):
     """
@@ -29,6 +36,42 @@ def import_name(name):
     if not hasattr(module, var_name):
         raise ImportError('%s not found in %s' % (var_name, module_name))
     return getattr(module, var_name)
+
+
+def update_dict(cfg, new_cfg):
+    for key, val in new_cfg.iteritems():
+        t = cfg
+        if '.' in key:
+            for k in key.split('.'):
+                if k == key.split('.')[-1]:
+                    if isinstance(val, collections.Mapping):
+                        t = t.setdefault(k, {})
+                        update_dict(t, new_cfg[key])
+                    else:
+                        t[k] = val
+                else:
+                    if not isinstance(t.get(k), collections.Mapping):
+                        t[k] = {}
+                    t = t.setdefault(k, {})
+        else:
+            if isinstance(val, collections.Mapping):
+                t = t.setdefault(key, {})
+                update_dict(t, new_cfg[key])
+            else:
+                t[key] = val
+
+
+def update_config(cfg=CONFIG, path='config.json'):
+    if isfile(path):
+        with open(path) as f:
+            try:
+                f_cfg = json.load(f)
+            except ValueError, e:
+                log.info('Invalid json %s: %s', path, e)
+            else:
+                update_dict(cfg, f_cfg)
+    else:
+        log.info('Invalid path: %s', path)
 
 
 class DotAccessDict(dict):
