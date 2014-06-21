@@ -3,7 +3,7 @@
     "apps": {
         "generator": {
             "$$type": "ref/app/mock/python",
-            "url": "https://s3.amazonaws.com/boysha/testfiles/generator.mock.json",
+            "$ref": "generator.mock.json",
             "checksum": "2c2dda15533c18ec43327543ef1bd682"
         },
         "incrementor": {
