@@ -3,7 +3,7 @@ import logging
 
 import networkx as nx
 
-import rabix.common.six as six
+from rabix.common import six
 from rabix.common.protocol import WrapperJob, Outputs, Resources
 from rabix.common.util import rnd_name
 from rabix.runtime.models import Pipeline

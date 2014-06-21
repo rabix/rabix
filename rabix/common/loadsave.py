@@ -1,9 +1,11 @@
 import os
 import json
+import copy
 import logging
 import collections
+from rabix.common.errors import ResourceUnavailable
 
-import rabix.common.six as six
+from rabix.common import six
 # noinspection PyUnresolvedReferences
 from rabix.common.six.moves.urllib import parse as urlparse
 from rabix.common.protocol import MAPPINGS
@@ -59,7 +61,7 @@ class JsonLoader(object):
             return self.resolved[url]
         doc_url, pointer = urlparse.urldefrag(url)
         document = self.fetch(doc_url)
-        fragment = self.resolve_pointer(document, pointer)
+        fragment = copy.deepcopy(self.resolve_pointer(document, pointer))
         result = self.resolve_all(fragment, doc_url)
         self.resolved[url] = result
         return result
@@ -84,10 +86,18 @@ class JsonLoader(object):
         scheme, path = split.scheme, split.path
 
         if scheme in ['http', 'https'] and requests:
-            result = requests.get(url).json()
+            resp = requests.get(url)
+            try:
+                resp.raise_for_status()
+            except Exception as e:
+                raise ResourceUnavailable(url, cause=e)
+            result = resp.json()
         elif scheme == 'file':
-            with open(path) as fp:
-                result = json.load(fp)
+            try:
+                with open(path) as fp:
+                    result = json.load(fp)
+            except (OSError, IOError) as e:
+                raise ResourceUnavailable(url, cause=e)
         else:
             raise ValueError('Unsupported scheme: %s' % scheme)
         self.fetched[url] = result

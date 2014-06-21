@@ -51,7 +51,7 @@ class InputRunner(Runner):
         try:
             r.raise_for_status()
         except Exception as e:
-            raise ResourceUnavailable(str(e))
+            raise ResourceUnavailable(url, cause=e)
         dest = self._get_dest_for_url(url)
         with open(dest, 'wb') as fp:
             for chunk in r.iter_content(chunk_size=1024):
@@ -98,7 +98,7 @@ class InputRunner(Runner):
     def _local(self, url):
         path = url[len('file://'):]
         if not os.path.isfile(path):
-            raise ResourceUnavailable('Not a file: %s' % path)
+            raise ResourceUnavailable(url)
         if not os.path.abspath(path).startswith(os.path.abspath('.')):
             raise NotImplementedError(
                 'File must be in current dir or subdirs. Got %s' % path

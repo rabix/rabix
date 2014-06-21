@@ -5,11 +5,10 @@ import random
 import itertools
 import json
 import collections
-import functools
 import logging
 
 from rabix import CONFIG
-import rabix.common.six as six
+from rabix.common import six
 
 log = logging.getLogger(__name__)
 
@@ -127,17 +126,3 @@ def rnd_name(syllables=5):
     return ''.join(itertools.chain(*zip(
         (random.choice('bcdfghjklmnpqrstvwxz') for _ in range(syllables)),
         (random.choice('aeiouy') for _ in range(syllables)))))
-
-
-def reraise_as(exc_cls, *only_these):
-    capture = only_these or (Exception,)
-
-    def wrapper(func):
-        @functools.wraps(func)
-        def wrapped(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except capture as e:
-                raise exc_cls(e.message)
-        return wrapped
-    return wrapper

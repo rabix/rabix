@@ -3,11 +3,10 @@ import sys
 import logging
 import argparse
 
-import rabix.common.six as six
-from rabix.common.loadsave import from_json, to_json
+from rabix.common import six
+from rabix.common.loadsave import from_url, to_json
 from rabix.common.protocol import WrapperJob, JobError
 from rabix.common.util import import_name, get_import_name
-from rabix.common.errors import ResourceUnavailable
 from rabix.sdk.wrapper import Wrapper, WrapperRunner
 
 log = logging.getLogger(__name__)
@@ -62,10 +61,7 @@ def cmd_run(cwd, input, output, **_):
         raise ValueError('No such directory: %s', cwd)
     os.chdir(cwd)
 
-    if not os.path.isfile(input):
-        raise ResourceUnavailable('No such file: %s' % input)
-    with open(input) as fp:
-        job = from_json(fp)
+    job = from_url(input)
     if not isinstance(job, WrapperJob):
         raise TypeError('Input JSON must describe a job.')
 
@@ -73,7 +69,7 @@ def cmd_run(cwd, input, output, **_):
         result = WrapperRunner(job).exec_wrapper_job(job)
     except Exception as e:
         log.exception('Job failed:')
-        result = JobError(e.message or six.text_type(e))
+        result = JobError(six.text_type(e))
 
     with open(output, 'w') as fp:
         to_json(result, fp)

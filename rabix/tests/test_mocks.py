@@ -1,13 +1,12 @@
 import os
 import tempfile
 import unittest
-import subprocess
 import logging
 
 from nose.tools import nottest, assert_equals
 
-import rabix.common.six as six
 from rabix import CONFIG
+from rabix.common import six
 from rabix.common.protocol import Outputs, WrapperJob
 from rabix.common.util import rnd_name
 from rabix.runtime import from_url

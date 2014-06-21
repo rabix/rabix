@@ -3,7 +3,7 @@ import logging
 
 import networkx as nx
 
-import rabix.common.six as six
+from rabix.common import six
 from rabix.common.errors import ValidationError
 
 log = logging.getLogger(__name__)

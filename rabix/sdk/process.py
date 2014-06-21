@@ -8,7 +8,7 @@ import functools
 import collections
 from subprocess import Popen, PIPE
 
-import rabix.common.six as six
+from rabix.common import six
 
 log = logging.getLogger(__name__)
 DEVNULL = open(os.devnull, 'w+b')
