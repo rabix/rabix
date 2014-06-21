@@ -109,7 +109,7 @@ class RQEngine(Engine):
                 connection=self.cn, config=config)
         log.debug('Engine initialized with %s nodes.', len(self.nodes))
 
-    def run_all(self):
+    def burst(self):
         log.info('%s: Running in burst mode.', self)
         if not self.nodes:
             raise RuntimeError('No nodes registered.')
@@ -135,8 +135,22 @@ class RQEngine(Engine):
             runner = self.get_runner(task)
             if not task.resources:
                 task.resources = runner.get_requirements()
+            if not self._can_run_eventually(task.resources):
+                log.warning(
+                    'Not enough resources to run %s: %s',
+                    task, task.resources
+                )
             log.debug('Task ready to run: %s', task)
             for node in six.itervalues(self.nodes):
                 if node.try_submit(job.job_id, task, runner):
                     self.before_task(task)
                     break
+
+    def _can_run_eventually(self, res):
+        if not self.nodes:
+            return False
+        if all([n.total_cpu < res.cpu for n in six.itervalues(self.nodes)]):
+            return False
+        if all([n.total_ram < res.mem_mb for n in six.itervalues(self.nodes)]):
+            return False
+        return True

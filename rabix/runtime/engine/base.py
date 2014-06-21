@@ -31,10 +31,10 @@ class Engine(object):
     def run(self, *jobs):
         for job in jobs:
             self.jobs[job.job_id] = job
-        self.run_all()
+        self.burst()
 
-    def run_all(self):
-        pass
+    def burst(self):
+        raise NotImplementedError('Override to run in burst mode.')
 
     def _iter_ready(self):
         for job in six.itervalues(self.jobs):
@@ -66,7 +66,7 @@ class SequentialEngine(Engine):
             task.status = Task.FAILED
             task.result = e
 
-    def run_all(self):
+    def burst(self):
         for job in six.itervalues(self.jobs):
             if job.status != Job.QUEUED:
                 continue
@@ -149,6 +149,9 @@ class MultiprocessingEngine(Engine):
             runner = self.get_runner(task)
             if not task.resources:
                 task.resources = runner.get_requirements()
+            if self.total_ram < task.resources.mem_mb or \
+                    self.total_cpu < task.resources.cpu:
+                raise RuntimeError('Not enough resources to run %s' % task)
             if not self.acquire_resources(task):
                 continue
             self.before_task(task)
@@ -158,7 +161,7 @@ class MultiprocessingEngine(Engine):
             result = self.run_task_async(runner)
             self.running.append([job, task, result])
 
-    def run_all(self):
+    def burst(self):
         while True:
             self._run_ready_tasks()
             to_remove = []
