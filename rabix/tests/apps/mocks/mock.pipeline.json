@@ -11,7 +11,7 @@
     "steps": [
         {
             "id": "gen1",
-            "app": "generator"
+            "app": {"$ref": "#/apps/generator"}
         },
         {
             "id": "inc1",

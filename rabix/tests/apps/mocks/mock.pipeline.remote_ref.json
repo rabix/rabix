@@ -23,7 +23,7 @@
     "steps": [
         {
             "id": "gen1",
-            "app": "generator"
+            "app": {"$ref": "generator.mock.json"}
         },
         {
             "id": "inc1",

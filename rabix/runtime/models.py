@@ -56,7 +56,7 @@ class Model(dict):
 class Pipeline(Model):
     TYPE = 'app/pipeline'
 
-    apps = property(lambda self: self['apps'])
+    apps = property(lambda self: self.get('apps', {}))
     steps = property(lambda self: self['steps'])
 
     def __init__(self, obj):
@@ -78,7 +78,8 @@ class Pipeline(Model):
         g = nx.DiGraph()
         inputs, outputs = set(), set()
         for step in self.steps:
-            g.add_node(step['id'], step=step, app=self.apps[step['app']])
+            app = self.get_app_for_step(step)
+            g.add_node(step['id'], step=step, app=app)
             for inp_id, src_list in six.iteritems(step.get('inputs', {})):
                 src_list = (src_list if isinstance(src_list, list)
                             else [x for x in [src_list] if x])
@@ -119,27 +120,34 @@ class Pipeline(Model):
         return g
 
     def _validate(self):
-        self._check_field('apps', dict, null=False)
+        if 'apps' in self:
+            self._check_field('apps', dict, null=False)
         self._check_field('steps', list, null=False)
         for step in self.steps:
             self._check_field(
                 'id', six.string_types, null=False, look_in=step
             )
             self._check_field(
-                'app', six.string_types, null=False, look_in=step
+                'app', (six.string_types, App), null=False, look_in=step
             )
-            assert step['app'] in self['apps'], (
-                '%s app not specified' % step['app'])
+            self.get_app_for_step(step)
         for app in six.itervalues(self['apps']):
+            if not isinstance(app, App):
+                raise ValidationError('Bad app: %s' % app)
             app.validate()
-        assert self.apps, 'No apps'
         assert self.steps, 'No steps'
         self._build_nx()
 
     def get_app_for_step(self, step_or_id):
         if isinstance(step_or_id, six.string_types):
             step_or_id = [s for s in self.steps if s['id'] == step_or_id][0]
-        return self['apps'][step_or_id['app']]
+
+        if isinstance(step_or_id['app'], App):
+            return step_or_id['app']
+        try:
+            return self['apps'][step_or_id['app']]
+        except:
+            raise ValidationError('No app for step %s' % step_or_id['id'])
 
     def get_inputs(self):
         """Returns a dict that maps input names to dict objects obtained from
