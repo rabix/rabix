@@ -8,7 +8,7 @@ import re
 import keyword
 import stat
 
-from rabix import VERSION
+from rabix import __version__
 
 
 DOCKER_FILE = """
@@ -23,33 +23,34 @@ ENTRYPOINT /usr/local/bin/rabix-adapter
 """
 
 SETUP = """
-import io
-from setuptools import setup, find_packages
+from distutils.core import setup
 
 
 setup(
     name="{name}",
     version="0.1.0",
-    include_package_data=True,
-    packages=find_packages(),
-    install_requires=[
-        x.strip() for x in
-        io.open('requirements.txt', 'r', encoding='utf-8')
-    ]
+    packages=["{name}"]
 )
 
 """
 
 BUILD_SH = """
-#!/bin/sh
+#!/bin/sh -e
 
-pip install --no-index --find-links /wrappers/build/deps /wrappers
+cd /wrappers/build
+tar xzf rabix-lib-{version}.tar.gz
+cd rabix-lib-{version}
+
+PYTHON=$(which python || which python3 || which python2)
+
+$PYTHON setup-lib.py install
+
+cd /wrappers
+$PYTHON setup.py install
+
 rm -rf /tmp/* /var/tmp/*
 rm -rf /wrappers
 """
-
-FETCH_DEPS = ["pip", "install", "--download", "build/deps",
-              "--requirement", "requirements.txt"]
 
 
 def init(work_dir, base_image, force=False):
@@ -58,17 +59,14 @@ def init(work_dir, base_image, force=False):
 
     build_dir = join(work_dir, "build")
     build_sh_path = join(build_dir, "build.sh")
-    deps_dir = join(build_dir, "deps")
     dockerfile_path = join(work_dir, "Dockerfile")
-    requirements_path = join(work_dir, "requirements.txt")
     setup_path = join(work_dir, "setup.py")
     package_dir = join(work_dir, name)
     init_path = join(package_dir, "__init__.py")
 
-    paths = [dockerfile_path, requirements_path,
-             setup_path, init_path, build_sh_path]
+    paths = [dockerfile_path, setup_path, init_path, build_sh_path]
 
-    dirs = [build_dir, deps_dir, package_dir]
+    dirs = [build_dir, package_dir]
 
     conflict = any(map(exists, paths)) or \
         any(map(lambda dir: exists(dir) and not isdir(dir), dirs))
@@ -76,17 +74,14 @@ def init(work_dir, base_image, force=False):
     if conflict and not force:
         raise RuntimeError("Build already initialized. Use the force.")
 
-    if not exists(deps_dir):
-        makedirs(deps_dir)
+    if not exists(build_dir):
+        makedirs(build_dir)
 
     if not exists(package_dir):
         makedirs(package_dir)
 
     with open(dockerfile_path, "w") as dockerfile:
         dockerfile.write(DOCKER_FILE.format(base=base_image))
-
-    with open(requirements_path, "w") as requirements:
-        requirements.write("rabix=={}".format(VERSION))
 
     with open(setup_path, "w") as setup:
         setup.write(SETUP.format(name=name))
@@ -95,14 +90,9 @@ def init(work_dir, base_image, force=False):
         init.write("\n")
 
     with open(build_sh_path, "w") as build_sh:
-        build_sh.write(BUILD_SH)
+        build_sh.write(BUILD_SH.format(version=__version__))
     chmod_plus(build_sh_path, stat.S_IEXEC)
-    # fetch_deps(work_dir)
-
-
-def fetch_deps(work_dir):
-    subprocess.check_call(FETCH_DEPS, cwd=work_dir)
-
+    # TODO: materialize sdk-lib tarbal in build dir somehow
 
 def build(work_dir, tag=None):
     docker_host = getenv("DOCKER_HOST")
