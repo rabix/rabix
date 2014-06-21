@@ -3,12 +3,13 @@ import tempfile
 import unittest
 import logging
 
-from nose.tools import nottest, assert_equals
+from nose.tools import nottest, assert_equals, assert_raises
 
 from rabix import CONFIG
 from rabix.common import six
 from rabix.common.protocol import Outputs, WrapperJob
 from rabix.common.util import rnd_name
+from rabix.common.errors import ValidationError
 from rabix.runtime import from_url
 from rabix.runtime.engine import get_engine
 from rabix.runtime.engine.base import SequentialEngine
@@ -125,3 +126,8 @@ class RQEngineTest(unittest.TestCase):
     def tearDown(self):
         os.remove('supervisord.conf')
         os.system('kill $(cat supervisord.pid)')
+
+
+def test_circular_ref():
+    with assert_raises(ValidationError):
+        from_url('rabix/tests/apps/mocks/circular.json')

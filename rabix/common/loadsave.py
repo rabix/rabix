@@ -23,8 +23,10 @@ log = logging.getLogger(__name__)
 
 class JsonLoader(object):
     def __init__(self):
-        self.fetched = NormDict(lambda url: urlparse.urlsplit(url).geturl())
-        self.resolved = NormDict(lambda url: urlparse.urlsplit(url).geturl())
+        normalize = lambda url: urlparse.urlsplit(url).geturl()
+        self.fetched = NormDict(normalize)
+        self.resolved = NormDict(normalize)
+        self.resolving = NormDict(normalize)
 
     def load(self, url):
         base_url = 'file://%s/' % os.path.abspath('.')
@@ -46,12 +48,16 @@ class JsonLoader(object):
         url = urlparse.urljoin(base_url, obj['$ref'])
         if url in self.resolved:
             return self.resolved[url]
+        if url in self.resolving:
+            raise ValidationError('Circular reference for url %s' % url)
+        self.resolving[url] = True
         doc_url, pointer = urlparse.urldefrag(url)
         document = self.fetch(doc_url)
         fragment = copy.deepcopy(self.resolve_pointer(document, pointer))
         self.verify_checksum(obj, fragment)
         result = self.resolve_all(fragment, doc_url)
         self.resolved[url] = result
+        del self.resolving[url]
         return result
 
     def resolve_all(self, document, base_url):
