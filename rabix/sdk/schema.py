@@ -6,8 +6,8 @@ import logging
 import tempfile
 import shutil
 import copy
-import six
 
+import rabix.common.six as six
 from rabix.common.util import DotAccessDict, intersect_dicts
 
 log = logging.getLogger(__name__)

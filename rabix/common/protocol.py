@@ -1,4 +1,4 @@
-import six
+import rabix.common.six as six
 import logging
 
 log = logging.getLogger(__name__)

@@ -1,5 +1,4 @@
 import os
-import six
 import json
 import time
 import select
@@ -7,6 +6,8 @@ import logging
 import itertools
 import functools
 import collections
+
+import rabix.common.six as six
 from subprocess import Popen, PIPE
 
 log = logging.getLogger(__name__)

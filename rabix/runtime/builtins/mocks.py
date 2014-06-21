@@ -1,8 +1,8 @@
 import re
 import os
-import six
 import keyword
 
+import rabix.common.six as six
 from rabix.runtime.models import App
 from rabix.runtime.tasks import Runner
 from rabix.common.util import import_name

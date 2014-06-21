@@ -9,7 +9,6 @@ setup(
     name="rabix-lib",
     version=__version__,
     packages=['rabix', 'rabix.common', 'rabix.sdk'],
-    install_requires=['six==1.6.1'],
     entry_points={
         'console_scripts': ['rabix-adapter = rabix.sdk.cli:main'],
     },

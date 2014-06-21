@@ -1,10 +1,10 @@
-import six
 import time
 import logging
 
 import rq
 import redis
 
+import rabix.common.six as six
 from rabix import CONFIG
 from rabix.common.util import import_name, get_import_name
 from rabix.runtime.tasks import Task

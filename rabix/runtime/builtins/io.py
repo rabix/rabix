@@ -1,7 +1,7 @@
 import os
 import tempfile
 import logging
-from six.moves.urllib import parse as urlparse
+from rabix.common.six.moves.urllib import parse as urlparse
 
 import requests
 

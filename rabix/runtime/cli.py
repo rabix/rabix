@@ -1,10 +1,10 @@
 import os
 import sys
-import six
 import logging
 
 from docopt import docopt, DocoptExit
 
+import rabix.common.six as six
 from rabix import __version__
 from rabix.common.util import rnd_name, update_config
 from rabix.runtime import from_url

@@ -1,11 +1,12 @@
 import os
-import six
 import json
 import hashlib
 import logging
 import functools
+
+import rabix.common.six as six
 # noinspection PyUnresolvedReferences
-from six.moves.urllib import parse as urlparse
+from rabix.common.six.moves.urllib import parse as urlparse
 
 # requests is not used if installing as sdk-lib.
 try:
