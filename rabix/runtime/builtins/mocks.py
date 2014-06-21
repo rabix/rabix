@@ -28,9 +28,8 @@ class MockApp(App):
 
 
 class MockRunner(Runner):
-    """
-    Runs the app/mock/python jobs. A directory is created for each job.
-    """
+    """Runs the app/mock/python jobs. A directory is created for each job."""
+
     def run(self):
         func = import_name(self.task.app.importable)
         job = WrapperJob(None, self.task.task_id, self.task.arguments,

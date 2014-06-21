@@ -1,4 +1,5 @@
 import logging
+
 from rabix.runtime.tasks import TaskDAG
 
 log = logging.getLogger(__name__)

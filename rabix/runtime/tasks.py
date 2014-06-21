@@ -2,8 +2,8 @@ import copy
 import logging
 
 import networkx as nx
-import rabix.common.six as six
 
+import rabix.common.six as six
 from rabix.common.protocol import WrapperJob, Outputs, Resources
 from rabix.common.util import rnd_name
 from rabix.runtime.models import Pipeline
@@ -40,9 +40,7 @@ class Task(object):
         return replacement
 
     def _replace_wrapper_job_with_task(self, obj):
-        """Traverses arguments, creates replacement tasks in place of wrapper
-        jobs
-        """
+        """Traverses arguments, creates replaces wrapper jobs with tasks"""
         if isinstance(obj, list):
             for ndx, item in enumerate(obj):
                 if isinstance(item, WrapperJob):
@@ -60,8 +58,7 @@ class Task(object):
         return obj
 
     def iter_deps(self):
-        """Yields (path, task) for all tasks somewhere in the arguments tree.
-        """
+        """Yields (path, task) for all tasks in the arguments tree."""
         if isinstance(self.arguments, Task):
             yield self.arguments
         for path, job in [
@@ -134,7 +131,7 @@ class TaskDAG(object):
         return task_id
 
     def add_task(self, task):
-        """ Modifies task id. Returns modified task. """
+        """Adds task to graph. Modifies task id. Returns modified task."""
         task.task_id = self.get_id_for_task(task)
         self.dag.add_node(task.task_id, task=task)
         for path, dep in task.iter_deps():
@@ -158,10 +155,11 @@ class TaskDAG(object):
             yield node['task']
 
     def resolve_task(self, task):
-        """If successful, result is propagated downstream. Downstream tasks
-        may get READY status.
-        If result is a task, it is used as a replacement and dependency tasks
-        are added to the graph.
+        """
+        If successful, result is propagated downstream.
+        Downstream tasks may get READY status.
+        If result is a task, it is used as a replacement
+        and dependency tasks are added to the graph.
         If failed, result should be an exception.
         If cancelled, result should be None.
         """
@@ -189,11 +187,8 @@ class TaskDAG(object):
             self.update_status(dst)
 
     def propagate(self, src, dst, src_path, dst_path):
-        """Propagates results. Possibly override to add shuttling tasks when
-        multi node and no shared storage.
-        """
-        val = get_val_from_path(src.result, src_path)
-        dst.arguments = update_on_path(dst.arguments, dst_path, val)
+        val = _get_val_from_path(src.result, src_path)
+        dst.arguments = _update_on_path(dst.arguments, dst_path, val)
 
     def update_status(self, task):
         if task.status != Task.QUEUED:
@@ -249,7 +244,7 @@ class TaskDAG(object):
         }
 
 
-def get_val_from_path(obj, path, default=None):
+def _get_val_from_path(obj, path, default=None):
     if path is None:
         return None
     if not isinstance(path, list):
@@ -265,7 +260,7 @@ def get_val_from_path(obj, path, default=None):
     return curr
 
 
-def update_on_path(obj, path, val):
+def _update_on_path(obj, path, val):
     if path is None:
         return obj
     if not isinstance(path, list):
@@ -297,8 +292,4 @@ class Runner(object):
         return self.task.resources or Resources(200, Resources.CPU_NEGLIGIBLE)
 
     def __call__(self):
-        try:
-            return self.run()
-        except:
-            log.exception('Task %s failed:', self.task)
-            raise
+        return self.run()

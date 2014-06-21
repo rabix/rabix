@@ -1,5 +1,6 @@
-import rabix.common.six as six
 import logging
+
+import rabix.common.six as six
 
 log = logging.getLogger(__name__)
 MAPPINGS = {}

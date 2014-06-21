@@ -10,9 +10,7 @@ log = logging.getLogger(__name__)
 
 
 class Model(dict):
-    """Inherit this class for an easy way to turn JSON objects with $$type
-    fields to classes.
-    """
+    """Helper class to turn JSON objects with $$type fields to classes."""
     TYPE = None
 
     def __init__(self, obj):
@@ -20,8 +18,9 @@ class Model(dict):
         self.update(obj)
 
     def _validate(self):
-        """Override to validate. Raise AssertionError or ValidationError or
-        return array of errors. Or return None.
+        """
+        Override to validate. Raise AssertionError or ValidationError
+        or return array of errors. Or return None.
         """
         pass
 
@@ -101,8 +100,8 @@ class Pipeline(Model):
                 dst_list = (dst_list if isinstance(dst_list, list)
                             else [x for x in [dst_list] if x])
                 for dst in dst_list:
-                    # assert '.' not in dst, 'output contains dot'
                     if '.' in dst:
+                        log.warn('Ignoring invalid output value: %s', dst)
                         continue
                     outputs.add(dst)
                     g.add_node(dst, id=dst, app='$$output')
@@ -161,7 +160,7 @@ class Pipeline(Model):
                 for conn in incoming:
                     if '.' in conn:
                         continue
-                    # look in the app to get the schema for this input
+                    # Look in the app to get the schema for this input
                     app_inputs = self['apps'][step['app']].schema.inputs
                     schema = [
                         i for i in app_inputs if i['id'] == app_inp_id
@@ -169,8 +168,7 @@ class Pipeline(Model):
                     if conn not in inputs:
                         inputs[conn] = copy.deepcopy(schema)
                     else:
-                        # Input goes to multiple steps, check again for
-                        # list/required
+                        # Input goes to multiple steps, check list/required:
                         inp = inputs[conn]
                         if schema.get('required'):
                             inp['required'] = True

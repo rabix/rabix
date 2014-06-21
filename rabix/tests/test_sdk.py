@@ -16,6 +16,7 @@ def remove_test_dir():
         shutil.rmtree(test_dir)
 
 
+@require(100, require.CPU_SINGLE)
 class UselessWrapper(define.Wrapper):
     class Inputs(define.Inputs):
         inp = define.input(required=True)

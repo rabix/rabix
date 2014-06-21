@@ -7,15 +7,14 @@ import functools
 import rabix.common.six as six
 # noinspection PyUnresolvedReferences
 from rabix.common.six.moves.urllib import parse as urlparse
+from rabix.common.errors import ResourceUnavailable, ValidationError
+from rabix.common.protocol import MAPPINGS
 
 # requests is not used if installing as sdk-lib.
 try:
     import requests
 except ImportError:
     requests = None
-
-from rabix.common.errors import ResourceUnavailable, ValidationError
-from rabix.common.protocol import MAPPINGS
 
 log = logging.getLogger(__name__)
 

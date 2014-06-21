@@ -14,4 +14,4 @@ enum = _.EnumAttr
 real = _.RealAttr
 string = _.StringAttr
 struct = _.StructAttr
-__wrapper__ = Wrapper
+_ = Wrapper

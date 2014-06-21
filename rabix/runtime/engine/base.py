@@ -184,7 +184,7 @@ class MultiprocessingEngine(Engine):
                 if not self.running and not has_ready:
                     return
             else:
-                time.sleep(1)
+                time.sleep(.1)
 
     def get_result_or_raise_error(self, async_result):
         return async_result.get()

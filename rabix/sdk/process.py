@@ -6,9 +6,9 @@ import logging
 import itertools
 import functools
 import collections
+from subprocess import Popen, PIPE
 
 import rabix.common.six as six
-from subprocess import Popen, PIPE
 
 log = logging.getLogger(__name__)
 DEVNULL = open(os.devnull, 'w+b')
@@ -19,7 +19,8 @@ def print_prepare(arg):
 
 
 class SubprocessError(RuntimeError):
-    """Raised by the Process class if subprocess finished with exit_code != 0
+    """
+    Raised by the Process class if subprocess finished with exit_code != 0
     User error message is constructed from cmd_line and stderr or stdout.
     """
     def __init__(self, proc, *args, **kwargs):
@@ -133,7 +134,8 @@ class Process(object):
                 self.stdout.line_callback = stdout
 
     def run(self, wait=True):
-        """Run the process. If wait is true, wait for it to finish and parse
+        """
+        Run the process. If wait is true, wait for it to finish and parse
         output if line parsers are supplied.
         """
         try:
@@ -158,8 +160,9 @@ class Process(object):
         return self.wait() if wait else self
 
     def wait(self):
-        """Wait for the process to finish and parse output if line parsers are
-        supplied.
+        """
+        Wait for the process to finish and parse output
+        if line parsers are supplied.
         """
         try:
             rlist = []
@@ -215,8 +218,9 @@ class Process(object):
         return self.popen is not None and self.exit_code is None
 
     def add_arg(self, *args, **kwargs):
-        """Append arguments to the argument list. For supplied kwargs,
-        add_narg is called.
+        """
+        Append arguments to the argument list.
+        For supplied kwargs, add_narg is called.
         """
         if self.popen is not None:
             raise RuntimeError(
@@ -229,7 +233,8 @@ class Process(object):
             self.add_narg(key, val)
 
     def add_narg(self, key, value):
-        """Add named arguments to the argument list. Examples:
+        """
+        Add named arguments to the argument list. Examples:
 
         >>> p = Process('python')
         >>> # Same as p.add_arg('-3'). For bool values, only key is added or
@@ -251,7 +256,7 @@ class Process(object):
 
 
 def process_fails(exit_code, assert_this_str_in_stderr=''):
-    """ Decorator for testing """
+    """Decorator for testing"""
     def decorator(func):
         @functools.wraps(func)
         def wrapped():

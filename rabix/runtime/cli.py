@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 
-from docopt import docopt, DocoptExit
+import docopt
 
 import rabix.common.six as six
 from rabix import __version__ as version
@@ -79,7 +79,8 @@ def set_log_level(v_count):
 
 def run(path):
     pipeline = Pipeline.from_app(from_url(path))
-    args = docopt(make_pipeline_usage_string(pipeline, path), version=version)
+    usage_str = make_pipeline_usage_string(pipeline, path)
+    args = docopt.docopt(usage_str, version=version)
     set_log_level(args['--verbose'])
     inputs = {
         i[len('--'):]: args[i]
@@ -109,8 +110,8 @@ def main():
         update_config()
 
     try:
-        args = docopt(USAGE, version=version)
-    except DocoptExit:
+        args = docopt.docopt(USAGE, version=version)
+    except docopt.DocoptExit:
         if len(sys.argv) > 3:
             for a in sys.argv[2:]:
                 if not a.startswith('-'):

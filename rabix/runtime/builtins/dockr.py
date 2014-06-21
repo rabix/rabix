@@ -1,24 +1,19 @@
-from __future__ import print_function
-
 import os
 import copy
 import signal
 import logging
+import subprocess
 
 import docker
-import rabix.common.six as six
-
-from subprocess import Popen
-from sys import stdout
 
 from rabix import CONFIG
-
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import handle_signal
 from rabix.common.protocol import WrapperJob, Outputs, JobError
 from rabix.runtime import from_json, to_json
 from rabix.runtime.models import App, AppSchema
 from rabix.runtime.tasks import Runner
+import rabix.common.six as six
 
 log = logging.getLogger(__name__)
 MOUNT_POINT = '/rabix'
@@ -38,10 +33,12 @@ class DockerApp(App):
 
 
 class DockerRunner(Runner):
-    """Runs docker apps.
+    """
+    Runs docker apps.
 
     Instantiates a container from specified image, mounts the current directory
-    and runs entry point.
+    and runs entry point + Cmd + job args (compatibility reasons).
+    After running, all Job files are chown-ed to current user.
     A directory is created for each job.
     """
 
@@ -75,10 +72,11 @@ class DockerRunner(Runner):
             result = from_json(fp)
         if isinstance(result, Exception):
             raise result
-        return (self._fix_output_paths(result) if isinstance(result, Outputs)
-                else result)
+        return self._fix_output_paths(result)
 
     def _fix_output_paths(self, result):
+        if not isinstance(result, Outputs):
+            return result
         mount_point = (MOUNT_POINT if MOUNT_POINT.endswith('/')
                        else MOUNT_POINT + '/')
         for k, v in six.iteritems(result.outputs):
@@ -133,15 +131,15 @@ class DockerRunner(Runner):
 
 class DockerAppInstaller(Runner):
     def run(self):
-        get_image(docker.Client(os.environ.get('DOCKER_HOST')),
-                  self.task.app.image_ref)
+        get_image(docker.Client(), self.task.app.image_ref)
 
 
 class Container(object):
-    """Convenience wrapper around docker container.
+    """
+    Convenience wrapper around docker container.
 
-    Instantiation of the class does not make the docker container. Call run
-    methods to do that.
+    Instantiation of the class does not make the docker container.
+    Call run methods to do that.
     """
 
     def __init__(self, docker_client, image_id, container_config=None,
@@ -212,8 +210,7 @@ class Container(object):
     def print_log(self):
         self._check_container_ready()
         if self.is_running():
-            for out in self.docker.attach(container=self.container,
-                                          stream=True):
+            for out in self.docker.attach(self.container, stream=True):
                 print(out.rstrip())
         else:
             print(self.docker.logs(self.container))
@@ -221,8 +218,9 @@ class Container(object):
 
     def commit(self, message=None, conf=None):
         self._check_container_ready()
-        self.image = self.docker.commit(self.container['Id'], message=message,
-                                        conf=conf)
+        self.image = self.docker.commit(
+            self.container['Id'], message=message, conf=conf
+        )
         return self
 
     def run(self, command):
@@ -251,13 +249,7 @@ class Container(object):
 
 
 def find_image(client, image_id, repo=None, tag='latest'):
-    """Returns image dict if it exists locally, or None
-
-    :param client: docker.Client
-    :param image_id: Docker image ID
-    :param repo: Docker repository name
-    :param tag: Docker repository tag
-    """
+    """Returns image dict if it exists locally, or None"""
     images = client.images()
     img = ([i for i in images if i['Id'].startswith(image_id)]
            if image_id else None)
@@ -268,44 +260,31 @@ def find_image(client, image_id, repo=None, tag='latest'):
 
 
 def get_image(client, ref=None, repo=None, tag=None, id=None, pull_attempts=1):
-    """Returns the image dict. If not found locally, will pull from the
-    repository.
-
-    :param client: docker.Client
-    :param: ref: Image ref. Contains image ID, Docker repository name and
-        image tag
-    :param pull_attempts: Number of attempts to pull the repo+tag.
-    """
+    """Returns the image dict. Pulls from repo if not found locally."""
     ref = ref or {}
     repo = ref.get('image_repo', repo)
     tag = ref.get('image_tag', tag)
     image_id = ref.get('image_id', id)
     if not image_id and not repo:
-        raise ResourceUnavailable(
-            'App don\'t have Docker repository name or image ID'
-        )
+        raise ValueError('Need either repository or image ID.')
     elif not image_id and not tag:
-        log.info('Searching for image: %s:latest ID: %s', repo, image_id)
-        pull = Popen(['docker', 'pull', repo], stdout=stdout)
+        log.info('Pulling %s', repo)
+        pull = subprocess.Popen(['docker', 'pull', repo])
         pull.wait()
         img = find_image(client, image_id, repo)
         if not img:
-            raise ResourceUnavailable(
-                'Image not found: %s tag: %s' % (repo, 'latest')
-            )
+            raise ResourceUnavailable('Image not found: %s' % repo)
     else:
-        log.info('Searching for image: %s:%s ID: %s', repo, tag, image_id)
+        log.debug('Searching for image %s:%s ID: %s', repo, tag, image_id)
         img = find_image(client, image_id, repo, tag)
     if img:
         return img
 
     if pull_attempts < 1:
-        raise ResourceUnavailable('Image not found: %s tag: %s' % (repo, tag))
+        raise ResourceUnavailable('Image not found: %s:%s' % (repo, tag))
     if not repo:
-        raise ResourceUnavailable(
-            'Cannot search for image. No Docker repository name'
-        )
+        raise ResourceUnavailable('Image not found: %s' % image_id)
     log.info('No local image %s:%s. Downloading...', repo, tag)
-    pull = Popen(['docker', 'pull', repo], stdout=stdout)
+    pull = subprocess.Popen(['docker', 'pull', repo])
     pull.wait()
     return get_image(client, ref, pull_attempts - 1)

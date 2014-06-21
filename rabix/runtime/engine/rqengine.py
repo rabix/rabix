@@ -92,7 +92,7 @@ class Node(object):
 
 
 def rq_work(importable, task):
-    """Wrap so RQ can pickle the function."""
+    """Wrapper to allow RQ to pickle."""
     return import_name(importable)(task).run()
 
 
@@ -122,7 +122,7 @@ class RQEngine(Engine):
                     self.jobs[job_id].tasks.resolve_task(task)
                     self.after_task(task)
             if not modified:
-                time.sleep(1)
+                time.sleep(.5)
             elif not self._update_jobs_check_ready() and not self.busy:
                 return
 

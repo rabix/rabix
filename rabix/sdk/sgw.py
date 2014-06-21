@@ -1,5 +1,5 @@
-from rabix.sdk.wrapper import Wrapper, _get_method_requirements
 from rabix.common.protocol import Resources
+from rabix.sdk.wrapper import Wrapper, _get_method_requirements
 
 _error = NotImplementedError(
     'Methods split, work and merge must be overridden.'

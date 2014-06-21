@@ -483,8 +483,9 @@ class IOList(object):
         return value
 
     def make_metadata(self, **kwargs):
-        """Intersect metadata dictionaries of each file in list and returns the
-        new metadata object.
+        """
+        Intersect metadata dictionaries of each file in list
+        and return the new metadata object.
         """
         if not self._values:
             return DotAccessDict(**kwargs)

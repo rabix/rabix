@@ -7,8 +7,8 @@ import json
 import collections
 import logging
 
-import rabix.common.six as six
 from rabix import CONFIG
+import rabix.common.six as six
 
 log = logging.getLogger(__name__)
 
