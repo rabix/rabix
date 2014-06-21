@@ -74,10 +74,10 @@ def two_step_increment(job):
 
 
 @nottest
-def test_pipeline(pipeline_name, engine_cls=None):
+def test_pipeline(pipeline_url, engine_cls=None):
     # Be warned, all dirs with this prefix will be rm -rf on success
     prefix = 'x-test-%s' % rnd_name(5)
-    pipeline = from_url(get_mock_pipeline(pipeline_name))
+    pipeline = from_url(pipeline_url)
     job = RunJob(prefix, pipeline, inputs={'number': 'data:,1'})
     sch = engine_cls() if engine_cls else get_engine()
     sch.run(job)
@@ -88,20 +88,21 @@ def test_pipeline(pipeline_name, engine_cls=None):
         os.system('rm -rf %s.*' % prefix)
 
 
-def get_mock_pipeline(name):
-    return os.path.join(os.path.dirname(__file__), 'apps', name)
-
-
 def test_mock_pipeline_sequential():
-    test_pipeline('mock.pipeline.json', SequentialEngine)
+    test_pipeline('rabix/tests/apps/mocks/mock.pipeline.json', SequentialEngine)
+
+
+def test_mock_pipeline_relative_refs():
+    test_pipeline('rabix/tests/apps/mock_ref.json', SequentialEngine)
 
 
 def test_mock_pipeline_mp():
-    test_pipeline('mock.pipeline.json', MultiprocessingEngine)
+    test_pipeline('rabix/tests/apps/mocks/mock.pipeline.json',
+                  MultiprocessingEngine)
 
 
 def test_mock_pipeline_remote_ref():
-    test_pipeline('mock.pipeline.remote_ref.json')
+    test_pipeline('rabix/tests/apps/mocks/mock.pipeline.remote_ref.json')
 
 
 # noinspection PyClassicStyleClass
@@ -117,7 +118,7 @@ class RQEngineTest(unittest.TestCase):
             'ram_mb': 500,
             'cpu': 2,
         }]
-        test_pipeline('mock.pipeline.json', RQEngine)
+        test_pipeline('rabix/tests/apps/mocks/mock.pipeline.json', RQEngine)
         os.remove('supervisord.log')
         os.system('rm x-test-*')
 
