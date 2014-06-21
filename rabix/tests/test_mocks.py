@@ -1,15 +1,15 @@
 import os
 import tempfile
 import unittest
-import subprocess
 import logging
 
-from nose.tools import nottest, assert_equals
+from nose.tools import nottest, assert_equals, assert_raises
 
-import rabix.common.six as six
 from rabix import CONFIG
+from rabix.common import six
 from rabix.common.protocol import Outputs, WrapperJob
 from rabix.common.util import rnd_name
+from rabix.common.errors import ValidationError
 from rabix.runtime import from_url
 from rabix.runtime.engine import get_engine
 from rabix.runtime.engine.base import SequentialEngine
@@ -75,10 +75,10 @@ def two_step_increment(job):
 
 
 @nottest
-def test_pipeline(pipeline_name, engine_cls=None):
+def test_pipeline(pipeline_url, engine_cls=None):
     # Be warned, all dirs with this prefix will be rm -rf on success
     prefix = 'x-test-%s' % rnd_name(5)
-    pipeline = from_url(get_mock_pipeline(pipeline_name))
+    pipeline = from_url(pipeline_url)
     job = RunJob(prefix, pipeline, inputs={'number': 'data:,1'})
     sch = engine_cls() if engine_cls else get_engine()
     sch.run(job)
@@ -89,20 +89,21 @@ def test_pipeline(pipeline_name, engine_cls=None):
         os.system('rm -rf %s.*' % prefix)
 
 
-def get_mock_pipeline(name):
-    return os.path.join(os.path.dirname(__file__), 'apps', name)
-
-
 def test_mock_pipeline_sequential():
-    test_pipeline('mock.pipeline.json', SequentialEngine)
+    test_pipeline('rabix/tests/apps/mocks/mock.pipeline.json', SequentialEngine)
+
+
+def test_mock_pipeline_relative_refs():
+    test_pipeline('rabix/tests/apps/mock_ref.json', SequentialEngine)
 
 
 def test_mock_pipeline_mp():
-    test_pipeline('mock.pipeline.json', MultiprocessingEngine)
+    test_pipeline('rabix/tests/apps/mocks/mock.pipeline.json',
+                  MultiprocessingEngine)
 
 
 def test_mock_pipeline_remote_ref():
-    test_pipeline('mock.pipeline.remote_ref.json')
+    test_pipeline('rabix/tests/apps/mocks/mock.pipeline.remote_ref.json')
 
 
 # noinspection PyClassicStyleClass
@@ -118,10 +119,15 @@ class RQEngineTest(unittest.TestCase):
             'ram_mb': 500,
             'cpu': 2,
         }]
-        test_pipeline('mock.pipeline.json', RQEngine)
+        test_pipeline('rabix/tests/apps/mocks/mock.pipeline.json', RQEngine)
         os.remove('supervisord.log')
         os.system('rm x-test-*')
 
     def tearDown(self):
         os.remove('supervisord.conf')
         os.system('kill $(cat supervisord.pid)')
+
+
+def test_circular_ref():
+    with assert_raises(ValidationError):
+        from_url('rabix/tests/apps/mocks/circular.json')

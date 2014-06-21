@@ -1,6 +1,6 @@
 import logging
 
-import rabix.common.six as six
+from rabix.common import six
 
 log = logging.getLogger(__name__)
 MAPPINGS = {}
@@ -8,7 +8,10 @@ MAPPINGS = {}
 
 class JobError(RuntimeError):
     def __json__(self):
-        return {'$$type': 'error', 'message': self.message or str(self)}
+        return {
+            '$$type': 'error',
+            'message': self.message or six.text_type(self)
+        }
 
     @classmethod
     def from_dict(cls, d):

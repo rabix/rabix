@@ -4,7 +4,7 @@ import logging
 
 import docopt
 
-import rabix.common.six as six
+from rabix.common import six
 from rabix import __version__ as version
 from rabix.common.util import rnd_name, update_config
 from rabix.runtime import from_url

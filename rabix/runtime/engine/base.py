@@ -2,7 +2,7 @@ import time
 import logging
 import multiprocessing
 
-import rabix.common.six as six
+from rabix.common import six
 from rabix import CONFIG
 from rabix.common.util import import_name
 from rabix.common.protocol import JobError

@@ -8,7 +8,7 @@ import collections
 import logging
 
 from rabix import CONFIG
-import rabix.common.six as six
+from rabix.common import six
 
 log = logging.getLogger(__name__)
 
@@ -90,6 +90,21 @@ class DotAccessDict(dict):
         return self.__class__(copy.deepcopy(dict(self), memo))
 
 
+class NormDict(dict):
+    def __init__(self, normalize=unicode):
+        super(NormDict, self).__init__()
+        self.normalize = normalize
+
+    def __getitem__(self, key):
+        return super(NormDict, self).__getitem__(self.normalize(key))
+
+    def __setitem__(self, key, value):
+        return super(NormDict, self).__setitem__(self.normalize(key), value)
+
+    def __delitem__(self, key):
+        return super(NormDict, self).__delitem__(self.normalize(key))
+
+
 def intersect_dicts(d1, d2):
     """
     >>> intersect_dicts({'a': 1, 'b': 2}, {'a': 1, 'b': 3})
@@ -125,4 +140,4 @@ def get_import_name(cls):
 def rnd_name(syllables=5):
     return ''.join(itertools.chain(*zip(
         (random.choice('bcdfghjklmnpqrstvwxz') for _ in range(syllables)),
-        (random.choice('aeiou') for _ in range(syllables)))))
+        (random.choice('aeiouy') for _ in range(syllables)))))

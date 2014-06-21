@@ -27,15 +27,7 @@
         }
     ], 
     "apps": {
-        "FreeBayes": {
-            "url": "FreeBayes.json",
-            "$$type": "ref/app/tool/docker",
-            "checksum": ""
-        }, 
-        "BwaMem": {
-            "url": "BwaMem.json",
-            "$$type": "ref/app/tool/docker",
-            "checksum": ""
-        }
+        "FreeBayes": {"$ref": "FreeBayes.json"},
+        "BwaMem": {"$ref": "BwaMem.json"}
     }
 }

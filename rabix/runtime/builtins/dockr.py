@@ -10,10 +10,10 @@ from rabix import CONFIG
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import handle_signal
 from rabix.common.protocol import WrapperJob, Outputs, JobError
-from rabix.runtime import from_json, to_json
+from rabix.runtime import from_url, to_json
 from rabix.runtime.models import App, AppSchema
 from rabix.runtime.tasks import Runner
-import rabix.common.six as six
+from rabix.common import six
 
 log = logging.getLogger(__name__)
 MOUNT_POINT = '/rabix'
@@ -68,8 +68,7 @@ class DockerRunner(Runner):
         self._fix_uid()
         if not os.path.isfile(out_file):
             raise JobError('Job failed.')
-        with open(out_file) as fp:
-            result = from_json(fp)
+        result = from_url(out_file)
         if isinstance(result, Exception):
             raise result
         return self._fix_output_paths(result)
@@ -273,7 +272,7 @@ def get_image(client, ref=None, repo=None, tag=None, id=None, pull_attempts=1):
         pull.wait()
         img = find_image(client, image_id, repo)
         if not img:
-            raise ResourceUnavailable('Image not found: %s' % repo)
+            raise ResourceUnavailable(repo, 'Image not found.')
     else:
         log.debug('Searching for image %s:%s ID: %s', repo, tag, image_id)
         img = find_image(client, image_id, repo, tag)
@@ -281,9 +280,10 @@ def get_image(client, ref=None, repo=None, tag=None, id=None, pull_attempts=1):
         return img
 
     if pull_attempts < 1:
-        raise ResourceUnavailable('Image not found: %s:%s' % (repo, tag))
+        uri = ':'.join([repo, tag])
+        raise ResourceUnavailable(uri, 'Image not found.')
     if not repo:
-        raise ResourceUnavailable('Image not found: %s' % image_id)
+        raise ResourceUnavailable(image_id, 'Image not found.')
     log.info('No local image %s:%s. Downloading...', repo, tag)
     pull = subprocess.Popen(['docker', 'pull', repo])
     pull.wait()

@@ -2,7 +2,7 @@ import functools
 import itertools
 import operator
 
-import rabix.common.six as six
+from rabix.common import six
 from rabix.sdk.wrapper import Wrapper
 from rabix.sdk import require
 

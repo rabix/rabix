@@ -3,7 +3,7 @@ import uuid
 import logging
 import tempfile
 
-import rabix.common.six as six
+from rabix.common import six
 from rabix.common.errors import ValidationError
 from rabix.common.protocol import WrapperJob, Resources, Outputs
 from rabix.common.util import import_name, get_import_name
