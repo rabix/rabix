@@ -90,6 +90,21 @@ class DotAccessDict(dict):
         return self.__class__(copy.deepcopy(dict(self), memo))
 
 
+class NormDict(dict):
+    def __init__(self, normalize=unicode):
+        super(NormDict, self).__init__()
+        self.normalize = normalize
+
+    def __getitem__(self, key):
+        return super(NormDict, self).__getitem__(self.normalize(key))
+
+    def __setitem__(self, key, value):
+        return super(NormDict, self).__setitem__(self.normalize(key), value)
+
+    def __delitem__(self, key):
+        return super(NormDict, self).__delitem__(self.normalize(key))
+
+
 def intersect_dicts(d1, d2):
     """
     >>> intersect_dicts({'a': 1, 'b': 2}, {'a': 1, 'b': 3})

@@ -1,14 +1,16 @@
 import os
 import json
 import copy
+import hashlib
 import logging
 import collections
-from rabix.common.errors import ResourceUnavailable
 
 from rabix.common import six
 # noinspection PyUnresolvedReferences
 from rabix.common.six.moves.urllib import parse as urlparse
 from rabix.common.protocol import MAPPINGS
+from rabix.common.util import NormDict
+from rabix.common.errors import ResourceUnavailable, ValidationError
 
 # requests is not used if installing as sdk-lib.
 try:
@@ -17,21 +19,6 @@ except ImportError:
     requests = None
 
 log = logging.getLogger(__name__)
-
-
-class NormDict(dict):
-    def __init__(self, normalize=unicode):
-        super(NormDict, self).__init__()
-        self.normalize = normalize
-
-    def __getitem__(self, key):
-        return super(NormDict, self).__getitem__(self.normalize(key))
-
-    def __setitem__(self, key, value):
-        return super(NormDict, self).__setitem__(self.normalize(key), value)
-
-    def __delitem__(self, key):
-        return super(NormDict, self).__delitem__(self.normalize(key))
 
 
 class JsonLoader(object):
@@ -62,6 +49,7 @@ class JsonLoader(object):
         doc_url, pointer = urlparse.urldefrag(url)
         document = self.fetch(doc_url)
         fragment = copy.deepcopy(self.resolve_pointer(document, pointer))
+        self.verify_checksum(obj, fragment)
         result = self.resolve_all(fragment, doc_url)
         self.resolved[url] = result
         return result
@@ -102,6 +90,23 @@ class JsonLoader(object):
             raise ValueError('Unsupported scheme: %s' % scheme)
         self.fetched[url] = result
         return result
+
+    def verify_checksum(self, ref_obj, document):
+        checksum = ref_obj.get('checksum')
+        if not checksum:
+            return
+        try:
+            hash_method, hexdigest = checksum.split('$')
+        except ValueError:
+            raise ValidationError('Bad checksum format: %s' % checksum)
+        if hash_method not in ('md5', 'sha1'):
+            raise NotImplementedError(
+                'Unsupported hash method: %s' % hash_method
+            )
+        normalized = json.dumps(document, sort_keys=True, separators=(',', ':'))
+        actual = getattr(hashlib, hash_method)(normalized).hexdigest()
+        if hexdigest != actual:
+            raise ValidationError('Checksum does not match: %s' % checksum)
 
     @staticmethod
     def resolve_pointer(document, pointer):
