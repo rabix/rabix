@@ -94,6 +94,7 @@ def init(work_dir, base_image, force=False):
     chmod_plus(build_sh_path, stat.S_IEXEC)
     # TODO: materialize sdk-lib tarbal in build dir somehow
 
+
 def build(work_dir, tag=None):
     docker_host = getenv("DOCKER_HOST")
     client = docker.Client(docker_host)
