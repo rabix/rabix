@@ -38,7 +38,7 @@ class Node(object):
     def acquire_resources(self, task):
         log.debug('%s: Acquiring %s for %s', self, task.resources, task)
         cpu, ram = task.resources.cpu, task.resources.mem_mb
-        if cpu == -1:
+        if cpu < 0:
             cpu = self.total_cpu
         if ram > self.available_ram or cpu > self.available_cpu:
             return False
@@ -49,7 +49,7 @@ class Node(object):
     def release_resources(self, task):
         log.debug('%s: Releasing %s from %s', self, task.resources, task)
         cpu, ram = task.resources.cpu, task.resources.mem_mb
-        if cpu == -1:
+        if cpu < 0:
             cpu = self.total_cpu
         self.available_ram += ram
         self.available_cpu += cpu

@@ -102,43 +102,33 @@ class MultiprocessingEngine(Engine):
         self.total_cpu = multiprocessing.cpu_count()
         self.available_ram = self.total_ram
         self.available_cpu = self.total_cpu
-        self.multi_cpu_lock = False
 
     def _res(self):
-        return '%s/%s%s;%s/%s' % (
+        return '[%s/%scpu %s/%sMB]' % (
             self.available_cpu,
-            self.total_cpu, 'L' if self.multi_cpu_lock else '',
+            self.total_cpu,
             self.available_ram,
             self.total_ram
         )
 
     def acquire_resources(self, task):
-        res = task.resources
-        log.debug('[resources: %s] Acquiring %s for %s',
-                  self._res(), res, task)
-        if res.mem_mb > self.available_ram:
+        log.debug('%s Acquiring %s for %s', self._res(), task.resources, task)
+        cpu, ram = task.resources.cpu, task.resources.mem_mb
+        if cpu < 0:
+            cpu = self.total_cpu
+        if ram > self.available_ram or cpu > self.available_cpu:
             return False
-        if (res.cpu == res.CPU_ALL and
-                (self.multi_cpu_lock or self.available_cpu != self.total_cpu)):
-            return False
-        if res.cpu > self.available_cpu:
-            return False
-        self.available_ram -= res.mem_mb
-        if res.cpu == res.CPU_ALL:
-            self.multi_cpu_lock = True
-        else:
-            self.available_cpu -= res.cpu
+        self.available_ram -= ram
+        self.available_cpu -= cpu
         return True
 
     def release_resources(self, task):
-        res = task.resources
-        log.debug('[resources: %s] Releasing %s from %s',
-                  self._res(), res, task)
-        self.available_ram += res.mem_mb
-        if res.cpu == res.CPU_ALL:
-            self.multi_cpu_lock = False
-        else:
-            self.available_cpu += res.cpu
+        log.debug('%s Releasing %s from %s', self._res(), task.resources, task)
+        cpu, ram = task.resources.cpu, task.resources.mem_mb
+        if cpu < 0:
+            cpu = self.total_cpu
+        self.available_ram += ram
+        self.available_cpu += cpu
 
     def process_result(self, job, task, async_result):
         try:
