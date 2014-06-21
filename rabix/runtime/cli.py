@@ -5,7 +5,7 @@ import logging
 from docopt import docopt, DocoptExit
 
 import rabix.common.six as six
-from rabix import __version__
+from rabix import __version__ as version
 from rabix.common.util import rnd_name, update_config
 from rabix.runtime import from_url
 from rabix.runtime.models import Pipeline
@@ -17,22 +17,22 @@ log = logging.getLogger(__name__)
 
 USAGE = """
 Usage:
-  rabix run [-v] <file>
-  rabix install [-v] <file>
+  rabix run [-v...] <file>
+  rabix install [-v...] <file>
   rabix -h | --help
   rabix --version
 
 Options:
   -h --help        Display this message.
   --version        Print version to standard output and quit.
-  -v --verbose     Log level set to DEBUG
+  -v --verbose     Verbosity. More Vs more output.
 """
 
 RUN_TPL = """
-Usage: rabix run [-v] {pipeline} {arguments}
+Usage: rabix run [-v...] {pipeline} {arguments}
 
 Options:
-  -v --verbose                            Log level set to DEBUG
+  -v --verbose                            Verbosity. More Vs more output.
   {options}
 """
 
@@ -52,25 +52,35 @@ def make_pipeline_usage_string(pipeline, path):
 
 
 def before_task(task):
-    print('Running %s', task.task_id)
+    print('Running %s' % task.task_id)
     sys.stdout.flush()
 
 
 def present_outputs(outputs):
     header = False
-    row_fmt = '{:<20}{:<80}{:>16}'
+    row_fmt = '{:<20}{:<80}'
     for out_id, file_list in six.iteritems(outputs):
         for path in file_list:
             if not header:
-                print(row_fmt.format('Output ID', 'File path', 'File size'))
+                print(row_fmt.format('Output ID', 'File path'))
                 header = True
-            print(row_fmt.format(out_id, path, str(os.path.getsize(path))))
+            print(row_fmt.format(out_id, path))
+
+
+def set_log_level(v_count):
+    if v_count == 0:
+        level = logging.WARN
+    elif v_count == 1:
+        level = logging.INFO
+    else:
+        level = logging.DEBUG
+    logging.root.setLevel(level)
 
 
 def run(path):
     pipeline = Pipeline.from_app(from_url(path))
-    args = docopt(make_pipeline_usage_string(pipeline, path), version=__version__)
-    logging.root.setLevel(logging.DEBUG if args['--verbose'] else logging.WARN)
+    args = docopt(make_pipeline_usage_string(pipeline, path), version=version)
+    set_log_level(args['--verbose'])
     inputs = {
         i[len('--'):]: args[i]
         for i in args if i.startswith('--') and i != '--verbose'
@@ -99,7 +109,7 @@ def main():
         update_config()
 
     try:
-        args = docopt(USAGE, version=__version__)
+        args = docopt(USAGE, version=version)
     except DocoptExit:
         if len(sys.argv) > 3:
             for a in sys.argv[2:]:
@@ -107,7 +117,7 @@ def main():
                     return run(a)
         print(USAGE)
         return
-    logging.root.setLevel(logging.DEBUG if args['--verbose'] else logging.WARN)
+    set_log_level(args['--verbose'])
     if args["run"]:
         pipeline_path = args['<file>']
         pipeline = from_url(pipeline_path)

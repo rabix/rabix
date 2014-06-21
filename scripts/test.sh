@@ -1,2 +1,2 @@
 #!/bin/sh
-python -m pep8 . --max-line-length=120 && nosetests --nocapture --nologcapture rabix/tests
+python -m pep8 . --max-line-length=120 && nosetests rabix/tests
