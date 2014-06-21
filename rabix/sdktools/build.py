@@ -44,6 +44,8 @@ BUILD_SH = """
 #!/bin/sh
 
 pip install --no-index --find-links /wrappers/build/deps /wrappers
+rm -rf /tmp/* /var/tmp/*
+rm -rf /wrappers
 """
 
 FETCH_DEPS = ["pip", "install", "--download", "build/deps",
