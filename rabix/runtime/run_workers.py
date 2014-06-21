@@ -4,7 +4,7 @@ import logging
 
 import docopt
 
-from rabix import VERSION
+from rabix import __version__
 from rabix.common.util import rnd_name
 
 log = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ WORKER_CMD = ' '.join([
 
 
 def main():
-    args = docopt.docopt(USAGE, version=VERSION)
+    args = docopt.docopt(USAGE, version=__version__)
     if args['--verbose']:
         logging.root.setLevel(logging.DEBUG)
     password = args['--redis-password'] or ''

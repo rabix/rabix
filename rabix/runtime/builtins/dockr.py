@@ -1,12 +1,12 @@
 from __future__ import print_function
 
 import os
-import six
 import copy
 import signal
 import logging
 
 import docker
+import rabix.common.six as six
 
 from subprocess import Popen
 from sys import stdout

@@ -1,11 +1,11 @@
 import os
 import sys
-import six
 import logging
 
 from docopt import docopt, DocoptExit
 
-from rabix import VERSION
+import rabix.common.six as six
+from rabix import __version__
 from rabix.common.util import rnd_name, update_config
 from rabix.runtime import from_url
 from rabix.runtime.models import Pipeline
@@ -69,7 +69,7 @@ def present_outputs(outputs):
 
 def run(path):
     pipeline = Pipeline.from_app(from_url(path))
-    args = docopt(make_pipeline_usage_string(pipeline, path), version=VERSION)
+    args = docopt(make_pipeline_usage_string(pipeline, path), version=__version__)
     logging.root.setLevel(logging.DEBUG if args['--verbose'] else logging.WARN)
     inputs = {
         i[len('--'):]: args[i]
@@ -99,7 +99,7 @@ def main():
         update_config()
 
     try:
-        args = docopt(USAGE, version=VERSION)
+        args = docopt(USAGE, version=__version__)
     except DocoptExit:
         if len(sys.argv) > 3:
             for a in sys.argv[2:]:

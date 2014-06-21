@@ -4,12 +4,12 @@ import sys
 from setuptools import setup, find_packages
 
 sys.path.append(os.path.dirname(__file__))
-from rabix import VERSION
+from rabix import __version__
 
 
 setup(
     name="rabix",
-    version=VERSION,
+    version=__version__,
     include_package_data=True,
     packages=find_packages(),
     entry_points={

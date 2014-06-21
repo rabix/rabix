@@ -1,4 +1,6 @@
-VERSION = '0.2.0'
+
+__version__ = '0.3.0'
+
 CONFIG = {
     'engine': {
         'class': 'rabix.runtime.engine.base.MultiprocessingEngine',

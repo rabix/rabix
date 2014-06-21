@@ -3,13 +3,12 @@ import sys
 from setuptools import setup
 
 sys.path.append(os.path.dirname(__file__))
-from rabix import VERSION
+from rabix import __version__
 
 setup(
     name="rabix-lib",
-    version=VERSION,
+    version=__version__,
     packages=['rabix', 'rabix.common', 'rabix.sdk'],
-    install_requires=['six==1.6.1'],
     entry_points={
         'console_scripts': ['rabix-adapter = rabix.sdk.cli:main'],
     },

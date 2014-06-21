@@ -1,5 +1,4 @@
 import os
-import six
 import copy
 import signal
 import random
@@ -8,6 +7,7 @@ import json
 import collections
 import logging
 
+import rabix.common.six as six
 from rabix import CONFIG
 
 log = logging.getLogger(__name__)
