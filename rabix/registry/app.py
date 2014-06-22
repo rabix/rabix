@@ -3,7 +3,7 @@ import re
 import random
 
 from flask import Flask, request, g, session, redirect, jsonify
-from flask.ext.github import GitHub
+from flask.ext.github import GitHub, GitHubError
 
 from rabix import CONFIG
 from rabix.common.util import update_config
@@ -125,7 +125,11 @@ def logout():
 
 @flapp.route('/user')
 def user_info():
-    return jsonify(**github.get('user'))
+    try:
+        return jsonify(**github.get('user'))
+    except GitHubError:
+        log.exception('Failed getting user info.')
+        return jsonify()
 
 
 @flapp.route('/', methods=['GET'])

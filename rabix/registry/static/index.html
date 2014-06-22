@@ -25,6 +25,7 @@
         <a href="#/apps">Back to apps</a>
         <h1>{{app.name}}</h1>
         <p>{{app.description}}</p>
+        <pre>{{refCopy}}</pre>
     </div>
 </script>
 
@@ -115,6 +116,7 @@ rabix.controller('appCtrl', function($scope, $http, $routeParams) {
     $scope.getApp = function() {
         $http.get('/apps/'+$routeParams.id).success(function(data) {
             $scope.app = data;
+            $scope.refCopy = '{\n  "$ref": "' + data.links.app_ref + '",\n  "checksum": "'+data.app_checksum+'"\n}';
         })
     };
 
