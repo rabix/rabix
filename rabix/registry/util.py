@@ -1,7 +1,8 @@
+import os
 import json
 import functools
 
-from flask import g, jsonify, Response, request
+from flask import g, jsonify, Response, request, send_from_directory
 
 from rabix.common.loadsave import loader, to_json
 from rabix.common.errors import ValidationError
@@ -64,4 +65,5 @@ def add_links(app):
 
 
 def respond_with_client():
-    return Response('js client goes here')
+    static = os.path.join(os.path.dirname(__file__), 'static')
+    return send_from_directory(static, 'index.html')

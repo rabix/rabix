@@ -149,7 +149,9 @@ def apps_index():
 def apps_search():
     skip = request.args.get('skip', 0)
     limit = request.args.get('limit', 25)
-    terms = request.args.getlist('term')
+    terms = request.args.getlist('term', [])
+    terms += request.args.get('terms', '').split(' ')
+    terms = filter(None, terms)
     return {'items': map(add_links, store.search_apps(terms, skip, limit))}
 
 

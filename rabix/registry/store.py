@@ -102,7 +102,7 @@ class RethinkStore(object):
 
     def search_apps(self, terms, skip=0, limit=25):
         if not terms:
-            return []
+            return self.filter_apps({}, skip, limit)
         q = self._build_text_query(terms, ('name', 'description'))
         cur = self.apps.without('app').filter(q)\
             .skip(skip).limit(limit).run(self.cn)
