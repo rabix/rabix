@@ -117,7 +117,7 @@ def login():
         return redirect('/')
 
 
-@flapp.route('/logout', methods=['GET'])
+@flapp.route('/logout', methods=['POST'])
 def logout():
     session.pop('username', None)
     return redirect('/')
@@ -185,13 +185,13 @@ def app_update(app_id):
     return add_links(store.update_app(data))
 
 
-@flapp.route('/token', methods=['GET', 'PUT', 'DELETE'])
+@flapp.route('/token', methods=['GET', 'POST', 'DELETE'])
 @ApiView(login_required=True)
 def token_crud():
     token = None
     if request.method == 'GET':
         token = g.user.get('personal_token')
-    elif request.method == 'PUT':
+    elif request.method == 'POST':
         token = g.store.make_personal_token(g.user['username'])
     elif request.method == 'DELETE':
         g.store.revoke_personal_token(g.user['username'])
