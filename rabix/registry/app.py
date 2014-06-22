@@ -1,5 +1,5 @@
 import logging
-import json
+import re
 import random
 
 from flask import Flask, request, g, session, redirect, jsonify
@@ -8,7 +8,6 @@ from flask.ext.github import GitHub
 from rabix import CONFIG
 from rabix.common.util import update_config
 from rabix.common.errors import ResourceUnavailable
-from rabix.runtime import to_json
 from rabix.registry.util import ApiError, ApiView, validate_app, \
     respond_with_client, add_links
 from rabix.registry.store import RethinkStore
@@ -59,15 +58,21 @@ def handle_400(*_):
 
 @flapp.before_request
 def before_request():
-    g.user = store.get_user(str(session['username'])) \
-        if 'username' in session else None
-    if 'application/json' in request.headers.get('accept', '')\
-            or 'application/json' in request.headers.get('content-type', '') \
-            or 'json' in request.args:
-        g.json_api = True
-    else:
-        g.json_api = False
     g.store = RethinkStore()
+    g.user = None
+    auth = request.headers.get('authorization', '')
+    match = re.match(R'^token ([\w\-_=]+)$', auth)
+    if match:
+        token = match.group(1)
+        g.user = g.store.get_user_by_personal_token(token)
+        if not g.user:
+            raise ApiError(403, 'Invalid token.')
+    if not g.user and 'username' in session:
+        g.user = g.store.get_user(str(session['username']))
+
+    g.json_api = 'application/json' in request.headers.get('accept', '')\
+        or 'application/json' in request.headers.get('content-type', '') \
+        or 'json' in request.args
 
 
 @flapp.teardown_request
@@ -176,6 +181,19 @@ def app_update(app_id):
     if not data.get('repo', '').startswith(g.user['username']):
         raise ApiError(401, 'Not your repo.')
     return add_links(store.update_app(data))
+
+
+@flapp.route('/token', methods=['GET', 'PUT', 'DELETE'])
+@ApiView(login_required=True)
+def token_crud():
+    token = None
+    if request.method == 'GET':
+        token = g.user.get('personal_token')
+    elif request.method == 'PUT':
+        token = g.store.make_personal_token(g.user['username'])
+    elif request.method == 'DELETE':
+        g.store.revoke_personal_token(g.user['username'])
+    return jsonify(token=token)
 
 
 if __name__ == '__main__':

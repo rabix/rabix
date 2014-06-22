@@ -1,4 +1,5 @@
 import re
+import uuid
 import operator
 import logging
 
@@ -50,6 +51,22 @@ class RethinkStore(object):
     def get_user_by_token(self, token):
         res = list(self.users.filter({'token': token}).run(self.cn))
         return res[0] if res else None
+
+    def get_user_by_personal_token(self, token):
+        res = list(self.users.filter({'personal_token': token}).run(self.cn))
+        return res[0] if res else None
+
+    def make_personal_token(self, username):
+        token = str(uuid.uuid4())
+        res = self.users.get(username).update({'personal_token': token})\
+            .run(self.cn)
+        self._check_error(res)
+        return token
+
+    def revoke_personal_token(self, username):
+        res = self.users.get(username).update({'personal_token': None})\
+            .run(self.cn)
+        self._check_error(res)
 
     def upsert_user(self, user):
         res = self.users.insert(user, upsert=True).run(self.cn)
