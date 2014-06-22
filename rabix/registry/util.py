@@ -1,8 +1,9 @@
+import json
 import functools
 
-from flask import g, jsonify, Response
+from flask import g, jsonify, Response, request
 
-from rabix.common.loadsave import loader
+from rabix.common.loadsave import loader, to_json
 from rabix.common.errors import ValidationError
 from rabix.runtime.models import App
 
@@ -31,7 +32,7 @@ class ApiView(object):
         return decorated
 
 
-def make_inner_app(data):
+def validate_app(data):
     app = loader.classify(data)
     if not isinstance(app, dict):
         raise ApiError(400, 'Submit an object.')
@@ -47,6 +48,18 @@ def make_inner_app(data):
         app['app'].validate()
     except ValidationError as e:
         raise ApiError(400, unicode(e))
+    result = json.loads(to_json(app))
+    result['app_checksum'] = 'sha1$' + loader.checksum(result['app'])
+    return app
+
+
+def add_links(app):
+    prefix = request.url_root + 'apps/'
+    app['links'] = {
+        'self': prefix + app['id'] + '?json',
+        'app_ref': prefix + app['id'] + '?json#app',
+        'html': prefix + app['id'],
+    }
     return app
 
 

@@ -9,8 +9,8 @@ from rabix import CONFIG
 from rabix.common.util import update_config
 from rabix.common.errors import ResourceUnavailable
 from rabix.runtime import to_json
-from rabix.registry.util import ApiError, ApiView, make_inner_app, \
-    respond_with_client
+from rabix.registry.util import ApiError, ApiView, validate_app, \
+    respond_with_client, add_links
 from rabix.registry.store import RethinkStore
 
 if __name__ == '__main__':
@@ -136,7 +136,7 @@ def apps_index():
     skip = query.pop('skip', 0)
     limit = query.pop('limit', 25)
     query.pop('json', None)
-    return {'items': store.filter_apps(query, skip, limit)}
+    return {'items': map(add_links, store.filter_apps(query, skip, limit))}
 
 
 @flapp.route('/search', methods=['GET'])
@@ -145,7 +145,7 @@ def apps_search():
     skip = request.args.get('skip', 0)
     limit = request.args.get('limit', 25)
     terms = request.args.getlist('term')
-    return {'items': store.search_apps(terms, skip, limit)}
+    return {'items': map(add_links, store.search_apps(terms, skip, limit))}
 
 
 @flapp.route('/apps/<app_id>', methods=['GET'])
@@ -154,18 +154,18 @@ def app_get(app_id):
     app = store.get_app(app_id)
     if not app:
         raise ApiError(404, 'Not found.')
-    return app
+    return add_links(app)
 
 
 @flapp.route('/apps', methods=['POST'])
 @ApiView(login_required=True)
 def apps_insert():
     data = request.get_json(True)
-    app = make_inner_app(data)
+    app = validate_app(data)
     if not data.get('repo', '').startswith(g.user['username']):
         raise ApiError(401, 'Not your repo.')
-    store.insert_app(json.loads(to_json(app)))
-    return app
+    store.insert_app(app)
+    return add_links(app)
 
 
 @flapp.route('/apps/<app_id>', methods=['PUT'])
@@ -175,7 +175,7 @@ def app_update(app_id):
     data['id'] = app_id
     if not data.get('repo', '').startswith(g.user['username']):
         raise ApiError(401, 'Not your repo.')
-    return store.update_app(json.load(to_json(data)))
+    return add_links(store.update_app(data))
 
 
 if __name__ == '__main__':
