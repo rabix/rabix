@@ -16,6 +16,7 @@ class Model(dict):
     def __init__(self, obj):
         super(dict, self).__init__()
         self.update(obj)
+        self['$$type'] = self.TYPE
 
     def _validate(self):
         """
