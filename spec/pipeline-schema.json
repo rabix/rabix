@@ -1,0 +1,46 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "required": ["$$type", "steps"],
+    "properties": {
+        "$$type": "app/pipeline",
+        "steps": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/step"
+            }
+        },
+        "apps": {
+            "type": "object",
+            "patternProperties": {
+                "^[A-Za-z_][A-Za-z0-9_]*$": { "$ref": "app-schema.json#" }
+            }
+        }
+    },
+    "definitions": {
+        "step": {
+            "type": "object",
+            "required": ["id", "app"],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "app": {
+                    "oneOf": [
+                        {"type": "string"},
+                        {"$ref": "app-schema.json#"}
+                    ]
+                },
+                "inputs": {
+                    "type": "object"
+                },
+                "parameters": {
+                    "type": "object"
+                },
+                "output": {
+                    "type": "object"
+                }
+            }
+        }
+    }
+}

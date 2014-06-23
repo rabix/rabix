@@ -18,6 +18,7 @@ try:
 except ImportError:
     requests = None
 
+
 log = logging.getLogger(__name__)
 
 

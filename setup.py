@@ -17,9 +17,9 @@ setup(
     },
     install_requires=[
         x.strip() for x in
-        io.open('requirements.txt', 'r', encoding='utf-8')
+        io.open('requirements.txt')
     ],
-    long_description=io.open('README.md', 'r', encoding='utf-8').read(),
+    long_description=io.open('README.md').read(),
     zip_safe=False,
     test_suite='tests',
     license='AGPLv3',
