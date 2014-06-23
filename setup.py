@@ -21,6 +21,9 @@ setup(
         x.strip() for x in
         io.open('requirements.txt')
     ],
+    package_data={'rabix': [
+        'models/schema/*.json',
+    ]},
     long_description=io.open('README.md').read(),
     zip_safe=False,
     test_suite='tests',
