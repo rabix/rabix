@@ -3,7 +3,7 @@ import os
 import keyword
 
 from rabix.common import six
-from rabix.runtime.models import App
+from rabix.models import App
 from rabix.runtime.tasks import Runner
 from rabix.common.util import import_name
 from rabix.common.protocol import WrapperJob

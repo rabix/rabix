@@ -18,6 +18,7 @@ try:
 except ImportError:
     requests = None
 
+
 log = logging.getLogger(__name__)
 
 
@@ -28,8 +29,8 @@ class JsonLoader(object):
         self.resolved = NormDict(normalize)
         self.resolving = NormDict(normalize)
 
-    def load(self, url):
-        base_url = 'file://%s/' % os.path.abspath('.')
+    def load(self, url, base_url=None):
+        base_url = base_url or 'file://%s/' % os.path.abspath('.')
         document = self.resolve_ref({'$ref': url}, base_url)
         return self.classify(document)
 
@@ -54,7 +55,7 @@ class JsonLoader(object):
         doc_url, pointer = urlparse.urldefrag(url)
         document = self.fetch(doc_url)
         fragment = copy.deepcopy(self.resolve_pointer(document, pointer))
-        self.verify_checksum(obj, fragment)
+        self.verify_checksum(obj.get('checksum'), fragment)
         result = self.resolve_all(fragment, doc_url)
         self.resolved[url] = result
         del self.resolving[url]
@@ -97,25 +98,25 @@ class JsonLoader(object):
         self.fetched[url] = result
         return result
 
-    def verify_checksum(self, ref_obj, document):
-        checksum = ref_obj.get('checksum')
+    def verify_checksum(self, checksum, document):
         if not checksum:
             return
         try:
             hash_method, hexdigest = checksum.split('$')
         except ValueError:
             raise ValidationError('Bad checksum format: %s' % checksum)
-        if hash_method not in ('md5', 'sha1'):
-            raise NotImplementedError(
-                'Unsupported hash method: %s' % hash_method
-            )
-        normalized = json.dumps(document, sort_keys=True, separators=(',', ':'))
-        actual = getattr(hashlib, hash_method)(normalized).hexdigest()
-        if hexdigest != actual:
+        if hexdigest != self.checksum(document, hash_method):
             raise ValidationError('Checksum does not match: %s' % checksum)
 
-    @staticmethod
-    def resolve_pointer(document, pointer):
+    def checksum(self, document, method='sha1'):
+        if method not in ('md5', 'sha1'):
+            raise NotImplementedError(
+                'Unsupported hash method: %s' % method
+            )
+        normalized = json.dumps(document, sort_keys=True, separators=(',', ':'))
+        return getattr(hashlib, method)(normalized).hexdigest()
+
+    def resolve_pointer(self, document, pointer):
         parts = urlparse.unquote(pointer.lstrip('/')).split('/') \
             if pointer else []
         for part in parts:
@@ -140,5 +141,5 @@ def to_json(obj, fp=None):
     return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
 
 
-def from_url(url):
-    return loader.load(url)
+def from_url(url, base_url=None):
+    return loader.load(url, base_url)

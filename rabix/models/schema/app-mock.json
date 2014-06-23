@@ -1,0 +1,17 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "required": ["docker_image_ref", "schema", "wrapper_id"],
+    "properties": {
+        "wrapper_id": {"type": "string"},
+        "docker_image_ref": {
+            "type": "object",
+            "properties": {
+                "image_id": {"type": "string"},
+                "image_repo": {"type": "string"},
+                "image_tag": {"type": "string"}
+            }
+        },
+        "schema": {"$ref": "sbgsdk.json"}
+    }
+}

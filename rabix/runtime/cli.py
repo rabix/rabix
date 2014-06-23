@@ -8,7 +8,7 @@ from rabix.common import six
 from rabix import __version__ as version
 from rabix.common.util import rnd_name, update_config
 from rabix.runtime import from_url
-from rabix.runtime.models import Pipeline
+from rabix.models import Pipeline
 from rabix.runtime.engine import get_engine
 from rabix.runtime.jobs import RunJob, InstallJob
 

@@ -5,56 +5,15 @@ import networkx as nx
 
 from rabix.common import six
 from rabix.common.errors import ValidationError
+from rabix.models.base import Model
+from rabix.models.apps import App
 
 log = logging.getLogger(__name__)
 
 
-class Model(dict):
-    """Helper class to turn JSON objects with $$type fields to classes."""
-    TYPE = None
-
-    def __init__(self, obj):
-        super(dict, self).__init__()
-        self.update(obj)
-
-    def _validate(self):
-        """
-        Override to validate. Raise AssertionError or ValidationError
-        or return array of errors. Or return None.
-        """
-        pass
-
-    def _check_field(self, field, field_type=None, null=True, look_in=None):
-        obj = look_in or self
-        assert field in obj, 'Must have a "%s" field' % field
-        val = obj[field]
-        if val is None:
-            assert null, '%s cannot be null' % val
-            return
-        if field_type:
-            assert isinstance(val, field_type), (
-                '%s is %s, expected %s' % (val, val.__class__.__name__,
-                                           field_type)
-            )
-
-    def validate(self):
-        try:
-            errors = self._validate()
-        except AssertionError as e:
-            raise ValidationError(six.text_type(e))
-        if errors:
-            raise ValidationError('. '.join(errors))
-
-    def __json__(self):
-        return dict({'$$type': self.TYPE}, **self)
-
-    @classmethod
-    def from_dict(cls, obj):
-        return cls(obj)
-
-
 class Pipeline(Model):
     TYPE = 'app/pipeline'
+    SCHEMA = 'schema/pipeline.json'
 
     apps = property(lambda self: self.get('apps', {}))
     steps = property(lambda self: self['steps'])
@@ -187,6 +146,7 @@ class Pipeline(Model):
     @classmethod
     def from_app(cls, app):
         if isinstance(app, Pipeline):
+            app.validate()
             return app
         pipeline = cls({
             'apps': app.apps,
@@ -203,37 +163,3 @@ class Pipeline(Model):
         })
         pipeline.validate()
         return pipeline
-
-
-class App(Model):
-    schema = property(lambda self: self['schema'])
-    apps = property(lambda self: {'app': self})
-
-    def get_inputs(self):
-        return {inp['id']: inp for inp in self.schema.inputs}
-
-
-class AppSchema(Model):
-    TYPE = 'schema/app/sbgsdk'
-
-    inputs = property(lambda self: self['inputs'])
-    params = property(lambda self: self['params'])
-    outputs = property(lambda self: self['outputs'])
-
-    def _check_is_list_and_has_unique_ids(self, field,
-                                          required_element_fields=None):
-        self._check_field(field, list, null=False)
-        for el in self[field]:
-            for el_field in ['id'] + (required_element_fields or []):
-                self._check_field(
-                    el_field, six.string_types, null=False, look_in=el
-                )
-        assert len(set(el['id'] for el in self[field])) == len(self[field]), (
-            '%s IDs must be unique' % field)
-
-    def _validate(self):
-        self._check_is_list_and_has_unique_ids('inputs')
-        self._check_is_list_and_has_unique_ids('outputs')
-        self._check_is_list_and_has_unique_ids(
-            'params', required_element_fields=['type']
-        )
