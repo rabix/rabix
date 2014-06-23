@@ -6,7 +6,7 @@ import networkx as nx
 from rabix.common import six
 from rabix.common.protocol import WrapperJob, Outputs, Resources
 from rabix.common.util import rnd_name
-from rabix.runtime.models import Pipeline
+from rabix.models import Pipeline
 
 log = logging.getLogger(__name__)
 

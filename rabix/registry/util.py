@@ -6,7 +6,7 @@ from flask import g, jsonify, Response, request, send_from_directory
 
 from rabix.common.loadsave import loader, to_json
 from rabix.common.errors import ValidationError
-from rabix.runtime.models import App
+from rabix.models import App
 
 
 class ApiError(RuntimeError):

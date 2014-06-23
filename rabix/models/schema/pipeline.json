@@ -13,7 +13,7 @@
         "apps": {
             "type": "object",
             "patternProperties": {
-                "^[A-Za-z_][A-Za-z0-9_]*$": { "$ref": "app-schema.json#" }
+                "^[A-Za-z_][A-Za-z0-9_]*$": { "$ref": "app.json#" }
             }
         }
     },
@@ -28,7 +28,7 @@
                 "app": {
                     "oneOf": [
                         {"type": "string"},
-                        {"$ref": "app-schema.json#"}
+                        {"$ref": "app.json#"}
                     ]
                 },
                 "inputs": {

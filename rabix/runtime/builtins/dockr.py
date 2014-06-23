@@ -11,7 +11,7 @@ from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import handle_signal
 from rabix.common.protocol import WrapperJob, Outputs, JobError
 from rabix.runtime import from_url, to_json
-from rabix.runtime.models import App, AppSchema
+from rabix.models import App, AppSchema
 from rabix.runtime.tasks import Runner
 from rabix.common import six
 
