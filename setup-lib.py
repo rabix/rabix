@@ -1,17 +1,16 @@
-import os
+from distutils.core import setup
 import sys
-from setuptools import setup
+import os
 
 sys.path.append(os.path.dirname(__file__))
 from rabix import __version__
+
 
 setup(
     name="rabix-lib",
     version=__version__,
     packages=['rabix', 'rabix.common', 'rabix.sdk'],
-    entry_points={
-        'console_scripts': ['rabix-adapter = rabix.sdk.cli:main'],
-    },
+    scripts=['scripts/rabix-adapter'],
     long_description="",
     license='AGPLv3',
     classifiers=[
@@ -22,7 +21,7 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7'
         'Topic :: Scientific/Engineering :: Bio-Informatics',
-        ('License :: OSI Approved :: ' +
-            'GNU Affero General Public License v3 or later (AGPLv3+)')
+        'License :: OSI Approved :: ' +
+            'GNU Affero General Public License v3 or later (AGPLv3+)'
     ]
 )

@@ -79,7 +79,7 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
     args = vars(create_parser().parse_args())
     try:
-        args['cmd_func'](**args)
+        args.pop('cmd_func')(**args)
     except Exception:
         log.exception("Internal error: %s", args)
         return 1

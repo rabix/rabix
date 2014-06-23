@@ -1,0 +1,5 @@
+#!/usr/bin/env python
+
+import rabix.sdk.cli
+
+rabix.sdk.cli.main()
