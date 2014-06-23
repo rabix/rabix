@@ -51,7 +51,7 @@ def validate_app(data):
         raise ApiError(400, unicode(e))
     result = json.loads(to_json(app))
     result['app_checksum'] = 'sha1$' + loader.checksum(result['app'])
-    return app
+    return result
 
 
 def add_links(app):
