@@ -1,0 +1,9 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "required": ["importable", "schema"],
+    "properties": {
+        "importable": {"type": "string"},
+        "schema": {"$ref": "sbgsdk.json"}
+    }
+}

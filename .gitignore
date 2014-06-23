@@ -1,3 +1,7 @@
+*.log
 *.pyc
 .idea
-
+x-test-*
+dist
+*.egg-info
+rabix.conf

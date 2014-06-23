@@ -1,0 +1,34 @@
+{
+    "$$type": "app/pipeline",
+    "apps": {
+        "generator": {"$ref": "mocks.json#generator"},
+        "incrementor": {
+            "$ref": "mocks.json#incrementor",
+            "checksum": "md5$62b3ffa779afcc989a17ada62a668674"
+        },
+        "two_step_increment": {"$ref": "mocks.json#two_step_increment"}
+    },
+    "steps": [
+        {
+            "id": "gen1",
+            "app": {"$ref": "#/apps/generator"}
+        },
+        {
+            "id": "inc1",
+            "app": "incrementor",
+            "inputs": {
+                "to_increment": "number"
+            }
+        },
+        {
+            "id": "inc2",
+            "app": "two_step_increment",
+            "inputs": {
+                "to_increment": "inc1.incremented"
+            },
+            "outputs": {
+                "incremented": "incremented"
+            }
+        }
+    ]
+}

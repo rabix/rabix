@@ -3,18 +3,11 @@
     "apps": {
         "generator": {
             "$$type": "ref/app/mock/python",
-            "url": "https://s3.amazonaws.com/boysha/testfiles/generator.mock.json",
-            "checksum": "2c2dda15533c18ec43327543ef1bd682"
+            "$ref": "generator.mock.json"
         },
         "incrementor": {
-            "$$type": "app/mock/python",
-            "importable": "rabix.tests.test_mocks.incrementor",
-            "schema": {
-                "$$type": "schema/app/sbgsdk",
-                "inputs": [{"id": "to_increment", "list": false}],
-                "params" : [],
-                "outputs": [{"id": "incremented", "list": false}]
-            }
+            "$ref": "mocks.json#incrementor",
+            "checksum": "sha1$90a4abf163cb01dba4dd676a1fa47f72900c45e0"
         },
         "two_step_increment": {
             "$$type": "app/mock/python",
@@ -30,7 +23,7 @@
     "steps": [
         {
             "id": "gen1",
-            "app": "generator"
+            "app": {"$ref": "generator.mock.json"}
         },
         {
             "id": "inc1",
