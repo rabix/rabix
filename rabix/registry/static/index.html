@@ -61,7 +61,10 @@
 rabix = angular.module('RabixRegistry', ['ngRoute']);
 
 rabix.controller('mainCtrl', function($scope, $http, $location) {
-    $http.get('/user').success(function(data){$scope.user=data;});
+    $http.get('/user').success(function(data){
+        console.log(data);
+        $scope.user=data.login?data:null;
+    });
     $scope.logout = function() {
         $http.post('/logout').success(function () {
             $scope.user = null;

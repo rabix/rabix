@@ -90,6 +90,7 @@ def token_getter():
 @flapp.route('/github-callback')
 @github.authorized_handler
 def authorized(access_token):
+    log.debug(access_token)
     next_url = request.args.get('next') or '/'
     if access_token is None:
         return redirect(next_url)
@@ -104,7 +105,7 @@ def authorized(access_token):
             'name': resp['name'],
             'github_url': resp['html_url'],
         })
-        store.upsert_user(user)
+        store.create_or_update_user(user)
     session['username'] = user['username']
     return redirect('/')
 
@@ -119,12 +120,15 @@ def login():
 
 @flapp.route('/logout', methods=['POST'])
 def logout():
-    session.pop('username', None)
+    username = session.pop('username', None)
+    g.store.logout(username)
     return redirect('/')
 
 
 @flapp.route('/user')
 def user_info():
+    if not g.user:
+        return jsonify()
     try:
         return jsonify(**github.get('user'))
     except GitHubError:

@@ -68,8 +68,15 @@ class RethinkStore(object):
             .run(self.cn)
         self._check_error(res)
 
-    def upsert_user(self, user):
-        res = self.users.insert(user, upsert=True).run(self.cn)
+    def create_or_update_user(self, user):
+        if self.get_user(user['username']):
+            res = self.users.get(user['username']).update(user).run(self.cn)
+            self._check_error(res)
+            return self.get_user(user['username'])
+        self._check_error(self.users.insert(user).run(self.cn))
+
+    def logout(self, username):
+        res = self.users.get(username).update({'token': None}).run(self.cn)
         self._check_error(res)
 
     def insert_app(self, *documents):
