@@ -2,11 +2,8 @@
     "$schema": "http://json-schema.org/draft-04/schema#",
     "title": "Reproducible Analyses - Tool description schema",
     "type": "object",
-    "required": ["$$type", "inputs", "outputs", "params"],
+    "required": ["inputs", "outputs", "params"],
     "properties": {
-        "$$type": {
-            "enum": ["schema/app/sbgsdk"]
-        },
         "inputs": {
             "type": "array",
             "items": {

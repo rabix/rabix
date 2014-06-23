@@ -1,9 +1,8 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
     "type": "object",
-    "required": ["$$type", "steps"],
+    "required": ["steps"],
     "properties": {
-        "$$type": "app/pipeline",
         "steps": {
             "type": "array",
             "items": {
@@ -13,7 +12,7 @@
         "apps": {
             "type": "object",
             "patternProperties": {
-                "^[A-Za-z_][A-Za-z0-9_]*$": { "$ref": "app.json#" }
+                "^[A-Za-z_][A-Za-z0-9_]*$": { "type": "object" }
             }
         }
     },
@@ -28,7 +27,7 @@
                 "app": {
                     "oneOf": [
                         {"type": "string"},
-                        {"$ref": "app.json#"}
+                        {"type": "object"}
                     ]
                 },
                 "inputs": {

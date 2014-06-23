@@ -1,7 +1,11 @@
+import os
 import logging
+
+import jsonschema
 
 from rabix.common import six
 from rabix.common.errors import ValidationError
+from rabix.common.loadsave import from_url
 
 log = logging.getLogger(__name__)
 
@@ -9,6 +13,7 @@ log = logging.getLogger(__name__)
 class Model(dict):
     """Helper class to turn JSON objects with $$type fields to classes."""
     TYPE = None
+    SCHEMA = None
 
     def __init__(self, obj):
         super(dict, self).__init__()
@@ -36,6 +41,14 @@ class Model(dict):
             )
 
     def validate(self):
+        if self.SCHEMA:
+            base_url = 'file://' + os.path.abspath(__file__)
+            schema = from_url(self.SCHEMA, base_url)
+            validator = jsonschema.Draft4Validator(schema)
+            try:
+                validator.validate(self)
+            except jsonschema.ValidationError as e:
+                raise ValidationError(six.text_type(e))
         try:
             errors = self._validate()
         except AssertionError as e:

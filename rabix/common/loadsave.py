@@ -29,8 +29,8 @@ class JsonLoader(object):
         self.resolved = NormDict(normalize)
         self.resolving = NormDict(normalize)
 
-    def load(self, url):
-        base_url = 'file://%s/' % os.path.abspath('.')
+    def load(self, url, base_url=None):
+        base_url = base_url or 'file://%s/' % os.path.abspath('.')
         document = self.resolve_ref({'$ref': url}, base_url)
         return self.classify(document)
 
@@ -141,5 +141,5 @@ def to_json(obj, fp=None):
     return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
 
 
-def from_url(url):
-    return loader.load(url)
+def from_url(url, base_url=None):
+    return loader.load(url, base_url)

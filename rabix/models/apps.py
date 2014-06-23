@@ -16,6 +16,7 @@ class App(Model):
 
 class AppSchema(Model):
     TYPE = 'schema/app/sbgsdk'
+    SCHEMA = 'schema/sbgsdk.json'
 
     inputs = property(lambda self: self['inputs'])
     params = property(lambda self: self['params'])

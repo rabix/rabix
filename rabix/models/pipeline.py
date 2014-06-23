@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 
 class Pipeline(Model):
     TYPE = 'app/pipeline'
+    SCHEMA = 'schema/pipeline.json'
 
     apps = property(lambda self: self.get('apps', {}))
     steps = property(lambda self: self['steps'])
@@ -145,6 +146,7 @@ class Pipeline(Model):
     @classmethod
     def from_app(cls, app):
         if isinstance(app, Pipeline):
+            app.validate()
             return app
         pipeline = cls({
             'apps': app.apps,
