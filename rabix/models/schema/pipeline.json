@@ -12,7 +12,7 @@
         "apps": {
             "type": "object",
             "patternProperties": {
-                "^[A-Za-z_][A-Za-z0-9_]*$": { "type": "object" }
+                "^[A-Za-z_][A-Za-z0-9_]*$": {"$ref": "#/definitions/app"}
             }
         }
     },
@@ -27,7 +27,7 @@
                 "app": {
                     "oneOf": [
                         {"type": "string"},
-                        {"type": "object"}
+                        {"$ref": "#/definitions/app"}
                     ]
                 },
                 "inputs": {
