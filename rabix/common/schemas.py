@@ -18,4 +18,3 @@ class Schemas(object):
 
     def add_schema(self, schema):
         pass
-
