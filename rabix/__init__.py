@@ -20,5 +20,5 @@ CONFIG = {
     },
     'docker': {},
     'nodes': [{'node_id': 'some-id', 'ram_mb': 2*1024, 'cpu': 1}],
-    'redis': {'host': 'localhost', 'port': 6379, 'password': None},
+    'redis': {'host': 'localhost', 'port': 6379, 'password': None}
 }
