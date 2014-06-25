@@ -51,16 +51,16 @@ module.exports = function (grunt) {
             gruntfile: {
                 files: ['Gruntfile.js']
             },
-            livereload: {
-                options: {
-                    livereload: '<%= connect.options.livereload %>'
-                },
-                files: [
-                    '<%= yeoman.app %>/{,*/}*.html',
-                    '.tmp/styles/{,*/}*.css',
-                    '<%= yeoman.app %>/images/{,*/}*.{png,jpg,jpeg,gif,webp,svg}'
-                ]
-            },
+//            livereload: {
+//                options: {
+//                    livereload: '<%= connect.options.livereload %>'
+//                },
+//                files: [
+//                    '<%= yeoman.app %>/{,*/}*.html',
+//                    '.tmp/styles/{,*/}*.css',
+//                    '<%= yeoman.app %>/images/{,*/}*.{png,jpg,jpeg,gif,webp,svg}'
+//                ]
+//            },
             template: {
                 files: [
                     '<%= yeoman.app %>/views/{,*/}*.html'
@@ -189,12 +189,13 @@ module.exports = function (grunt) {
         compass: {
             options: {
                 sassDir: '<%= yeoman.app %>/styles',
-                cssDir: '.tmp/styles',
+//                cssDir: '.tmp/styles',
+                cssDir: '<%= yeoman.app %>/styles',
                 generatedImagesDir: '.tmp/images/generated',
                 imagesDir: '<%= yeoman.app %>/images',
                 javascriptsDir: '<%= yeoman.app %>/scripts',
                 fontsDir: '<%= yeoman.app %>/styles/fonts',
-                importPath: './bower_components',
+                importPath: './app/bower_components',
                 httpImagesPath: '/images',
                 httpGeneratedImagesPath: '/images/generated',
                 httpFontsPath: '/styles/fonts',
@@ -434,7 +435,7 @@ module.exports = function (grunt) {
             //'wiredep',
             'concurrent:server',
             'autoprefixer',
-            'connect:livereload',
+//            'connect:livereload',
             'ngtemplates:app',
             'watch'
         ]);

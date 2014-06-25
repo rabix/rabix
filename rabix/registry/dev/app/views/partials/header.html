@@ -1,25 +1,34 @@
 <div class="header">
-    <div class="container" ng-if="(view.user | isEmpty)">
-        Welcome!
-        <button class="btn btn-primary" class="logIn()">Log In With GitHub</button>
-    </div>
-    <div class="container" ng-if="!(view.user | isEmpty)">
+    <div ng-if="!view.loading" class="container">
+
         <div class="row">
-            <div class="col-md-6"><span class="welcome">Welcome {{ view.user.username }}!</span></div>
-            <div class="col-md-6">
-                <div class="btn-group pull-right" dropdown>
-                    <button type="button" class="btn btn-primary dropdown-toggle" ng-disabled="disabled">
-                        Options <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" role="menu">
-                        <li><a href="#">(Re)generate token</a></li>
-                        <li><a href="#">Revoke token</a></li>
+            <div class="col-md-2">
+                <a ng-href="#/" class="logo">Rabix</a>
+            </div>
+
+            <div ng-if="(view.user | isEmpty)" class="col-md-4 col-md-offset-6">
+                <button class="btn btn-primary btn-block" ng-disabled="view.loggingIn" ng-click="logIn()">Log In With GitHub</button>
+            </div>
+
+            <div ng-if="!(view.user | isEmpty)" class="col-md-10">
+                <div class="btn-group pull-right" dropdown is-open="view.showOptions">
+
+                    <div class="dropdown-toggle">
+                        <span class="glyphicon glyphicon-cog"></span>
+                    </div>
+
+                    <ul class="dropdown-menu" role="menu" ng-class="{loading: view.processing}">
+                        <li><a href ng-click="generateToken()">(Re)generate token</a></li>
+                        <li><a href ng-click="revokeToken">Revoke token</a></li>
                         <li class="divider"></li>
-                        <li><a href="#">Log Out</a></li>
+                        <li><a href ng-click="logOut()">Log Out</a></li>
                     </ul>
                 </div>
+                <span class="welcome pull-right">Welcome {{ view.user.username }}!</span>
 
             </div>
+
         </div>
+
     </div>
 </div>

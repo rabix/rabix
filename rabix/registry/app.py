@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
 dirname = os.path.abspath(os.path.dirname(__file__))
 static_dir = os.path.join(dirname, CONFIG['registry']['STATIC_DIR'])
-flapp = Flask(__name__, static_folder=static_dir, static_url_path='/static')
+flapp = Flask(__name__, static_folder=static_dir, static_url_path='')
 flapp.config.update(CONFIG['registry'])
 log = flapp.logger
 github = GitHub(flapp)
@@ -111,6 +111,11 @@ def teardown_request(_):
     g.store.disconnect()
 
 
+# @flapp.route('/static/<path:path>', methods=['GET'])
+# def static_route(path):
+#     return flapp.send_static_file(path)
+
+
 @github.access_token_getter
 def token_getter():
     user = g.user
@@ -185,7 +190,7 @@ def apps_index():
     skip = query.pop('skip', 0)
     limit = query.pop('limit', 25)
     query.pop('json', None)
-    return {'items': map(add_links, store.filter_apps(query, skip, limit))}
+    return {'items': map(add_links, store.filter_apps(query, int(skip), limit))}
 
 
 @flapp.route('/search', methods=['GET'])
