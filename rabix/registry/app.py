@@ -1,5 +1,7 @@
 import logging
+import functools
 import re
+import os
 import random
 
 from flask import Flask, request, g, session, redirect, jsonify
@@ -8,14 +10,15 @@ from flask.ext.github import GitHub, GitHubError
 from rabix import CONFIG
 from rabix.common.util import update_config
 from rabix.common.errors import ResourceUnavailable
-from rabix.registry.util import ApiError, ApiView, validate_app, \
-    respond_with_client, add_links
+from rabix.registry.util import ApiError, validate_app, add_links
 from rabix.registry.store import RethinkStore
 
 if __name__ == '__main__':
     update_config()
 
-flapp = Flask(__name__)
+dirname = os.path.abspath(os.path.dirname(__file__))
+static_dir = os.path.join(dirname, CONFIG['registry']['STATIC_DIR'])
+flapp = Flask(__name__, static_folder=static_dir, static_url_path='/static')
 flapp.config.update(CONFIG['registry'])
 log = flapp.logger
 github = GitHub(flapp)
@@ -27,6 +30,24 @@ mock_user = {
     'login': '$mock',
     'name': 'Mock User',
 }
+
+
+class ApiView(object):
+    def __init__(self, login_required=False):
+        self.login_required = login_required
+
+    def __call__(self, func):
+        @functools.wraps(func)
+        def decorated(*args, **kwargs):
+            if self.login_required and not g.user:
+                raise ApiError(403, 'Login required.')
+            if not g.json_api:
+                return flapp.send_static_file('index.html')
+            resp = func(*args, **kwargs)
+            if isinstance(resp, dict):
+                return jsonify(**resp)
+            return resp
+        return decorated
 
 
 @flapp.errorhandler(ApiError)
@@ -55,7 +76,7 @@ def server_error(exc):
 @flapp.errorhandler(404)
 def handle_404(*_):
     return error_handler(ApiError(404, 'Not found.'))\
-        if g.json_api else respond_with_client()
+        if g.json_api else flapp.send_static_file('index.html')
 
 
 @flapp.errorhandler(400)
