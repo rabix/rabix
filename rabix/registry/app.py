@@ -28,6 +28,7 @@ mock_user = {
     'name': 'Mock User',
 }
 
+
 @flapp.errorhandler(ApiError)
 def error_handler(exc):
     resp = jsonify(message=exc.message)
