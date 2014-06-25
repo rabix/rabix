@@ -1,0 +1,23 @@
+{
+  "name": "registry",
+  "version": "0.0.0",
+  "dependencies": {
+    "angular": "1.2.16",
+    "json3": "~3.3.1",
+    "es5-shim": "~3.1.0",
+    "angular-resource": "1.2.16",
+    "angular-cookies": "1.2.16",
+    "angular-sanitize": "1.2.16",
+    "angular-animate": "1.2.16",
+    "angular-route": "1.2.16",
+    "angular-ui-bootstrap": "~0.11.0",
+    "angular-bootstrap": "~0.11.0",
+    "bootstrap-sass-official": "~3.1.1+2",
+    "bootstrap": "~3.1.1"
+  },
+  "devDependencies": {
+    "angular-mocks": "1.2.16",
+    "angular-scenario": "1.2.16"
+  },
+  "appPath": "app"
+}
