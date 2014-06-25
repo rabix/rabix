@@ -285,6 +285,6 @@ def get_image(client, ref=None, repo=None, tag=None, id=None, pull_attempts=1):
     if not repo:
         raise ResourceUnavailable(image_id, 'Image not found.')
     log.info('No local image %s:%s. Downloading...', repo, tag)
-    pull = subprocess.Popen(['docker', 'pull', repo])
+    pull = subprocess.Popen(['docker', 'pull', ':'.join([repo, tag])])
     pull.wait()
     return get_image(client, ref, pull_attempts - 1)
