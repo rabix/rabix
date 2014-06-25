@@ -26,6 +26,7 @@ CONFIG = {
         'GITHUB_CLIENT_SECRET': '',
         'GITHUB_CALLBACK_URL': '',
         'MOCK_USER': False,
+        'STATIC_DIR': 'static',
     },
     'docker': {},
     'nodes': [{'node_id': 'some-id', 'ram_mb': 2*1024, 'cpu': 1}],
