@@ -18,6 +18,15 @@ CONFIG = {
             'app/mock/python': 'rabix.runtime.builtins.mocks.MockRunner'
         }
     },
+    'registry': {
+        'HOST': 'localhost',
+        'DEBUG': True,
+        'SECRET_KEY': '',
+        'GITHUB_CLIENT_ID': '',
+        'GITHUB_CLIENT_SECRET': '',
+        'GITHUB_CALLBACK_URL': '',
+        'MOCK_USER': False,
+    },
     'docker': {},
     'nodes': [{'node_id': 'some-id', 'ram_mb': 2*1024, 'cpu': 1}],
     'redis': {'host': 'localhost', 'port': 6379, 'password': None}

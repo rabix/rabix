@@ -114,3 +114,7 @@ class RethinkStore(object):
         cur = self.apps.without('app').filter(q)\
             .skip(skip).limit(limit).run(self.cn)
         return list(cur)
+
+
+if __name__ == '__main__':
+    RethinkStore().init_db()
