@@ -20,7 +20,13 @@ flapp.config.update(CONFIG['registry'])
 log = flapp.logger
 github = GitHub(flapp)
 store = RethinkStore()
-
+mock_user = {
+    'avatar_url': 'https://avatars.githubusercontent.com/u/125295?',
+    'gravatar_id': 'e2e353bd6284cc95fc98d3c1a2c358c5',
+    'html_url': 'https://github.com/ntijanic',
+    'login': '$mock',
+    'name': 'Mock User',
+}
 
 @flapp.errorhandler(ApiError)
 def error_handler(exc):
@@ -68,7 +74,10 @@ def before_request():
         if not g.user:
             raise ApiError(403, 'Invalid token.')
     if not g.user and 'username' in session:
-        g.user = g.store.get_user(str(session['username']))
+        if not flapp.config.get('MOCK_USER'):
+            g.user = g.store.get_user(str(session['username']))
+        else:
+            g.user = {'username': mock_user['login']}
 
     g.json_api = 'application/json' in request.headers.get('accept', '')\
         or 'application/json' in request.headers.get('content-type', '') \
@@ -84,7 +93,7 @@ def teardown_request(_):
 def token_getter():
     user = g.user
     if user is not None:
-        return user['token']
+        return user.get('token')
 
 
 @flapp.route('/github-callback')
@@ -112,10 +121,13 @@ def authorized(access_token):
 
 @flapp.route('/login')
 def login():
-    if 'username' not in session:
-        return github.authorize()
-    else:
+    if 'username' in session:
         return redirect('/')
+    if flapp.config.get('MOCK_USER'):
+        g.store.create_or_update_user({'username': mock_user['login']})
+        session['username'] = mock_user['login']
+        return redirect('/')
+    return github.authorize()
 
 
 @flapp.route('/logout', methods=['POST'])
@@ -129,6 +141,8 @@ def logout():
 def user_info():
     if not g.user:
         return jsonify()
+    if flapp.config.get('MOCK_USER'):
+        return jsonify(**mock_user)
     try:
         return jsonify(**github.get('user'))
     except GitHubError:
@@ -208,4 +222,4 @@ def token_crud():
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    flapp.run(port=4480)
+    flapp.run(port=4280)
