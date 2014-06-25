@@ -1,3 +1,25 @@
 <div class="header">
-    header
+    <div class="container" ng-if="(view.user | isEmpty)">
+        Welcome!
+        <button class="btn btn-primary" class="logIn()">Log In With GitHub</button>
+    </div>
+    <div class="container" ng-if="!(view.user | isEmpty)">
+        <div class="row">
+            <div class="col-md-6"><span class="welcome">Welcome {{ view.user.username }}!</span></div>
+            <div class="col-md-6">
+                <div class="btn-group pull-right" dropdown>
+                    <button type="button" class="btn btn-primary dropdown-toggle" ng-disabled="disabled">
+                        Options <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="#">(Re)generate token</a></li>
+                        <li><a href="#">Revoke token</a></li>
+                        <li class="divider"></li>
+                        <li><a href="#">Log Out</a></li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+    </div>
 </div>

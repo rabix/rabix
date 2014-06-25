@@ -10,7 +10,13 @@ angular.module('registryApp')
             link: function (scope) {
 
                 scope.view = {};
-                console.log('header');
+                //scope.view.user = {};
+                scope.view.user = {username: 'test'};
+
+                scope.logIn = function() {
+
+                };
+
 
             }
         };
