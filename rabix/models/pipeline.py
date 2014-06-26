@@ -122,7 +122,7 @@ class Pipeline(Model):
                              else [] if o is None else [o])
         inputs = {}
         for step in self['steps']:
-            for app_inp_id, incoming in six.iteritems(step['inputs']):
+            for app_inp_id, incoming in six.iteritems(step.get('inputs', {})):
                 incoming = to_list(incoming)
                 for conn in incoming:
                     if '.' in conn:
