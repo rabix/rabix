@@ -186,30 +186,21 @@ def index():
 @flapp.route('/apps', methods=['GET'])
 @ApiView()
 def apps_index():
-    query = {k: v for k, v in request.args.iteritems()}
-    try:
-        skip = int(query.pop('skip', 0))
-        limit = int(query.pop('limit', 25))
-        assert skip >= 0 and limit >= 0
-    except (TypeError, ValueError, AssertionError):
-        raise ApiError(400, 'skip and limit must be positive integers')
-    query.pop('json', None)
-    return {'items': map(add_links, store.filter_apps(query, skip, limit))}
-
-
-@flapp.route('/search', methods=['GET'])
-@ApiView()
-def apps_search():
+    query = {k[len('field_'):]: v for k, v in request.args.iteritems()
+             if k.startswith('field_')}
+    text = request.args.get('q')
     try:
         skip = int(request.args.get('skip', 0))
         limit = int(request.args.get('limit', 25))
-        assert skip >= 0 and limit >= 0
-    except (ValueError, TypeError, AssertionError):
-        raise ApiError(400, 'skip and list must be positive integers')
-    terms = request.args.getlist('term')
-    terms += request.args.get('terms', '').split(' ')
-    terms = filter(None, terms)
-    return {'items': map(add_links, store.search_apps(terms, skip, limit))}
+        if skip < 0 or limit < 0:
+            raise ValueError('Negative value for skip or limit.')
+    except ValueError:
+        raise ApiError(400, 'skip and limit must be positive integers')
+    apps, total = store.filter_apps(query, text, skip, limit)
+    return {
+        'items': map(add_links, apps),
+        'total': total,
+    }
 
 
 @flapp.route('/apps/<app_id>', methods=['GET'])

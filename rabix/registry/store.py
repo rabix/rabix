@@ -101,19 +101,15 @@ class RethinkStore(object):
     def get_app(self, app_id):
         return self.apps.get(app_id).run(self.cn)
 
-    def filter_apps(self, filter, skip=0, limit=25):
+    def filter_apps(self, filter, text=None, skip=0, limit=25):
         log.debug('Filter apps: %s', filter)
-        cur = self.apps.without('app').filter(filter) \
-            .skip(skip).limit(limit).run(self.cn)
-        return list(cur)
-
-    def search_apps(self, terms, skip=0, limit=25):
-        if not terms:
-            return self.filter_apps({}, skip, limit)
-        q = self._build_text_query(terms, ('name', 'description'))
-        cur = self.apps.without('app').filter(q)\
-            .skip(skip).limit(limit).run(self.cn)
-        return list(cur)
+        q = self.apps.without('app').filter(filter)
+        if text:
+            terms = text.split(' ')
+            q = q.filter(self._build_text_query(terms, ('name', 'description')))
+        cur = q.skip(skip).limit(limit).run(self.cn)
+        count = q.count().run(self.cn)
+        return cur, count
 
 
 if __name__ == '__main__':
