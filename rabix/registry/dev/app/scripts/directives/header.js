@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('registryApp')
-    .directive('header', ['$templateCache', '$timeout', '$route', 'Model', function ($templateCache, $timeout, $route, Model) {
+    .directive('header', ['$templateCache', '$timeout', '$route', '$modal', 'Model', function ($templateCache, $timeout, $route, $modal, Model) {
         return {
             restrict: 'E',
             replace: true,
@@ -40,8 +40,18 @@ angular.module('registryApp')
                 scope.generateToken = function() {
                     scope.view.processing = true;
                     Model.generateToken().then(function(result) {
-                        console.log(result);
+
                         scope.view.processing = false;
+                        scope.view.showOptions = false;
+
+                        $modal.open({
+                            template: $templateCache.get('views/partials/token-regenerated.html'),
+                            controller: 'ModalCtrl',
+                            resolve: {
+                                data: function () { return {token: result.token}; }
+                            }
+                        });
+
                     });
                 };
 
@@ -50,9 +60,17 @@ angular.module('registryApp')
                  */
                 scope.revokeToken = function() {
                     scope.view.processing = true;
-                    Model.revokeToken().then(function(result) {
-                        console.log(result);
+                    Model.revokeToken().then(function() {
+
                         scope.view.processing = false;
+                        scope.view.showOptions = false;
+
+                        $modal.open({
+                            template: $templateCache.get('views/partials/token-revoked.html'),
+                            controller: 'ModalCtrl',
+                            resolve: { data: function () { return {}; } }
+                        });
+
                     });
                 };
 

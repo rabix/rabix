@@ -53,6 +53,11 @@
           width: 60%;
         }
       }
+      td {
+        p {
+          max-width: 100%;
+        }
+      }
     }
   }
 }
@@ -86,4 +91,9 @@
 
 .search-form {
   padding: 10px 0;
+}
+
+.token {
+  font-size: 18px;
+  margin: 0;
 }
