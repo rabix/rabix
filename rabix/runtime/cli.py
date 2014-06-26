@@ -43,7 +43,7 @@ def make_pipeline_usage_string(pipeline, path):
         arg = '--%s=<%s_file>%s' % (
             inp_id, inp_id, '...' if inp_details['list'] else ''
         )
-        usage_str.append(arg if inp_details['required'] else '[%s]' % arg)
+        usage_str.append(arg if inp_details.get('required', False) else '[%s]' % arg)
         options.append('{0: <40}{1}'.format(
             arg, inp_details.get('description', ''))
         )
