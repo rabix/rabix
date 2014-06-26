@@ -1,0 +1,40 @@
+steps:
+  - run:
+      name: make
+      from: ubuntu:14
+      cmd:
+        - apt-get update
+        - apt-get install gcc
+        - make
+        - ./bin/mytool  # Just print usage
+
+  - build:
+      name: package_tool
+      from: ubuntu:14
+      cmd: cp ./bin/mytool /usr/bin
+      entrypoint: /usr/bin/mytool
+
+  - run:
+      name: test_tool
+      from: $package_tool
+      cmd: --input ./test-data/simple.vcf
+
+  - build:
+      name: install_wrappers
+      from: $package_tool
+      cmd:
+        - pip install ./wrappers
+        - rabix package rabix_mytool
+      entrypoint: rabix
+
+  - run:
+      name: test_wrappers
+      from: $install_wrappers
+      override_entrypoint: /bin/bash
+      cmd:
+        - nosetests mytool_rabix.tests
+        - rabix run-full --input ./test-data/simple.vcf
+
+register:
+  wrappers: boysha/mytool:rabix-$version
+  package_tool: boysha/mytool:$version

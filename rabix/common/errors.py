@@ -16,3 +16,8 @@ class ResourceUnavailable(RuntimeError):
         super(ResourceUnavailable, self).__init__(msg)
         self.__cause__ = cause
         self.uri = uri
+
+
+class RabixError(BaseException):
+    def __init__(self, message=''):
+        super(RabixError, self).__init__(message)

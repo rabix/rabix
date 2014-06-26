@@ -10,3 +10,4 @@ Flask==0.10.1
 GitHub-Flask==1.1.1
 rethinkdb==1.13.0-0
 jsonschema==2.3.0
+PyYaml==3.11
