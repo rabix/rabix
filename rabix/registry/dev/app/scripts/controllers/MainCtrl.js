@@ -18,11 +18,8 @@ angular.module('registryApp')
          */
         var appsLoaded = function(result) {
 
-            // TODO replace this value with the total value from the api request
-            var total = 126;
-
             $scope.view.paginator.prev = $scope.view.page > 1;
-            $scope.view.paginator.next = (($scope.view.page - 1) * $scope.view.perPage) < total;
+            $scope.view.paginator.next = ($scope.view.page * $scope.view.perPage) <= result.total;
 
             $scope.view.apps = result.items;
             $scope.view.loading = false;

@@ -8,8 +8,6 @@ angular.module('registryApp')
 
         var api = {};
 
-        api.search = $resource(apiUrl + '/search');
-
         api.apps = $resource(apiUrl + '/apps/:id', {app_id: '@id'}, {
             add: {method: 'POST'},
             update: {method: 'PUT'}

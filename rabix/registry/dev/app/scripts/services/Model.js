@@ -14,20 +14,18 @@ angular.module('registryApp')
          */
         self.getApps = function(skip, searchTerm, repo) {
 
-            var call = 'apps';
             var isSearch = !(_.isUndefined(searchTerm) || _.isEmpty(searchTerm));
             var params = {skip: skip};
 
             if (isSearch) {
-                params.term = searchTerm;
-                call = 'search';
+                params.q = searchTerm;
             }
 
             if (!_.isUndefined(repo)) {
-                params.repo = repo.replace(/&/g, '/');
+                params.field_repo = repo.replace(/&/g, '/');
             }
 
-            var promise = Api[call].get(params).$promise;
+            var promise = Api.apps.get(params).$promise;
 
             return promise;
 

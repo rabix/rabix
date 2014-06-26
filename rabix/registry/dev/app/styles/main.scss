@@ -54,8 +54,12 @@
         }
       }
       td {
-        p {
-          max-width: 100%;
+        p:not(.alert) {
+          max-width: 500px;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          overflow: hidden;
+          display: block;
         }
       }
     }
