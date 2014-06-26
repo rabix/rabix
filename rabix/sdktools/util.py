@@ -2,6 +2,7 @@ import os
 import yaml
 from rabix.common.errors import RabixError
 
+
 def yaml_load(path='./rabix.yaml'):
     if os.path.exists(path):
         with open(path) as cfg:
