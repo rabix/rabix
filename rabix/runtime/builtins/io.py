@@ -1,10 +1,11 @@
 import os
 import tempfile
-import urlparse
 import logging
 
 import requests
 
+# noinspection PyUnresolvedReferences
+from rabix.common.six.moves.urllib import parse as urlparse
 from rabix.runtime import to_json
 from rabix.common.errors import ResourceUnavailable
 from rabix.runtime.tasks import Runner
@@ -13,7 +14,10 @@ log = logging.getLogger(__name__)
 
 
 class InputRunner(Runner):
-    """ Will handle local files, 'data:,' URLs (for tests) and delegate other URLs to requests.get() """
+    """
+    Will handle local files and 'data:,' URLs (for tests).
+    Other URLs are delegated to requests.get()
+    """
     def __init__(self, task):
         super(InputRunner, self).__init__(task)
         self.urls = task.arguments or []
@@ -29,7 +33,10 @@ class InputRunner(Runner):
         return self._task_dir
 
     def run(self):
-        return map(os.path.abspath, (self._download(url) for url in self.urls))
+        return [
+            os.path.abspath(x)
+            for x in (self._download(url) for url in self.urls)
+        ]
 
     def _download(self, url):
         if url.startswith('data:,'):
@@ -43,8 +50,8 @@ class InputRunner(Runner):
         r = requests.get(url)
         try:
             r.raise_for_status()
-        except Exception, e:
-            raise ResourceUnavailable(str(e))
+        except Exception as e:
+            raise ResourceUnavailable(url, cause=e)
         dest = self._get_dest_for_url(url)
         with open(dest, 'wb') as fp:
             for chunk in r.iter_content(chunk_size=1024):
@@ -91,7 +98,9 @@ class InputRunner(Runner):
     def _local(self, url):
         path = url[len('file://'):]
         if not os.path.isfile(path):
-            raise ResourceUnavailable('Not a file: %s' % path)
+            raise ResourceUnavailable(url)
         if not os.path.abspath(path).startswith(os.path.abspath('.')):
-            raise NotImplementedError('File must be in current dir or subdirs. Got %s' % path)
+            raise NotImplementedError(
+                'File must be in current dir or subdirs. Got %s' % path
+            )
         return path
