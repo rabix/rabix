@@ -12,7 +12,7 @@ angular.module('registryApp')
          * @params {string} searchTerm
          * @returns {object} $promise
          */
-        self.getApps = function(skip, searchTerm, username, repoName) {
+        self.getApps = function(skip, searchTerm, repo) {
 
             var call = 'apps';
             var isSearch = !(_.isUndefined(searchTerm) || _.isEmpty(searchTerm));
@@ -23,8 +23,8 @@ angular.module('registryApp')
                 call = 'search';
             }
 
-            if (!_.isUndefined(username)) {
-                params.repo = username + '/' + repoName;
+            if (!_.isUndefined(repo)) {
+                params.repo = repo.replace(/&/g, '/');
             }
 
             var promise = Api[call].get(params).$promise;
@@ -49,19 +49,6 @@ angular.module('registryApp')
         self.getUser = function() {
 
             var promise = Api.user.get().$promise;
-
-            return promise;
-
-        };
-
-        /**
-         * Log In the user
-         *
-         * @returns {object} $promise
-         */
-        self.logIn = function() {
-
-            var promise = Api.login.get().$promise;
 
             return promise;
 

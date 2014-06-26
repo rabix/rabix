@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('registryApp')
-    .directive('header', ['$templateCache', '$timeout', 'Model', function ($templateCache, $timeout, Model) {
+    .directive('header', ['$templateCache', '$timeout', '$route', 'Model', function ($templateCache, $timeout, $route, Model) {
         return {
             restrict: 'E',
             replace: true,
@@ -15,28 +15,24 @@ angular.module('registryApp')
                 scope.view.processing = false;
                 scope.view.showOptions = false;
 
+                var parseUser = function (result) {
+
+                    var params = ['avatar_url', 'gravatar_id', 'html_url', 'name'];
+                    var user = {};
+
+                    _.each(params, function (param) {
+                        if (!_.isUndefined(result[param])) {
+                            user[param] = result[param];
+                        }
+                    });
+
+                    return user;
+                };
+
                 Model.getUser().then(function(result) {
-                    console.log(result);
-                    scope.view.user = (_.isUndefined(result.user)) ? {} : result.user;
+                    scope.view.user = parseUser(result);
                     scope.view.loading = false;
                 });
-
-                /**
-                 * Log In the user
-                 */
-                scope.logIn = function() {
-                    scope.view.loggingIn = true;
-                    /*
-                    Model.logIn().then(function(result) {
-                        console.log(result);
-                        scope.view.logging = false;
-                    });
-                    */
-                    $timeout(function() {
-                        scope.view.user = {username: 'test user'};
-                        scope.view.loggingIn = false;
-                    }, 2000)
-                };
 
                 /**
                  * Generate the token for the user
@@ -65,16 +61,13 @@ angular.module('registryApp')
                  */
                 scope.logOut = function() {
                     scope.view.processing = true;
-                    /*
-                    Model.logOut().then(function(result) {
-                        scope.view.showOptions = false;
-                    });
-                    */
-                    $timeout(function() {
+
+                    Model.logOut().then(function() {
                         scope.view.user = {};
                         scope.view.showOptions = false;
                         scope.view.processing = false;
-                    }, 2000)
+                        $route.reload();
+                    });
                 };
 
 

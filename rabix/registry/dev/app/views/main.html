@@ -26,7 +26,7 @@
             <tbody>
                 <tr ng-repeat="app in view.apps">
                     <td><a ng-href="#/app/{{ app.id }}">{{ app.name }}</a></td>
-                    <td><a ng-href="#/repo/{{ app.repo }}">{{ app.repo }}</a></td>
+                    <td><a ng-href="#/repo/{{ app.repo | encode }}">{{ app.repo }}</a></td>
                     <td>{{ app.description }}</td>
                 </tr>
                 <tr ng-if="view.apps.length === 0">

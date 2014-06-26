@@ -161,7 +161,7 @@ def login():
 def logout():
     username = session.pop('username', None)
     g.store.logout(username)
-    return redirect('/')
+    return jsonify()
 
 
 @flapp.route('/user')
@@ -187,18 +187,26 @@ def index():
 @ApiView()
 def apps_index():
     query = {k: v for k, v in request.args.iteritems()}
-    skip = query.pop('skip', 0)
-    limit = query.pop('limit', 25)
+    try:
+        skip = int(query.pop('skip', 0))
+        limit = int(query.pop('limit', 25))
+        assert skip >= 0 and limit >= 0
+    except (TypeError, ValueError, AssertionError):
+        raise ApiError(400, 'skip and limit must be positive integers')
     query.pop('json', None)
-    return {'items': map(add_links, store.filter_apps(query, int(skip), limit))}
+    return {'items': map(add_links, store.filter_apps(query, skip, limit))}
 
 
 @flapp.route('/search', methods=['GET'])
 @ApiView()
 def apps_search():
-    skip = request.args.get('skip', 0)
-    limit = request.args.get('limit', 25)
-    terms = request.args.getlist('term', [])
+    try:
+        skip = int(request.args.get('skip', 0))
+        limit = int(request.args.get('limit', 25))
+        assert skip >= 0 and limit >= 0
+    except (ValueError, TypeError, AssertionError):
+        raise ApiError(400, 'skip and list must be positive integers')
+    terms = request.args.getlist('term')
     terms += request.args.get('terms', '').split(' ')
     terms = filter(None, terms)
     return {'items': map(add_links, store.search_apps(terms, skip, limit))}

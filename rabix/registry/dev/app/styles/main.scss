@@ -1,5 +1,4 @@
 @import "mixins";
-body {}
 
 .header {
   border-bottom: 1px solid #ddd;
@@ -48,7 +47,7 @@ body {}
       th {
         &:nth-child(1),
         &:nth-child(2) {
-          width: 30%;
+          width: 20%;
         }
         &:nth-child(3) {
           width: 60%;

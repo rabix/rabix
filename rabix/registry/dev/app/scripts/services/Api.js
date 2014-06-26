@@ -27,8 +27,6 @@ angular.module('registryApp')
             revoke: {method: 'DELETE'}
         });
 
-        api.login = $resource(apiUrl + '/login');
-
         api.logout = $resource(apiUrl + '/logout', {}, {
             confirm: {method: 'POST'}
         });

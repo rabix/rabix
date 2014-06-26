@@ -23,7 +23,7 @@ angular
                 templateUrl: 'views/main.html',
                 controller: 'MainCtrl'
             })
-            .when('/repo/:username/:repoName', {
+            .when('/repo/:repo', {
                 templateUrl: 'views/main.html',
                 controller: 'MainCtrl'
             })

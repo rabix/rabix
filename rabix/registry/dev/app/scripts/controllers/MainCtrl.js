@@ -41,7 +41,7 @@ angular.module('registryApp')
         $scope.view.page = 1;
         $scope.view.perPage = 25;
 
-        Model.getApps(0, '', $routeParams.username, $routeParams.repoName).then(appsLoaded);
+        Model.getApps(0, '', $routeParams.repo).then(appsLoaded);
 
         /**
          * Go to the next/prev page
@@ -62,7 +62,7 @@ angular.module('registryApp')
                 $scope.view.loading = true;
                 var offset = ($scope.view.page - 1) * $scope.view.perPage;
 
-                Model.getApps(offset, $scope.view.searchTerm, $routeParams.username, $routeParams.repoName).then(appsLoaded);
+                Model.getApps(offset, $scope.view.searchTerm, $routeParams.repo).then(appsLoaded);
 
             }
         };
@@ -72,7 +72,7 @@ angular.module('registryApp')
          */
         $scope.searchApps = function() {
 
-            Model.getApps(0, $scope.view.searchTerm, $routeParams.username, $routeParams.repoName).then(appsLoaded);
+            Model.getApps(0, $scope.view.searchTerm, $routeParams.repo).then(appsLoaded);
 
         };
 
@@ -82,7 +82,7 @@ angular.module('registryApp')
         $scope.resetSearch = function() {
 
             $scope.view.searchTerm = '';
-            Model.getApps(0, '', $routeParams.username, $routeParams.repoName).then(appsLoaded);
+            Model.getApps(0, '', $routeParams.repo).then(appsLoaded);
 
         };
 

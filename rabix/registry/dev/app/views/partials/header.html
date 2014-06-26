@@ -7,7 +7,7 @@
             </div>
 
             <div ng-if="(view.user | isEmpty)" class="col-md-4 col-md-offset-6">
-                <button class="btn btn-primary btn-block" ng-disabled="view.loggingIn" ng-click="logIn()">Log In With GitHub</button>
+                <a href="/login" class="btn btn-primary btn-block">Log In With GitHub</a>
             </div>
 
             <div ng-if="!(view.user | isEmpty)" class="col-md-10">
