@@ -1,6 +1,8 @@
 import json
+import hmac
+import hashlib
 
-from flask import request
+from flask import request, g
 
 from rabix.common.loadsave import loader, to_json
 from rabix.common.errors import ValidationError
@@ -42,3 +44,13 @@ def add_links(app):
         'html': prefix + app['id'],
     }
     return app
+
+
+def verify_webhook(payload, signature, obj):
+    obj = obj or json.load(payload)
+    username = obj['repository']['owner']['name']
+    repo_name = obj['repository']['name']
+    repo_id = '/'.join([username, repo_name])
+    secret = g.store.get_repo_secret(repo_id)
+    calc_sig = hmac.new(secret, request.data, hashlib.sha1).hexdigest()
+    return signature == 'sha1=' + calc_sig

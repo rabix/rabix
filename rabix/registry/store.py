@@ -21,15 +21,24 @@ class RethinkStore(object):
         self.db = r.db(db_name)
         self.apps = self.db.table('apps')
         self.users = self.db.table('users')
+        self.builds = self.db.table('builds')
+        self.repos = self.db.table('repos')
 
     def disconnect(self):
         self.cn.close()
 
     def init_db(self):
-        r.db_create(self.db_name).run(self.cn)
-        r.db(self.db_name).table_create('apps').run(self.cn)
-        r.db(self.db_name).table_create('users', primary_key='username') \
-            .run(self.cn)
+        if self.db_name not in r.db_list().run(self.cn):
+            r.db_create(self.db_name).run(self.cn)
+        if 'apps' not in self.db.table_list().run(self.cn):
+            self.db.table_create('apps').run(self.cn)
+        if 'users' not in self.db.table_list().run(self.cn):
+            self.db.table_create('users', primary_key='username') \
+                .run(self.cn)
+        if 'builds' not in self.db.table_list().run(self.cn):
+            self.db.table_create('builds').run(self.cn)
+        if 'repos' not in self.db.table_list().run(self.cn):
+            self.db.table_create('repos').run(self.cn)
 
     def _check_error(self, query_result):
         if query_result['errors']:
@@ -110,6 +119,46 @@ class RethinkStore(object):
         cur = q.skip(skip).limit(limit).run(self.cn)
         count = q.count().run(self.cn)
         return cur, count
+
+    def create_build(self, build):
+        build.pop('id', None)
+        res = self.builds.insert(build).run(self.cn)
+        self._check_error(res)
+        build['id'] = res['generated_keys'][0]
+        return build
+
+    def update_build(self, build):
+        res = self.builds.get(build['id']).update(build).run(self.cn)
+        self._check_error(res)
+        if not res['updated']:
+            raise ResourceUnavailable(build['id'], 'Not found.')
+        return self.get_build(build['id'])
+
+    def get_build(self, build_id):
+        return self.builds.get(build_id).run(self.cn)
+
+    def filter_builds(self, filter, skip=0, limit=25):
+        log.debug('Filter builds: %s', filter)
+        q = self.builds.filter(filter)
+        cur = q.skip(skip).limit(limit).run(self.cn)
+        count = q.count().run(self.cn)
+        return cur, count
+
+    def create_repo(self, repo_id, username):
+        repo = {
+            'id': repo_id,
+            'secret': str(uuid.uuid4()),
+            'created_by': username,
+        }
+        return self.repos.insert(
+            repo, upsert=True, return_vals=True
+        ).run(self.cn)
+
+    def get_repo_secret(self, repo_id):
+        repo = self.repos.get(repo_id).run(self.cn)
+        if not repo:
+            raise ResourceUnavailable(repo_id, 'not found')
+        return repo['secret']
 
 
 if __name__ == '__main__':

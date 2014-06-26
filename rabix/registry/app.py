@@ -10,7 +10,8 @@ from flask.ext.github import GitHub, GitHubError
 from rabix import CONFIG
 from rabix.common.util import update_config
 from rabix.common.errors import ResourceUnavailable
-from rabix.registry.util import ApiError, validate_app, add_links
+from rabix.registry.util import ApiError, validate_app, add_links, \
+    verify_webhook
 from rabix.registry.store import RethinkStore
 
 if __name__ == '__main__':
@@ -244,6 +245,22 @@ def token_crud():
     elif request.method == 'DELETE':
         g.store.revoke_personal_token(g.user['username'])
     return jsonify(token=token)
+
+
+@flapp.route('/github-webhook', methods=['POST'])
+def handle_event():
+    event = request.get_json()
+    delivery_id = request.headers.get('X-Github-Delivery', '')
+    event_type = request.headers.get('X-Github-Event', '')
+    signature = request.headers.get('X-Hub-Signature', '')
+    log.debug('%s:%s:%s:%s', delivery_id, event_type, signature, event)
+    log.info('Webhook: %s:%s', event_type, delivery_id)
+    if event_type != 'push':
+        return jsonify(status='ignored')
+    if not verify_webhook(request.data, signature, request.json):
+        raise ApiError(403, 'Failed to verify HMAC.')
+    # TODO: Submit task
+    return jsonify(status='ok')
 
 
 if __name__ == '__main__':
