@@ -5,7 +5,7 @@ import os
 import json
 import random
 
-from flask import Flask, request, g, session, redirect, jsonify
+from flask import Flask, request, g, session, redirect, jsonify, Response
 from flask.ext.github import GitHub, GitHubError
 
 from rabix import CONFIG
@@ -258,7 +258,8 @@ def handle_event():
     log.info('Webhook: %s:%s', event_type, delivery_id)
     if event_type != 'push':
         return jsonify(status='ignored')
-    if not verify_webhook(request.data, signature, event):
+    mock = flapp.config.get('MOCK_USER', False)
+    if not mock and not verify_webhook(request.data, signature, event):
         raise ApiError(403, 'Failed to verify HMAC.')
     # Submit task
     cmt = event.get('head_commit')
@@ -280,7 +281,8 @@ def handle_event():
         'description': 'Build pending.',
         'target_url': request.url_root + 'builds/' + build['id'],
     }
-    github.put(res, data=json.dumps(status))
+    if not mock:
+        github.put(res, data=json.dumps(status))
     return jsonify(status='ok', build_id=build['id'])
 
 
@@ -293,6 +295,63 @@ def list_github_repos():
         'html_url': repo['html_url'],
     } for repo in repos]
     return jsonify(items=repos_short)
+
+
+@flapp.route('/repos', methods=['GET'])
+@ApiView()
+def repo_index():
+    query = {k[len('field_'):]: v for k, v in request.args.iteritems()
+             if k.startswith('field_')}
+    try:
+        skip = int(request.args.get('skip', 0))
+        limit = int(request.args.get('limit', 25))
+        if skip < 0 or limit < 0:
+            raise ValueError('Negative value for skip or limit.')
+    except ValueError:
+        raise ApiError(400, 'skip and limit must be positive integers')
+    repos, total = store.filter_repos(query, skip, limit)
+    return {
+        'items': list(repos),
+        'total': total,
+    }
+
+
+@flapp.route('/repos/<owner>/<name>', methods=['GET'])
+@ApiView()
+def get_repo(owner, name):
+    repo_id = '/'.join([owner, name])
+    return jsonify(**g.store.get_repo(repo_id))
+
+
+@flapp.route('/builds', methods=['GET'])
+@ApiView()
+def build_index():
+    query = {k[len('field_'):]: v for k, v in request.args.iteritems()
+             if k.startswith('field_')}
+    try:
+        skip = int(request.args.get('skip', 0))
+        limit = int(request.args.get('limit', 25))
+        if skip < 0 or limit < 0:
+            raise ValueError('Negative value for skip or limit.')
+    except ValueError:
+        raise ApiError(400, 'skip and limit must be positive integers')
+    builds, total = store.filter_builds(query, skip, limit)
+    return {
+        'items': list(builds),
+        'total': total,
+    }
+
+
+@flapp.route('/builds/<build_id>', methods=['GET'])
+@ApiView()
+def get_build(build_id):
+    return jsonify(**g.store.get_build(build_id))
+
+
+@flapp.route('/builds/<build_id>/log', methods=['GET'])
+@ApiView()
+def get_build_log(build_id):
+    return Response('logs for %s' % build_id, content_type='text/plain')
 
 
 if __name__ == '__main__':

@@ -111,7 +111,6 @@ class RethinkStore(object):
         return self.apps.get(app_id).run(self.cn)
 
     def filter_apps(self, filter, text=None, skip=0, limit=25):
-        log.debug('Filter apps: %s', filter)
         q = self.apps.without('app').filter(filter)
         if text:
             terms = text.split(' ')
@@ -138,7 +137,6 @@ class RethinkStore(object):
         return self.builds.get(build_id).run(self.cn)
 
     def filter_builds(self, filter, skip=0, limit=25):
-        log.debug('Filter builds: %s', filter)
         q = self.builds.filter(filter)
         cur = q.skip(skip).limit(limit).run(self.cn)
         count = q.count().run(self.cn)
@@ -154,11 +152,20 @@ class RethinkStore(object):
             repo, upsert=True, return_vals=True
         ).run(self.cn)
 
-    def get_repo_secret(self, repo_id):
+    def get_repo(self, repo_id):
         repo = self.repos.get(repo_id).run(self.cn)
         if not repo:
             raise ResourceUnavailable(repo_id, 'not found')
-        return repo['secret']
+        return repo
+
+    def get_repo_secret(self, repo_id):
+        return self.get_repo(repo_id)['secret']
+
+    def filter_repos(self, filter, skip=0, limit=25):
+        q = self.repos.filter(filter)
+        cur = q.skip(skip).limit(limit).run(self.cn)
+        count = q.count().run(self.cn)
+        return cur, count
 
 
 if __name__ == '__main__':
