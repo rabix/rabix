@@ -1,8 +1,9 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
     "type": "object",
-    "required": ["steps"],
+    "required": ["$$type", "steps"],
     "properties": {
+        "$$type": {"enum": ["app/pipeline"]},
         "steps": {
             "type": "array",
             "items": {

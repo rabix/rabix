@@ -2,8 +2,9 @@
     "$schema": "http://json-schema.org/draft-04/schema#",
     "title": "Reproducible Analyses - Tool description schema",
     "type": "object",
-    "required": ["inputs", "outputs", "params"],
+    "required": ["$$type"],
     "properties": {
+        "$$type": {"enum": ["schema/app/sbgsdk"]},
         "inputs": {
             "type": "array",
             "items": {
@@ -28,11 +29,10 @@
             "type": "object",
             "properties": {
                 "id": {"type": "string"},
-                "list": {"type": "boolean"},
-                "name": {"type": "string"},
-                "description": {"type": "string"},
-                "required": {"type": "boolean"},
-                "default": {"type": "any"}
+                "list": {"type": ["null", "boolean"]},
+                "name": {"type": ["null", "string"]},
+                "description": {"type": ["null", "string"]},
+                "required": {"type": ["null", "boolean"]}
             },
             "required": ["id"]
         },
@@ -40,10 +40,10 @@
             "type": "object",
             "properties": {
                 "id": {"type": "string"},
-                "list": {"type": "boolean"},
-                "name": {"type": "string"},
-                "description": {"type": "string"},
-                "required": {"type": "boolean"}
+                "list": {"type": ["null", "boolean"]},
+                "name": {"type": ["null", "string"]},
+                "description": {"type": ["null", "string"]},
+                "required": {"type": ["null", "boolean"]}
             },
             "required": ["id", "type"]
         },
@@ -51,10 +51,10 @@
             "type": "object",
             "properties": {
                 "id": {"type": "string"},
-                "list": {"type": "boolean"},
-                "name": {"type": "string"},
-                "description": {"type": "string"},
-                "required": {"type": "boolean"}
+                "list": {"type": ["null", "boolean"]},
+                "name": {"type": ["null", "string"]},
+                "description": {"type": ["null", "string"]},
+                "required": {"type": ["null", "boolean"]}
             },
             "required": ["id"]
         }

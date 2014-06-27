@@ -39,7 +39,7 @@ class JsonLoader(object):
             return [self.classify(x) for x in document]
         if isinstance(document, dict):
             new = {k: self.classify(v) for k, v in six.iteritems(document)}
-            if '$$type' in new:
+            if '$$type' in new and isinstance(new['$$type'], six.string_types):
                 return MAPPINGS[new.pop('$$type')].from_dict(new)
             else:
                 return new

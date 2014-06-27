@@ -18,9 +18,9 @@ class AppSchema(Model):
     TYPE = 'schema/app/sbgsdk'
     SCHEMA = 'schema/sbgsdk.json'
 
-    inputs = property(lambda self: self['inputs'])
-    params = property(lambda self: self['params'])
-    outputs = property(lambda self: self['outputs'])
+    inputs = property(lambda self: self.get('inputs', []))
+    params = property(lambda self: self.get('params', []))
+    outputs = property(lambda self: self.get('outputs', []))
 
     def _check_is_list_and_has_unique_ids(self, field,
                                           required_element_fields=None):

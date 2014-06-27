@@ -79,6 +79,7 @@ def set_log_level(v_count):
 
 def run(path):
     pipeline = Pipeline.from_app(from_url(path))
+    pipeline.validate()
     usage_str = make_pipeline_usage_string(pipeline, path)
     args = docopt.docopt(usage_str, version=version)
     set_log_level(args['--verbose'])
@@ -122,6 +123,7 @@ def main():
     if args["run"]:
         pipeline_path = args['<file>']
         pipeline = from_url(pipeline_path)
+        pipeline.validate()
         print(make_pipeline_usage_string(pipeline, pipeline_path))
     elif args["install"]:
         install(from_url(args['<file>']))
