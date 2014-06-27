@@ -2,6 +2,7 @@ import logging
 import functools
 import re
 import os
+import json
 import random
 
 from flask import Flask, request, g, session, redirect, jsonify
@@ -155,7 +156,7 @@ def login():
         g.store.create_or_update_user({'username': mock_user['login']})
         session['username'] = mock_user['login']
         return redirect('/')
-    return github.authorize()
+    return github.authorize(scope='repo:status read:org')
 
 
 @flapp.route('/logout', methods=['POST'])
@@ -257,10 +258,41 @@ def handle_event():
     log.info('Webhook: %s:%s', event_type, delivery_id)
     if event_type != 'push':
         return jsonify(status='ignored')
-    if not verify_webhook(request.data, signature, request.json):
+    if not verify_webhook(request.data, signature, event):
         raise ApiError(403, 'Failed to verify HMAC.')
-    # TODO: Submit task
-    return jsonify(status='ok')
+    # Submit task
+    cmt = event.get('head_commit')
+    if not cmt:
+        return jsonify(status='ignored')
+    repo = event['repository']['owner']['name'], event['repository']['name']
+    repo = '/'.join(repo)
+    build = {
+        'head_commit': cmt,
+        'pusher': event.get('pusher', {}).get('name'),
+        'status': 'pending',
+        'repo': repo,
+    }
+    build = g.store.create_build(build)
+    res = 'repo/%s/statuses/%s' % (repo, cmt['id'])
+    status = {
+        'state': 'pending',
+        'context': 'continuous-integration/rabix',
+        'description': 'Build pending.',
+        'target_url': request.url_root + 'builds/' + build['id'],
+    }
+    github.put(res, data=json.dumps(status))
+    return jsonify(status='ok', build_id=build['id'])
+
+
+@flapp.route('/github-repos', methods=['GET'])
+@ApiView(login_required=True)
+def list_github_repos():
+    repos = github.get('user/%s/repos' % g.user['username'])
+    repos_short = [{
+        'id': repo['full_name'],
+        'html_url': repo['html_url'],
+    } for repo in repos]
+    return jsonify(items=repos_short)
 
 
 if __name__ == '__main__':
