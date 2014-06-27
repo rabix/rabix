@@ -35,46 +35,6 @@ angular.module('registryApp')
                 });
 
                 /**
-                 * Generate the token for the user
-                 */
-                scope.generateToken = function() {
-                    scope.view.processing = true;
-                    Model.generateToken().then(function(result) {
-
-                        scope.view.processing = false;
-                        scope.view.showOptions = false;
-
-                        $modal.open({
-                            template: $templateCache.get('views/partials/token-regenerated.html'),
-                            controller: 'ModalCtrl',
-                            resolve: {
-                                data: function () { return {token: result.token}; }
-                            }
-                        });
-
-                    });
-                };
-
-                /**
-                 * Revoke the token of the user
-                 */
-                scope.revokeToken = function() {
-                    scope.view.processing = true;
-                    Model.revokeToken().then(function() {
-
-                        scope.view.processing = false;
-                        scope.view.showOptions = false;
-
-                        $modal.open({
-                            template: $templateCache.get('views/partials/token-revoked.html'),
-                            controller: 'ModalCtrl',
-                            resolve: { data: function () { return {}; } }
-                        });
-
-                    });
-                };
-
-                /**
                  * Log Out the user
                  */
                 scope.logOut = function() {
@@ -88,6 +48,16 @@ angular.module('registryApp')
                     });
                 };
 
+                scope.showOptions = function () {
+
+                    $modal.open({
+                        template: $templateCache.get('views/partials/options.html'),
+                        controller: 'OptionsCtrl',
+                        windowClass: 'modal-options',
+                        resolve: { data: function () { return {user: scope.view.user}; } }
+                    });
+
+                };
 
             }
         };

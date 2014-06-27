@@ -1,5 +1,12 @@
 <div class="page app" ng-class="{loading: view.loading}">
-    <div ng-if="!view.loading">
+
+    <div class="actions">
+        <div class="container">
+            <button class="btn btn-default" ng-click="goBack()"><i class="glyphicon glyphicon-chevron-left"></i> Back</button>
+        </div>
+    </div>
+
+    <div ng-if="!view.loading" class="container">
 
         <h1>{{ view.app.name }}</h1>
         <p>{{ view.app.description }}</p>

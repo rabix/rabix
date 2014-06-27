@@ -69,6 +69,7 @@ angular.module('registryApp')
          */
         $scope.searchApps = function() {
 
+            $scope.view.page = 1;
             Model.getApps(0, $scope.view.searchTerm, $routeParams.repo).then(appsLoaded);
 
         };
@@ -78,6 +79,7 @@ angular.module('registryApp')
          */
         $scope.resetSearch = function() {
 
+            $scope.view.page = 1;
             $scope.view.searchTerm = '';
             Model.getApps(0, '', $routeParams.repo).then(appsLoaded);
 

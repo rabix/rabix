@@ -11,20 +11,12 @@
             </div>
 
             <div ng-if="!(view.user | isEmpty)" class="col-md-10">
-                <div class="btn-group pull-right" dropdown is-open="view.showOptions">
 
-                    <div class="dropdown-toggle">
-                        <span class="glyphicon glyphicon-cog"></span>
-                    </div>
-
-                    <ul class="dropdown-menu" role="menu" ng-class="{loading: view.processing}">
-                        <li><a href ng-click="generateToken()">(Re)generate token</a></li>
-                        <li><a href ng-click="revokeToken()">Revoke token</a></li>
-                        <li class="divider"></li>
-                        <li><a href ng-click="logOut()">Log Out</a></li>
-                    </ul>
+                <div class="actions pull-right">
+                    <span class="welcome">Welcome {{ view.user.name }}!</span>
+                    <a href ng-click="showOptions()" class="options"><i class="glyphicon glyphicon-cog"></i></a>
+                    <a href ng-click="logOut()" class="btn btn-primary">Log Out</a>
                 </div>
-                <span class="welcome pull-right">Welcome {{ view.user.username }}!</span>
 
             </div>
 

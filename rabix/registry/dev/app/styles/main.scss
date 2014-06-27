@@ -1,5 +1,9 @@
 @import "mixins";
 
+body {
+  color: #555;
+}
+
 .header {
   border-bottom: 1px solid #ddd;
   padding: 10px 0;
@@ -13,30 +17,23 @@
   }
   
   .welcome {
-    font-size: 18px;
+    display: inline-block;
+    vertical-align: middle;
+    font-size: 16px;
     line-height: 40px;
   }
 
-  .btn-group {
-    &.open {
-      .dropdown-toggle {
-        @include box-shadow(none);
-      }
-    }
-    .dropdown-toggle {
-      position: relative;
-      .glyphicon {
-        font-size: 25px;
-        padding: 8px 20px;
-        cursor: pointer;
-      }
-    }
-    .dropdown-menu {
-      &.loading {
-        @extend .loading-abs;
-      }
+  .options {
+    color: #555;
+    display: inline-block;
+    vertical-align: middle;
+    .glyphicon {
+      font-size: 25px;
+      padding: 8px 10px;
+      cursor: pointer;
     }
   }
+
 }
 
 .page {
@@ -44,6 +41,7 @@
 
   &.home {
     .table {
+      margin: 0;
       th {
         &:nth-child(1),
         &:nth-child(2) {
@@ -54,15 +52,32 @@
         }
       }
       td {
-        p:not(.alert) {
-          max-width: 500px;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          overflow: hidden;
-          display: block;
+        p {
+          margin: 0;
+          &:not(.alert) {
+            max-width: 500px;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            display: block;
+          }
         }
       }
     }
+  }
+
+  .actions,
+  .search-form {
+    padding: 10px 0;
+    background-color: #f3f3f3;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .paginate {
+    padding: 10px 0;
+    overflow: auto;
+    background-color: #f3f3f3;
+    border-top: 1px solid #ddd;
   }
 }
 
@@ -88,16 +103,16 @@
   }
 }
 
-.paginate {
-  padding: 10px 0;
-  overflow: auto;
-}
 
-.search-form {
-  padding: 10px 0;
-}
-
-.token {
-  font-size: 18px;
-  margin: 0;
+.modal-options {
+  .col-md-6 {
+    text-align: center;
+    &:first-child {
+      border-right: 1px solid #ddd;
+    }
+  }
+  .alert {
+    margin: 30px 0 0 0;
+    text-align: center;
+  }
 }
