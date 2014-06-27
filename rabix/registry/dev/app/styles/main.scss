@@ -116,3 +116,25 @@ body {
     text-align: center;
   }
 }
+
+.general-error {
+  $width: 400px;
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  left: 50%;
+  width: $width;
+  margin-left: -($width/2);
+  .alert {
+    @include border-radius(0 0 4px 4px);
+    @include box-shadow(0 0 7px 0px #aaa);
+    text-align: center;
+    padding: 15px 30px;
+    margin: 0;
+    .close {
+      position: absolute;
+      top: 15px;
+      right: 10px;
+    }
+  }
+}
