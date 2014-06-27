@@ -154,10 +154,10 @@ class Pipeline(Model):
                 'id': list(app.apps.keys())[0],
                 'app': list(app.apps.keys())[0],
                 'inputs': {
-                    inp['id']: inp['id'] for inp in app.schema.inputs
+                    inp['id']: 'inp_' + inp['id'] for inp in app.schema.inputs
                 },
                 'outputs': {
-                    out['id']: out['id'] for out in app.schema.outputs
+                    out['id']: 'out_' + out['id'] for out in app.schema.outputs
                 },
             }]
         })
