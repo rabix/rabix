@@ -9,7 +9,28 @@
     <div ng-if="!view.loading" class="container">
 
         <h1>{{ view.app.name }}</h1>
-        <p>{{ view.app.description }}</p>
+
+        <div class="description">
+            <div class="panel panel-warning">
+                <div class="panel-heading"><h4 class="panel-title">Docker Image Details</h4></div>
+                <div class="panel-body">
+                    <p><strong>Image Repo:</strong> {{ view.app.app.docker_image_ref.image_repo }}</p>
+                    <p><strong>Image Tag:</strong> {{ view.app.app.docker_image_ref.image_tag }}</p>
+                </div>
+            </div>
+            {{ view.app.description }}
+        </div>
+
+
+        <div class="snippet">
+            <p>Use this code snippet for your pipeline</p>
+            <pre pretty-json="{$ref: view.app.links.app_ref, checksum: view.app.app_checksum}"></pre>
+        </div>
+
+        <div class="snippet">
+            <p>Use this command to run the pipeline</p>
+            <pre>$ rabix run {{ view.app.links.app_ref }}</pre>
+        </div>
 
     </div>
 </div>

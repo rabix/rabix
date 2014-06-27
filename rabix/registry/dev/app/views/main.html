@@ -1,5 +1,5 @@
 <div class="page home" ng-class="{loading: view.loading}">
-    <div ng-if="!view.loading">
+    <!--<div ng-if="!view.loading">-->
 
         <form class="search-form" ng-submit="searchApps()" novalidate>
             <div class="container">
@@ -13,11 +13,14 @@
                             </span>
                         </div>
                     </div>
+                    <div class="col-md-8">
+                        <span ng-if="view.repo" class="label label-primary">{{ view.repo }} <a ng-href="#/" class="close">&times;</a></span>
+                    </div>
                 </div>
             </div>
         </form>
 
-        <div class="container">
+        <div ng-if="!view.loading" class="container">
             <table class="table table-striped">
                 <thead>
                     <tr>
@@ -30,10 +33,10 @@
                     <tr ng-repeat="app in view.apps">
                         <td><a ng-href="#/app/{{ app.id }}">{{ app.name }}</a></td>
                         <td><a ng-href="#/repo/{{ app.repo | encode }}">{{ app.repo }}</a></td>
-                        <td><p>{{ app.description }}</p></td>
+                        <td><p tooltip="{{ app.description }}" tooltip-popup-delay="1000">{{ app.description }}</p></td>
                     </tr>
                     <tr ng-if="view.apps.length === 0">
-                        <td colspan="3"><p class="alert alert-info">There are no apps</p></td>
+                        <td colspan="3"><p class="alert alert-info">There are no apps found</p></td>
                     </tr>
                 </tbody>
             </table>
@@ -46,5 +49,5 @@
             </div>
         </div>
 
-    </div>
+    <!--</div>-->
 </div>

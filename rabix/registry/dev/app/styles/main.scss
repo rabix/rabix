@@ -1,13 +1,33 @@
 @import "mixins";
 
+html, body {
+  height: 100%;
+}
 body {
   color: #555;
+  background-color: #f3f3f3;
+}
+
+.main {
+  height: 100%;
+  .content {
+    height: 90%;
+    .page {
+      height: 100%;
+      & > .container {
+        height: 90%;
+        overflow: auto;
+      }
+    }
+  }
 }
 
 .header {
+  $header: 60px;
   border-bottom: 1px solid #ddd;
   padding: 10px 0;
-  min-height: 56px;
+  min-height: $header;
+  background-color: #fff;
   
   .logo {
     font-size: 30px;
@@ -38,6 +58,7 @@ body {
 
 .page {
   position: relative;
+  background-color: #fff;
 
   &.home {
     .table {
@@ -59,7 +80,7 @@ body {
             white-space: nowrap;
             text-overflow: ellipsis;
             overflow: hidden;
-            display: block;
+            float: left;
           }
         }
       }
@@ -73,12 +94,59 @@ body {
     border-bottom: 1px solid #ddd;
   }
 
+  .search-form {
+    .label {
+      font-size: 15px;
+      display: inline-block;
+      line-height: 22px;
+      .close {
+        color: #fff;
+        font-weight: normal;
+        text-shadow: none;
+        float: none;
+        @include opacity(1);
+      }
+    }
+  }
+
   .paginate {
     padding: 10px 0;
     overflow: auto;
     background-color: #f3f3f3;
     border-top: 1px solid #ddd;
   }
+
+  .description {
+    margin: 20px 0;
+    overflow: auto;
+    .panel {
+      float: right;
+      margin: 0 0 5px 5px;
+      p {
+        strong {
+          width: 90px;
+          display: inline-block;
+        }
+        &:last-of-type {
+          margin-bottom: 0;
+        }
+      }
+    }
+  }
+
+  .snippet {
+    border-left: 5px solid #f0ad4e;
+    margin: 0 0 30px 0;
+    p {
+      padding: 0 0 0 5px;
+      margin: 0 0 5px;
+    }
+    pre {
+      @include border-radius(0 3px 3px 0);
+      border-left: none;
+    }
+  }
+
 }
 
 .loading {
@@ -137,4 +205,19 @@ body {
       right: 10px;
     }
   }
+}
+
+/* SCROLLBAR STYLE
+================================================ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #eee;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #608dc1;
 }

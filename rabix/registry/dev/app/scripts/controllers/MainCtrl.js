@@ -29,6 +29,9 @@ angular.module('registryApp')
         $scope.view.loading = true;
         $scope.view.apps = [];
         $scope.view.searchTerm = '';
+        if ($routeParams.repo) {
+            $scope.view.repo = $routeParams.repo.replace(/&/g, '/');
+        }
 
         $scope.view.paginator = {
             prev: false,

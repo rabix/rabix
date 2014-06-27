@@ -10,7 +10,6 @@ angular.module('registryApp')
         Model.getApp($routeParams.id).then(function(result) {
             $scope.view.loading = false;
             $scope.view.app = result;
-            console.log(result);
         });
 
         $scope.goBack = function () {
