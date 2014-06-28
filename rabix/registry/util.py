@@ -54,3 +54,18 @@ def verify_webhook(payload, signature, obj):
     secret = g.store.get_repo_secret(repo_id)
     calc_sig = hmac.new(secret, request.data, hashlib.sha1).hexdigest()
     return signature == 'sha1=' + calc_sig
+
+
+def get_query_args():
+    filter = {
+        k[len('field_'):]: v
+        for k, v in request.args.iteritems() if k.startswith('field_')
+    }
+    try:
+        skip = int(request.args.get('skip', 0))
+        limit = int(request.args.get('limit', 25))
+        if skip < 0 or limit < 0:
+            raise ValueError('Negative value for skip or limit.')
+    except ValueError:
+        raise ApiError(400, 'skip and limit must be positive integers')
+    return filter, skip, limit

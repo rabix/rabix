@@ -12,7 +12,7 @@ from rabix import CONFIG
 from rabix.common.util import update_config
 from rabix.common.errors import ResourceUnavailable
 from rabix.registry.util import ApiError, validate_app, add_links, \
-    verify_webhook
+    verify_webhook, get_query_args
 from rabix.registry.store import RethinkStore
 
 if __name__ == '__main__':
@@ -113,11 +113,6 @@ def teardown_request(_):
     g.store.disconnect()
 
 
-# @flapp.route('/static/<path:path>', methods=['GET'])
-# def static_route(path):
-#     return flapp.send_static_file(path)
-
-
 @github.access_token_getter
 def token_getter():
     user = g.user
@@ -182,27 +177,16 @@ def user_info():
 @flapp.route('/', methods=['GET'])
 @ApiView()
 def index():
-    return {}
+    return jsonify()
 
 
 @flapp.route('/apps', methods=['GET'])
 @ApiView()
 def apps_index():
-    query = {k[len('field_'):]: v for k, v in request.args.iteritems()
-             if k.startswith('field_')}
+    filter, skip, limit = get_query_args()
     text = request.args.get('q')
-    try:
-        skip = int(request.args.get('skip', 0))
-        limit = int(request.args.get('limit', 25))
-        if skip < 0 or limit < 0:
-            raise ValueError('Negative value for skip or limit.')
-    except ValueError:
-        raise ApiError(400, 'skip and limit must be positive integers')
-    apps, total = store.filter_apps(query, text, skip, limit)
-    return {
-        'items': map(add_links, apps),
-        'total': total,
-    }
+    apps, total = store.filter_apps(filter, text, skip, limit)
+    return {'items': map(add_links, apps), 'total': total}
 
 
 @flapp.route('/apps/<app_id>', methods=['GET'])
@@ -300,20 +284,9 @@ def list_github_repos():
 @flapp.route('/repos', methods=['GET'])
 @ApiView()
 def repo_index():
-    query = {k[len('field_'):]: v for k, v in request.args.iteritems()
-             if k.startswith('field_')}
-    try:
-        skip = int(request.args.get('skip', 0))
-        limit = int(request.args.get('limit', 25))
-        if skip < 0 or limit < 0:
-            raise ValueError('Negative value for skip or limit.')
-    except ValueError:
-        raise ApiError(400, 'skip and limit must be positive integers')
-    repos, total = store.filter_repos(query, skip, limit)
-    return {
-        'items': list(repos),
-        'total': total,
-    }
+    filter, skip, limit = get_query_args()
+    repos, total = store.filter_repos(filter, skip, limit)
+    return {'items': list(repos), 'total': total}
 
 
 @flapp.route('/repos/<owner>/<name>', methods=['GET'])
@@ -326,20 +299,9 @@ def get_repo(owner, name):
 @flapp.route('/builds', methods=['GET'])
 @ApiView()
 def build_index():
-    query = {k[len('field_'):]: v for k, v in request.args.iteritems()
-             if k.startswith('field_')}
-    try:
-        skip = int(request.args.get('skip', 0))
-        limit = int(request.args.get('limit', 25))
-        if skip < 0 or limit < 0:
-            raise ValueError('Negative value for skip or limit.')
-    except ValueError:
-        raise ApiError(400, 'skip and limit must be positive integers')
-    builds, total = store.filter_builds(query, skip, limit)
-    return {
-        'items': list(builds),
-        'total': total,
-    }
+    filter, skip, limit = get_query_args()
+    builds, total = store.filter_builds(filter, skip, limit)
+    return {'items': list(builds), 'total': total}
 
 
 @flapp.route('/builds/<build_id>', methods=['GET'])
