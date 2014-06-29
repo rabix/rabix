@@ -103,7 +103,7 @@ class RethinkStore(object):
         result = self.apps.get_all(document['id']). \
             filter(filter).update(document).run(self.cn)
         self._check_error(result)
-        if not result['updated']:
+        if not result['replaced']:
             raise ResourceUnavailable(document['id'], 'Not found.')
         return self.get_app(document['id'])
 
@@ -129,7 +129,7 @@ class RethinkStore(object):
     def update_build(self, build):
         res = self.builds.get(build['id']).update(build).run(self.cn)
         self._check_error(res)
-        if not res['updated']:
+        if not res['replaced']:
             raise ResourceUnavailable(build['id'], 'Not found.')
         return self.get_build(build['id'])
 

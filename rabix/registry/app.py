@@ -5,12 +5,16 @@ import os
 import json
 import random
 
-from flask import Flask, request, g, session, redirect, jsonify, Response
+import rq
+import redis
+from flask import Flask, request, g, session, redirect, jsonify, Response, \
+    send_from_directory
 from flask.ext.github import GitHub, GitHubError
 
 from rabix import CONFIG
 from rabix.common.util import update_config
 from rabix.common.errors import ResourceUnavailable
+from rabix.registry.tasks import build_task
 from rabix.registry.util import ApiError, validate_app, add_links, \
     verify_webhook, get_query_args
 from rabix.registry.store import RethinkStore
@@ -258,13 +262,19 @@ def handle_event():
         'repo': repo,
     }
     build = g.store.create_build(build)
+    target_url = request.url_root + 'builds/' + build['id']
+    build['target_url'] = target_url
+    g.store.update_build(build)
+    queue = rq.Queue('builds', 600, redis.Redis())
+    queue.enqueue(build_task, build['id'], mock)
     res = 'repo/%s/statuses/%s' % (repo, cmt['id'])
     status = {
         'state': 'pending',
         'context': 'continuous-integration/rabix',
         'description': 'Build pending.',
-        'target_url': request.url_root + 'builds/' + build['id'],
+        'target_url': target_url,
     }
+    log.info('New status: %s', status)
     if not mock:
         github.put(res, data=json.dumps(status))
     return jsonify(status='ok', build_id=build['id'])
@@ -313,7 +323,24 @@ def get_build(build_id):
 @flapp.route('/builds/<build_id>/log', methods=['GET'])
 @ApiView()
 def get_build_log(build_id):
-    return Response('logs for %s' % build_id, content_type='text/plain')
+    builds_dir = flapp.config['BUILDS_DIR']
+    log_file = os.path.join(builds_dir, build_id + '.log')
+    if not os.path.isfile(log_file):
+        return Response('', content_type='text/plain')
+    range_header = request.headers.get('range', '')
+    if not range_header:
+        return send_from_directory(builds_dir, build_id + '.log')
+    try:
+        range = map(int, range_header[len('bytes='):].split('-'))
+        assert len(range) == 2
+        assert range[1] - range[0] > 0
+        assert os.path.getsize(log_file) >= range[0] + range[1]
+    except:
+        raise ApiError(416, 'Invalid range.')
+    with open(log_file) as fp:
+        fp.seek(range[0])
+        content = fp.read(range[1] - range[0])
+        return Response(content, content_type='text/plain')
 
 
 if __name__ == '__main__':
