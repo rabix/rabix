@@ -32,7 +32,7 @@ def build_task(build_id, mock=False):
         raise
     else:
         os.chdir(cwd)
-        shutil.rmtree(build_id)
+        os.system('docker run --rm -v $(pwd):/mnt:rw busybox rm -rf /mnt/%s' % build_id)
 
 
 def mock_build(build):

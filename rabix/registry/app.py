@@ -341,24 +341,26 @@ def get_build(build_id):
 @flapp.route('/builds/<build_id>/log', methods=['GET'])
 @ApiView()
 def get_build_log(build_id):
-    builds_dir = flapp.config['BUILDS_DIR']
+    builds_dir = os.path.abspath(flapp.config['BUILDS_DIR'])
     log_file = os.path.join(builds_dir, build_id + '.log')
     if not os.path.isfile(log_file):
-        return Response('', content_type='text/plain')
+        return Response('')
     range_header = request.headers.get('range', '')
     if not range_header:
-        return send_from_directory(builds_dir, build_id + '.log')
+        with open(os.path.join(builds_dir, build_id + '.log')) as fp:
+            return Response(fp.read(), content_type='text/plain')
     try:
-        range = map(int, range_header[len('bytes='):].split('-'))
-        assert len(range) == 2
-        assert range[1] - range[0] > 0
-        assert os.path.getsize(log_file) >= range[0] + range[1]
+        one, two = range_header[len('bytes='):].split('-')
+        two = two or os.path.getsize(log_file)
+        one, two = map(int, [one, two])
+        assert two >= one
+        assert os.path.getsize(log_file) >= two
     except:
         raise ApiError(416, 'Invalid range.')
     with open(log_file) as fp:
-        fp.seek(range[0])
-        content = fp.read(range[1] - range[0])
-        return Response(content, content_type='text/plain')
+        fp.seek(one)
+        content = fp.read(two - one + 1)
+        return Response(content, 206, content_type='text/plain')
 
 
 if __name__ == '__main__':
