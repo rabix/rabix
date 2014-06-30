@@ -160,7 +160,7 @@ class Container(object):
             'Dns': None
         }
         self.config.update(container_config or {})
-        self.binds = {os.path.abspath('.'): self.mount_point + ':rw'}
+        self.binds = {os.path.abspath('.'): self.mount_point}
         self.container = None
         self.image = None
 

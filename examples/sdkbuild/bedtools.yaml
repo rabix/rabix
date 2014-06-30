@@ -1,0 +1,16 @@
+steps:
+  - make:
+      type: run
+      from: bedtools-build
+      cmd:
+        - curl -k https://bedtools.googlecode.com/files/BEDTools.v2.17.0.tar.gz > BEDTools.tar.gz
+        - tar -zxvf BEDTools.tar.gz
+        - cd bedtools-2.17.0
+        - make
+        - ./bin/bedtools  # Just print usage
+
+  - package_tool:
+      type: build
+      from: ubuntu:14.04
+      cmd: cp ./bedtools-2.17.0/bin/bedtools /usr/bin
+      entrypoint: /usr/bin/bedtools

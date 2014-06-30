@@ -6,6 +6,8 @@ from os import getcwd
 from os.path import abspath, join
 
 from rabix.sdktools.build import init
+from rabix.sdktools.util import yaml_load
+from rabix.sdktools.steps import Runner
 
 
 log = logging.getLogger(__name__)
@@ -15,11 +17,13 @@ def create_parser():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
-    infest = subparsers.add_parser(
-        'infest',
+    build = subparsers.add_parser(
+        'build',
         help='Install Rabix adapter to docker image.')
+    build.add_argument('-c', '--config', default='.rabix.yml',
+                       help="Rabix config file to read. Default is .rabix.yml")
 
-    infest.set_defaults(cmd_func=cmd_infest)
+    build.set_defaults(cmd_func=cmd_build)
 
     test = subparsers.add_parser(
         'test', help='Run wrapper job.')
@@ -41,8 +45,9 @@ def create_parser():
     return parser
 
 
-def cmd_infest():
-    pass
+def cmd_build(config):
+    r = Runner()
+    r.run(yaml_load(config))
 
 
 def cmd_test():
