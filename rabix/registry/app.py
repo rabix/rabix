@@ -341,14 +341,15 @@ def get_build(build_id):
 @flapp.route('/builds/<build_id>/log', methods=['GET'])
 @ApiView()
 def get_build_log(build_id):
+    h = {'X-BUILD-STATUS': g.store.get_build(build_id)['status']}
     builds_dir = os.path.abspath(flapp.config['BUILDS_DIR'])
     log_file = os.path.join(builds_dir, build_id + '.log')
     if not os.path.isfile(log_file):
-        return Response('')
+        return Response('', headers=h)
     range_header = request.headers.get('range', '')
     if not range_header:
         with open(os.path.join(builds_dir, build_id + '.log')) as fp:
-            return Response(fp.read(), content_type='text/plain')
+            return Response(fp.read(), content_type='text/plain', headers=h)
     try:
         one, two = range_header[len('bytes='):].split('-')
         two = two or os.path.getsize(log_file)
@@ -360,7 +361,7 @@ def get_build_log(build_id):
     with open(log_file) as fp:
         fp.seek(one)
         content = fp.read(two - one + 1)
-        return Response(content, 206, content_type='text/plain')
+        return Response(content, 206, content_type='text/plain', headers=h)
 
 
 if __name__ == '__main__':
