@@ -17,6 +17,7 @@ def build(client, from_img, cmd, **kwargs):
     run_cmd = make_cmd(cmd)
 
     container.run(run_cmd)
+    container.print_log()
 
     if container.is_success():
         message = kwargs.pop('message', None)
@@ -37,6 +38,7 @@ def run(client, from_img, cmd, **kwargs):
     run_cmd = make_cmd(cmd)
     container = Container(client, from_img, cfg, mount_point='/build')
     container.run(run_cmd)
+    container.print_log()
     if not container.is_success():
         raise RabixError(container.docker.logs(container.container))
 
