@@ -20,7 +20,8 @@ def build(client, from_img, cmd, **kwargs):
 
     if container.is_success():
         message = kwargs.pop('message', None)
-        cfg = make_config(**kwargs)
+        cfg = {"Cmd": []}
+        cfg.update(make_config(**kwargs))
         container.commit(message, cfg)
     else:
         raise RabixError(container.docker.logs(container.container))
@@ -30,7 +31,7 @@ def build(client, from_img, cmd, **kwargs):
 def run(client, from_img, cmd, **kwargs):
     cfg = make_config(**kwargs)
     run_cmd = make_cmd(cmd)
-    container = Container(client, from_img, cfg)
+    container = Container(client, from_img, cfg, mount_point='/build')
     container.run(run_cmd)
     if not container.is_success():
         raise RabixError(container.docker.logs(container.container))
