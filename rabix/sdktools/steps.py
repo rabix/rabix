@@ -17,14 +17,19 @@ def build(client, from_img, cmd, **kwargs):
     run_cmd = make_cmd(cmd)
 
     container.run(run_cmd)
+    container.print_log()
 
     if container.is_success():
         message = kwargs.pop('message', None)
+        register = kwargs.pop('register', {})
         cfg = {"Cmd": []}
         cfg.update(make_config(**kwargs))
-        container.commit(message, cfg)
+        container.commit(
+            message, cfg, repository=register.get('repository'),
+            tag=register.get('tag')
+        )
     else:
-        raise RabixError(container.docker.logs(container.container))
+        raise RabixError("Build failed!")
     return container.image['Id']
 
 
@@ -33,6 +38,7 @@ def run(client, from_img, cmd, **kwargs):
     run_cmd = make_cmd(cmd)
     container = Container(client, from_img, cfg, mount_point='/build')
     container.run(run_cmd)
+    container.print_log()
     if not container.is_success():
         raise RabixError(container.docker.logs(container.container))
 
