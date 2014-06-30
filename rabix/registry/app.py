@@ -281,7 +281,7 @@ def handle_event():
     if not mock:
         endpoint = 'https://api.github.com/' + res
         token = g.store.get_user(g.store.get_repo(repo)['created_by'])['token']
-        headers = {'Authorization': 'token: %s' % token}
+        headers = {'Authorization': 'token %s' % token}
         r = requests.post(endpoint, data=json.dumps(status), headers=headers)
         r.raise_for_status()
     return jsonify(status='ok', build_id=build['id'])
