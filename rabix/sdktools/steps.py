@@ -20,11 +20,15 @@ def build(client, from_img, cmd, **kwargs):
 
     if container.is_success():
         message = kwargs.pop('message', None)
+        register = kwargs.pop('register', {})
         cfg = {"Cmd": []}
         cfg.update(make_config(**kwargs))
-        container.commit(message, cfg)
+        container.commit(
+            message, cfg, repository=register.get('repository'),
+            tag=register.get('tag')
+        )
     else:
-        raise RabixError(container.docker.logs(container.container))
+        raise RabixError("Build failed!")
     return container.image['Id']
 
 

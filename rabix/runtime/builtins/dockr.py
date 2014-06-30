@@ -215,10 +215,11 @@ class Container(object):
             print(self.docker.logs(self.container))
         return self
 
-    def commit(self, message=None, conf=None):
+    def commit(self, message=None, conf=None, repository=None, tag=None):
         self._check_container_ready()
         self.image = self.docker.commit(
-            self.container['Id'], message=message, conf=conf
+            self.container['Id'], message=message, conf=conf,
+            repository=repository, tag=tag
         )
         return self
 
