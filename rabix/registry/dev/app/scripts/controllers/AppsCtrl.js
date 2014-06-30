@@ -1,15 +1,9 @@
 'use strict';
 
-/**
- * @ngdoc function
- * @name registryApp.controller:MainCtrl
- * @description
- * # MainCtrl
- * Controller of the registryApp
- */
 angular.module('registryApp')
-    .controller('MainCtrl', ['$scope', '$routeParams', 'Model', function ($scope, $routeParams, Model) {
+    .controller('AppsCtrl', ['$scope', '$routeParams', 'App', 'Header', function ($scope, $routeParams, App, Header) {
 
+        Header.setActive('apps');
 
         /**
          * Callback when apps are loaded
@@ -41,7 +35,7 @@ angular.module('registryApp')
         $scope.view.page = 1;
         $scope.view.perPage = 25;
 
-        Model.getApps(0, '', $routeParams.repo).then(appsLoaded);
+        App.getApps(0, '', $routeParams.repo).then(appsLoaded);
 
         /**
          * Go to the next/prev page
@@ -62,7 +56,7 @@ angular.module('registryApp')
                 $scope.view.loading = true;
                 var offset = ($scope.view.page - 1) * $scope.view.perPage;
 
-                Model.getApps(offset, $scope.view.searchTerm, $routeParams.repo).then(appsLoaded);
+                App.getApps(offset, $scope.view.searchTerm, $routeParams.repo).then(appsLoaded);
 
             }
         };
@@ -73,7 +67,7 @@ angular.module('registryApp')
         $scope.searchApps = function() {
 
             $scope.view.page = 1;
-            Model.getApps(0, $scope.view.searchTerm, $routeParams.repo).then(appsLoaded);
+            App.getApps(0, $scope.view.searchTerm, $routeParams.repo).then(appsLoaded);
 
         };
 
@@ -84,7 +78,7 @@ angular.module('registryApp')
 
             $scope.view.page = 1;
             $scope.view.searchTerm = '';
-            Model.getApps(0, '', $routeParams.repo).then(appsLoaded);
+            App.getApps(0, '', $routeParams.repo).then(appsLoaded);
 
         };
 

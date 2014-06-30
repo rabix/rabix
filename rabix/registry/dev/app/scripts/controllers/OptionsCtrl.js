@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('registryApp')
-    .controller('OptionsCtrl', ['$scope', 'Model', '$modalInstance', 'data', function ($scope, Model, $modalInstance, data) {
+    .controller('OptionsCtrl', ['$scope', 'User', '$modalInstance', 'data', function ($scope, User, $modalInstance, data) {
 
         $scope.view = {};
         $scope.view.data = data;
@@ -22,7 +22,7 @@ angular.module('registryApp')
          */
         $scope.generateToken = function() {
             $scope.view.generating = true;
-            Model.generateToken().then(function(result) {
+            User.generateToken().then(function(result) {
 
                 $scope.view.generating = false;
                 $scope.view.trace = 'Your new token: ' + result.token;
@@ -35,7 +35,7 @@ angular.module('registryApp')
          */
         $scope.revokeToken = function() {
             $scope.view.revoking = true;
-            Model.revokeToken().then(function() {
+            User.revokeToken().then(function() {
 
                 $scope.view.revoking = false;
                 $scope.view.trace = 'Your token has been revoked';

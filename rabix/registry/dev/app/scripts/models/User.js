@@ -1,43 +1,9 @@
 "use strict";
 
 angular.module('registryApp')
-    .factory('Model', ['Api', function (Api) {
+    .factory('User', ['Api', function (Api) {
 
         var self = {};
-
-        /**
-         * Get list of apps
-         *
-         * @params {integer} skip
-         * @params {string} searchTerm
-         * @returns {object} $promise
-         */
-        self.getApps = function(skip, searchTerm, repo) {
-
-            var isSearch = !(_.isUndefined(searchTerm) || _.isEmpty(searchTerm));
-            var params = {skip: skip};
-
-            if (isSearch) {
-                params.q = searchTerm;
-            }
-
-            if (!_.isUndefined(repo)) {
-                params.field_repo = repo.replace(/&/g, '/');
-            }
-
-            var promise = Api.apps.get(params).$promise;
-
-            return promise;
-
-        };
-
-        self.getApp = function(id) {
-
-            var promise = Api.apps.get({id: id}).$promise;
-
-            return promise;
-
-        };
 
         /**
          * Get user's details
@@ -102,6 +68,5 @@ angular.module('registryApp')
         };
 
         return self;
-
 
     }]);

@@ -1,0 +1,54 @@
+<div class="page home" ng-class="{loading: view.loading}">
+
+    <form class="search-form" ng-submit="searchApps()" novalidate>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <input type="text" class="form-control" ng-model="view.searchTerm" placeholder="Search apps" required>
+                        <span class="input-group-btn">
+                            <button class="btn btn-primary" type="submit"><i class="glyphicon glyphicon-search"></i></button>
+                            <a ng-if="!(view.searchTerm | isEmpty)" class="btn btn-default" href ng-click="resetSearch()"><i class="glyphicon glyphicon-ban-circle"></i></a>
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-8 tags">
+                    <span ng-if="view.repo" class="label label-primary">{{ view.repo }} <a ng-href="#/" class="close">&times;</a></span>
+                </div>
+            </div>
+        </div>
+    </form>
+    <!-- # .search-form -->
+
+    <div class="container" ng-if="!view.loading">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Repo</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr ng-repeat="app in view.apps">
+                    <td><a ng-href="#/app/{{ app.id }}">{{ app.name }}</a></td>
+                    <td><a ng-href="#/repo/{{ app.repo | encode }}">{{ app.repo }}</a></td>
+                    <td><p tooltip="{{ app.description }}" tooltip-popup-delay="1000">{{ app.description }}</p></td>
+                </tr>
+                <tr ng-if="view.apps.length === 0">
+                    <td colspan="3"><p class="alert alert-info">There are no apps found</p></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <!-- # .container -->
+
+    <div class="paginate" ng-if="!view.loading && view.apps.length !== 0">
+        <div class="container">
+            <button ng-disabled="!view.paginator.prev" class="btn btn-default pull-left" ng-click="goToPage('prev')"><i class="glyphicon glyphicon-chevron-left"></i></button>
+            <button ng-disabled="!view.paginator.next" class="btn btn-default pull-right" ng-click="goToPage('next')"><i class="glyphicon glyphicon-chevron-right"></i></button>
+        </div>
+    </div>
+    <!-- # .paginate -->
+
+</div>
