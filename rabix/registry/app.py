@@ -1,8 +1,10 @@
 import logging
+import logging.config
 import functools
 import re
 import os
 import json
+import sys
 import random
 
 import rq
@@ -307,7 +309,7 @@ def get_repo(owner, name):
 
 
 @flapp.route('/repos/<owner>/<name>', methods=['PUT'])
-@ApiView()
+@ApiView(login_required=True)
 def put_repo(owner, name):
     username = g.user['username']
     if username != owner:
@@ -355,5 +357,9 @@ def get_build_log(build_id):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    if len(sys.argv) > 1:
+        with open(sys.argv[1]) as fp:
+            logging.config.dictConfig(json.load(fp))
+    else:
+        logging.basicConfig(level=logging.DEBUG)
     flapp.run(port=4280)
