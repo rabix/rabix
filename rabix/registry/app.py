@@ -9,6 +9,7 @@ import random
 
 import rq
 import redis
+import requests
 from flask import Flask, request, g, session, redirect, jsonify, Response, \
     send_from_directory
 from flask.ext.github import GitHub, GitHubError
@@ -269,7 +270,7 @@ def handle_event():
     g.store.update_build(build)
     queue = rq.Queue('builds', 600, redis.Redis())
     queue.enqueue(build_task, build['id'], mock)
-    res = 'repo/%s/statuses/%s' % (repo, cmt['id'])
+    res = 'repos/%s/statuses/%s' % (repo, cmt['id'])
     status = {
         'state': 'pending',
         'context': 'continuous-integration/rabix',
@@ -278,7 +279,11 @@ def handle_event():
     }
     log.info('New status: %s', status)
     if not mock:
-        github.put(res, data=json.dumps(status))
+        endpoint = 'https://api.github.com/' + res
+        token = g.store.get_user(g.store.get_repo(repo)['created_by'])['token']
+        headers = {'Authorization': 'token: %s' % token}
+        r = requests.post(endpoint, data=json.dumps(status), headers=headers)
+        r.raise_for_status()
     return jsonify(status='ok', build_id=build['id'])
 
 

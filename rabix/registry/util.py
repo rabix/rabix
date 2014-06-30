@@ -51,7 +51,7 @@ def verify_webhook(payload, signature, obj):
     username = obj['repository']['owner']['name']
     repo_name = obj['repository']['name']
     repo_id = '/'.join([username, repo_name])
-    secret = g.store.get_repo_secret(repo_id)
+    secret = str(g.store.get_repo_secret(repo_id))
     calc_sig = hmac.new(secret, request.data, hashlib.sha1).hexdigest()
     return signature == 'sha1=' + calc_sig
 
