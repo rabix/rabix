@@ -25,8 +25,8 @@ angular
                 controller: 'AppsCtrl'
             })
             .when('/repo/:repo', {
-                templateUrl: 'views/main.html',
-                controller: 'MainCtrl'
+                templateUrl: 'views/apps.html',
+                controller: 'AppsCtrl'
             })
             .when('/app/:id', {
                 templateUrl: 'views/app.html',

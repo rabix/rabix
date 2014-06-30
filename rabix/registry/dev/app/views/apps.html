@@ -1,24 +1,26 @@
 <div class="page home" ng-class="{loading: view.loading}">
 
-    <form class="search-form" ng-submit="searchApps()" novalidate>
+    <div class="filters">
         <div class="container">
             <div class="row">
                 <div class="col-md-4">
-                    <div class="input-group">
-                        <input type="text" class="form-control" ng-model="view.searchTerm" placeholder="Search apps" required>
-                        <span class="input-group-btn">
-                            <button class="btn btn-primary" type="submit"><i class="glyphicon glyphicon-search"></i></button>
-                            <a ng-if="!(view.searchTerm | isEmpty)" class="btn btn-default" href ng-click="resetSearch()"><i class="glyphicon glyphicon-ban-circle"></i></a>
-                        </span>
-                    </div>
+                    <form class="search-form" ng-submit="searchApps()" novalidate>
+                        <div class="input-group">
+                            <input type="text" class="form-control" ng-model="view.searchTerm" placeholder="Search apps" required>
+                            <span class="input-group-btn">
+                                <button class="btn btn-primary" type="submit"><i class="glyphicon glyphicon-search"></i></button>
+                                <a ng-if="!(view.searchTerm | isEmpty)" class="btn btn-default" href ng-click="resetSearch()"><i class="glyphicon glyphicon-ban-circle"></i></a>
+                            </span>
+                        </div>
+                    </form>
                 </div>
                 <div class="col-md-8 tags">
                     <span ng-if="view.repo" class="label label-primary">{{ view.repo }} <a ng-href="#/" class="close">&times;</a></span>
                 </div>
             </div>
         </div>
-    </form>
-    <!-- # .search-form -->
+    </div>
+    <!-- # .filters -->
 
     <div class="container" ng-if="!view.loading">
         <table class="table table-striped">
