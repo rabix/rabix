@@ -308,7 +308,7 @@ def get_repo(owner, name):
 
 @flapp.route('/repos/<owner>/<name>', methods=['PUT'])
 @ApiView()
-def get_repo(owner, name):
+def put_repo(owner, name):
     username = g.user['username']
     if username != owner:
         raise ApiError(403, 'You can only setup repos owned by you.')
