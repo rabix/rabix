@@ -306,6 +306,17 @@ def get_repo(owner, name):
     return jsonify(**g.store.get_repo(repo_id))
 
 
+@flapp.route('/repos/<owner>/<name>', methods=['PUT'])
+@ApiView()
+def get_repo(owner, name):
+    username = g.user['username']
+    if username != owner:
+        raise ApiError(403, 'You can only setup repos owned by you.')
+    repo_id = '/'.join([owner, name])
+    repo = g.store.create_repo(repo_id, username)
+    return jsonify(**repo)
+
+
 @flapp.route('/builds', methods=['GET'])
 @ApiView()
 def build_index():
