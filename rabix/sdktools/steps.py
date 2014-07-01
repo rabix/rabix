@@ -26,7 +26,7 @@ def build(client, from_img, cmd, **kwargs):
         cfg = {"Cmd": []}
         cfg.update(make_config(**kwargs))
         container.commit(
-            message, cfg, repository=register.get('repository'),
+            message, cfg, repository=register.get('repo'),
             tag=register.get('tag')
         )
     else:
