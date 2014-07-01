@@ -3,7 +3,6 @@ import docker
 import logging
 import re
 from os import getenv
-from docker.utils.utils import parse_repository_tag
 
 import rabix.common.six as six
 from rabix.runtime.builtins.dockr import Container, get_image
@@ -37,8 +36,6 @@ def build(client, from_img, cmd, **kwargs):
 def run(client, from_img, cmd, **kwargs):
     cfg = make_config(**kwargs)
     run_cmd = make_cmd(cmd)
-    repo, tag = parse_repository_tag(from_img)
-    get_image(repo, tag)
     container = Container(client, from_img, cfg, mount_point='/build')
     container.run(run_cmd)
     container.print_log()
