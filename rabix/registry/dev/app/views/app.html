@@ -1,14 +1,13 @@
 <div class="page app" ng-class="{loading: view.loading}">
 
-    <div class="actions">
+    <div class="heading">
         <div class="container">
-            <button class="btn btn-default" ng-click="goBack()"><i class="glyphicon glyphicon-chevron-left"></i> Back</button>
+            <button class="btn btn-default pull-left go-back" ng-click="goBack()"><i class="glyphicon glyphicon-chevron-left"></i> Back</button>
+            <h1>{{ view.app.name }}</h1>
         </div>
     </div>
 
     <div ng-if="!view.loading" class="container">
-
-        <h1>{{ view.app.name }}</h1>
 
         <div class="description">
             <div class="panel panel-warning">

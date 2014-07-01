@@ -21,7 +21,7 @@ angular.module('registryApp')
                 params.q = searchTerm;
             }
 
-            if (!_.isUndefined(repo)) {
+            if (angular.isDefined(repo)) {
                 params.field_repo = repo.replace(/&/g, '/');
             }
 

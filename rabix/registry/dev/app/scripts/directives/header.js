@@ -41,7 +41,7 @@ angular.module('registryApp')
                     var user = {};
 
                     _.each(params, function (param) {
-                        if (!_.isUndefined(result[param])) {
+                        if (angular.isDefined(result[param])) {
                             user[param] = result[param];
                         }
                     });

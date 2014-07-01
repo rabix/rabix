@@ -1,6 +1,9 @@
 @import "mixins";
 
 $gray: #f3f3f3;
+$orange: #f0ad4e;
+$green: #5cb85c;
+$red: #d9534f;
 
 html, body {
   height: 100%;
@@ -71,10 +74,9 @@ body {
   position: relative;
   background-color: #fff;
 
-  /* HOME page */
-  &.home {
+  /* Apps page */
+  &.apps {
     .table {
-      margin: 0;
       th {
         &:nth-child(1),
         &:nth-child(2) {
@@ -86,27 +88,165 @@ body {
       }
       td {
         p {
-          margin: 0;
           &:not(.alert) {
             max-width: 500px;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            overflow: hidden;
-            float: left;
           }
         }
       }
     }
   }
 
-  .actions,
+  /* Builds page */
+  &.builds {
+    .table {
+      th {
+        &.field-status,
+        &.field-id {
+          width: 5%;
+        }
+        &.field-message {
+          width: 30%;
+        }
+        &.field-commit,
+        &.field-duration,
+        &.field-finished {
+          width: 15%;
+        }
+        &.field-committer {
+          width: 15%;
+        }
+      }
+      td {
+        p {
+          &:not(.alert) {
+            max-width: 500px;
+          }
+        }
+      }
+    }
+  }
+
+  h1 {
+    margin: 0;
+    padding: 11px 0 11px 90px;
+    font-size: 30px;
+    .label {
+      font-size: 18px;
+      margin: 5px 0;
+      font-weight: normal;
+    }
+    span {
+      display: inline-block;
+      vertical-align: middle;
+    }
+  }
+
+  .table {
+    margin: 0;
+    td {
+      p {
+        margin: 0;
+        &:not(.alert) {
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          overflow: hidden;
+          float: left;
+        }
+      }
+    }
+    .status {
+      width: 20px;
+//      height: 15px;
+//      line-height: 15px;
+      font-size: 20px;
+//      color: #fff;
+      display: block;
+      margin: 0 auto;
+      padding: 0;
+      @include border-radius(7.5px);
+
+      &.success {
+        color: $green;
+      }
+      &.running {
+        color: $orange;
+      }
+      &.failed {
+        color: $red;
+      }
+    }
+  }
+
+  .heading,
   .filters {
-    padding: 10px 0;
     background-color: $gray;
     border-bottom: 1px solid #ddd;
   }
 
+  .heading {
+    .go-back {
+      margin: 12px 0;
+    }
+    &.navigation {
+      .nav {
+        display: inline-block;
+        vertical-align: middle;
+        margin-left: 30px;
+        margin-bottom: -20px;
+        li {
+          margin: 0 5px;
+          position: relative;
+          &.active {
+            a, a:hover, a:focus {
+              background-color: #fff;
+              color: #555;
+              border: 1px solid #ddd;
+            }
+
+            &:before, &:after {
+              content: '';
+              display: block;
+              position: absolute;
+              left: 0;
+              width: 100%;
+            }
+            &:before {
+              bottom: -15px;
+              border-top: 15px solid #ddd;
+              border-left: 50px solid transparent;
+              border-right: 50px solid transparent;
+              z-index: 1;
+            }
+            &:after {
+              bottom: -14px;
+              border-top: 15px solid #fff;
+              border-left: 50px solid transparent;
+              border-right: 50px solid transparent;
+              z-index: 2;
+            }
+
+          }
+          a {
+            font-size: 14px;
+            font-weight: normal;
+            border: 1px solid transparent;
+            width: 100px;
+            text-align: center;
+            @include border-radius(3px 3px 0 0);
+            &:hover {
+              background-color: #fefefe;
+              border: 1px solid #ddd;
+            }
+          }
+        }
+      }
+    }
+  }
+
   .filters {
+    height: 55px;
+    padding: 10px 0;
+
     .label {
       font-size: 15px;
       display: inline-block;
@@ -129,6 +269,12 @@ body {
     overflow: auto;
     background-color: $gray;
     border-top: 1px solid #ddd;
+    text-align: center;
+    .page-number {
+      display: inline-block;
+      font-weight: bold;
+      padding: 7px;
+    }
   }
 
   .description {
@@ -138,6 +284,7 @@ body {
       float: right;
       margin: 0 0 5px 5px;
       p {
+        white-space: nowrap;
         strong {
           width: 90px;
           display: inline-block;
@@ -150,15 +297,26 @@ body {
   }
 
   .snippet {
-    border-left: 5px solid #f0ad4e;
-    margin: 0 0 30px 0;
+    border-left: 5px solid $orange;
     p {
       padding: 0 0 0 5px;
       margin: 0 0 5px;
     }
     pre {
       @include border-radius(0 3px 3px 0);
+      border-color: $orange;
       border-left: none;
+      margin-bottom: 1px;
+    }
+
+    &.log {
+      pre {
+        background-color: #222;
+        padding: 0 10px;
+        .line {
+          color: $orange;
+        }
+      }
     }
   }
 
@@ -250,7 +408,7 @@ body {
   margin-top: 1px;
   li {
     &.active {
-      a, a:focus {
+      a, a:focus, a:hover {
         background-color: $gray;
         border-bottom-color: $gray;
       }

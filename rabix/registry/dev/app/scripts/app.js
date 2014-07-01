@@ -36,6 +36,14 @@ angular
                 templateUrl: 'views/builds.html',
                 controller: 'BuildsCtrl'
             })
+            .when('/builds/:id', {
+                templateUrl: 'views/build.html',
+                controller: 'BuildCtrl'
+            })
+            .when('/builds/:id/:tab', {
+                templateUrl: 'views/build.html',
+                controller: 'BuildCtrl'
+            })
             .otherwise({
                 redirectTo: '/'
             });

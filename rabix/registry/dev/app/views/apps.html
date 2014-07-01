@@ -1,4 +1,4 @@
-<div class="page home" ng-class="{loading: view.loading}">
+<div class="page apps" ng-class="{loading: view.loading}">
 
     <div class="filters">
         <div class="container">
@@ -48,6 +48,7 @@
     <div class="paginate" ng-if="!view.loading && view.apps.length !== 0">
         <div class="container">
             <button ng-disabled="!view.paginator.prev" class="btn btn-default pull-left" ng-click="goToPage('prev')"><i class="glyphicon glyphicon-chevron-left"></i></button>
+            <span class="page-number">{{ view.page }} / {{ view.total }}</span>
             <button ng-disabled="!view.paginator.next" class="btn btn-default pull-right" ng-click="goToPage('next')"><i class="glyphicon glyphicon-chevron-right"></i></button>
         </div>
     </div>

@@ -15,31 +15,45 @@
     <!-- # .filters -->
 
     <div class="container" ng-if="!view.loading">
-        <table class="table table-striped">
+        <table class="table">
             <thead>
-            <tr>
-                <th>Name</th>
-                <th>Repo</th>
-                <th>Description</th>
-            </tr>
+                <tr>
+                    <th class="field-status"></th>
+                    <th class="field-id">Build</th>
+                    <th class="field-message">Message</th>
+                    <th class="field-commit">Commit</th>
+                    <th class="field-committer">Committer</th>
+                    <th class="field-duration">Duration</th>
+                    <th class="field-finished">Finished</th>
+                </tr>
             </thead>
             <tbody>
-            <tr ng-repeat="app in view.apps">
-                <td><a ng-href="#/app/{{ app.id }}">{{ app.name }}</a></td>
-                <td><a ng-href="#/repo/{{ app.repo | encode }}">{{ app.repo }}</a></td>
-                <td><p tooltip="{{ app.description }}" tooltip-popup-delay="1000">{{ app.description }}</p></td>
-            </tr>
-            <tr ng-if="view.apps.length === 0">
-                <td colspan="3"><p class="alert alert-info">There are no apps found</p></td>
-            </tr>
+                <tr ng-repeat="build in view.builds">
+                    <td>
+                        <span class="status glyphicon {{ build.status }}"
+                              tooltip="{{ build.status }}"
+                              ng-class="{'glyphicon-ok-circle': build.status === 'success', 'glyphicon-time': build.status === 'running', 'glyphicon-remove-circle': build.status === 'failed'}">
+                        </span>
+                    </td>
+                    <td><a ng-href="#/builds/{{ build.id }}">#{{ build.id }}</a></td>
+                    <td><p tooltip="{{ build.message }}" tooltip-popup-delay="1000">{{ build.message }}</p></td>
+                    <td><a ng-href="#">{{ build.commit }} ({{ build.branch }})</a></td>
+                    <td>{{ build.committer }}</td>
+                    <td>{{ build.duration }}</td>
+                    <td>{{ build.finished }}</td>
+                </tr>
+                <tr ng-if="view.builds.length === 0">
+                    <td colspan="7"><p class="alert alert-info">There are no builds</p></td>
+                </tr>
             </tbody>
         </table>
     </div>
     <!-- # .container -->
 
-    <div class="paginate" ng-if="!view.loading && view.apps.length !== 0">
+    <div class="paginate" ng-if="!view.loading && view.builds.length !== 0">
         <div class="container">
             <button ng-disabled="!view.paginator.prev" class="btn btn-default pull-left" ng-click="goToPage('prev')"><i class="glyphicon glyphicon-chevron-left"></i></button>
+            <span class="page-number">{{ view.page }} / {{ view.total }}</span>
             <button ng-disabled="!view.paginator.next" class="btn btn-default pull-right" ng-click="goToPage('next')"><i class="glyphicon glyphicon-chevron-right"></i></button>
         </div>
     </div>

@@ -14,6 +14,9 @@ angular.module('registryApp')
             $scope.view.app = result;
         });
 
+        /**
+         * Go back to the previous screen
+         */
         $scope.goBack = function () {
             $window.history.back();
         };
