@@ -57,7 +57,7 @@ def make_config(**kwargs):
     cfg = {k: v for k, v in six.iteritems(cfg) if k in keys}
     entrypoint = cfg.get("Entrypoint")
     if isinstance(entrypoint, six.string_types):
-        cfg['Entrypoint'] = ['/bin/sh', '-c', entrypoint]
+        cfg['Entrypoint'] = [entrypoint]
 
     return cfg
 
