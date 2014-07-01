@@ -28,6 +28,11 @@ body {
         height: 90%;
         overflow: auto;
       }
+//      &.app, &.build {
+//        & > .container {
+//          height: 94%;
+//        }
+//      }
     }
   }
 }
@@ -402,9 +407,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: lighten(#608dc1, 5%);
+  //background: lighten(#608dc1, 5%);
+  background: $orange;
   &:hover {
-    background: #608dc1;
+    background: darken($orange, 10%);
   }
 }
 
@@ -416,6 +422,7 @@ body {
       a, a:focus, a:hover {
         background-color: $gray;
         border-bottom-color: $gray;
+        cursor: pointer;
       }
     }
   }
