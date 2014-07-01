@@ -13,6 +13,8 @@ angular.module('registryApp')
             update: {method: 'PUT'}
         });
 
+        api.builds = $resource(apiUrl + '/builds/:id', {build_id: '@id'});
+
         api.user = $resource(apiUrl + '/user');
 
         api.token = $resource(apiUrl + '/token', {}, {

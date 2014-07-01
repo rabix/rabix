@@ -13,15 +13,15 @@ angular.module('registryApp')
          */
         self.getBuilds = function(skip, repo) {
 
-//            var params = {skip: skip};
+            var params = {skip: skip};
 //
 //            if (!_.isUndefined(repo)) {
 //                params.field_repo = repo.replace(/&/g, '/');
 //            }
 //
-//            var promise = Api.builds.get(params).$promise;
-//
-//            return promise;
+            var promise = Api.builds.get(params).$promise;
+
+            return promise;
 
         };
 
