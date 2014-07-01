@@ -21,16 +21,20 @@ angular
     .config(['$routeProvider', '$httpProvider', function ($routeProvider, $httpProvider) {
         $routeProvider
             .when('/', {
-                templateUrl: 'views/main.html',
-                controller: 'MainCtrl'
+                templateUrl: 'views/apps.html',
+                controller: 'AppsCtrl'
             })
             .when('/repo/:repo', {
-                templateUrl: 'views/main.html',
-                controller: 'MainCtrl'
+                templateUrl: 'views/apps.html',
+                controller: 'AppsCtrl'
             })
             .when('/app/:id', {
                 templateUrl: 'views/app.html',
                 controller: 'AppCtrl'
+            })
+            .when('/builds', {
+                templateUrl: 'views/builds.html',
+                controller: 'BuildsCtrl'
             })
             .otherwise({
                 redirectTo: '/'

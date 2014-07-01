@@ -16,7 +16,9 @@ angular.module('registryApp')
                     }
                 });
 
-                // TODO: error design and dismiss logic
+                /**
+                 * Close the error alert
+                 */
                 scope.closeError = function () {
                     scope.errorMessages = [];
                 };

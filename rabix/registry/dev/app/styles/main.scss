@@ -1,17 +1,24 @@
 @import "mixins";
 
+$gray: #f3f3f3;
+
 html, body {
   height: 100%;
 }
 body {
   color: #555;
-  background-color: #f3f3f3;
+  background-color: $gray;
 }
 
 .main {
   height: 100%;
   .content {
     height: 90%;
+
+    @media screen and (max-height: 800) {
+      height: 90%;
+    }
+
     .page {
       height: 100%;
       & > .container {
@@ -22,10 +29,12 @@ body {
   }
 }
 
+/* HEADER
+================================================ */
 .header {
-  $header: 60px;
+  $header: 52px;
   border-bottom: 1px solid #ddd;
-  padding: 10px 0;
+  padding: 10px 0 0 0;
   min-height: $header;
   background-color: #fff;
   
@@ -56,10 +65,13 @@ body {
 
 }
 
+/* PAGE
+================================================ */
 .page {
   position: relative;
   background-color: #fff;
 
+  /* HOME page */
   &.home {
     .table {
       margin: 0;
@@ -88,13 +100,13 @@ body {
   }
 
   .actions,
-  .search-form {
+  .filters {
     padding: 10px 0;
-    background-color: #f3f3f3;
+    background-color: $gray;
     border-bottom: 1px solid #ddd;
   }
 
-  .search-form {
+  .filters {
     .label {
       font-size: 15px;
       display: inline-block;
@@ -107,12 +119,15 @@ body {
         @include opacity(1);
       }
     }
+    .tags {
+      padding: 2px 0;
+    }
   }
 
   .paginate {
     padding: 10px 0;
     overflow: auto;
-    background-color: #f3f3f3;
+    background-color: $gray;
     border-top: 1px solid #ddd;
   }
 
@@ -149,6 +164,8 @@ body {
 
 }
 
+/* LOADER
+================================================ */
 .loading {
   &:after {
     content: '';
@@ -171,7 +188,8 @@ body {
   }
 }
 
-
+/* MODAL OPTIONS
+================================================ */
 .modal-options {
   .col-md-6 {
     text-align: center;
@@ -185,6 +203,8 @@ body {
   }
 }
 
+/* GENERAL ERROR
+================================================ */
 .general-error {
   $width: 400px;
   position: fixed;
@@ -219,5 +239,21 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #608dc1;
+  background: lighten(#608dc1, 5%);
+  &:hover {
+    background: #608dc1;
+  }
+}
+
+.nav-tabs {
+  border-bottom: none;
+  margin-top: 1px;
+  li {
+    &.active {
+      a, a:focus {
+        background-color: $gray;
+        border-bottom-color: $gray;
+      }
+    }
+  }
 }

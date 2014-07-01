@@ -1,7 +1,24 @@
 'use strict';
 
 angular.module('registryApp')
-    .directive('header', ['$templateCache', '$timeout', '$route', '$modal', 'Model', function ($templateCache, $timeout, $route, $modal, Model) {
+    .service('Header', [function () {
+
+        var self = {};
+
+        self.active = 'apps';
+
+        self.setActive = function (active) {
+            self.active = active;
+        };
+
+        self.getActive = function () {
+            return self.active;
+        };
+
+        return self;
+
+    }])
+    .directive('header', ['$templateCache', '$timeout', '$route', '$modal', 'User', 'Header', function ($templateCache, $timeout, $route, $modal, User, Header) {
         return {
             restrict: 'E',
             replace: true,
@@ -14,6 +31,9 @@ angular.module('registryApp')
                 scope.view.loggingIn = false;
                 scope.view.processing = false;
                 scope.view.showOptions = false;
+                scope.view.active = Header.getActive();
+
+                scope.HeaderService = Header;
 
                 var parseUser = function (result) {
 
@@ -29,7 +49,7 @@ angular.module('registryApp')
                     return user;
                 };
 
-                Model.getUser().then(function(result) {
+                User.getUser().then(function(result) {
                     scope.view.user = parseUser(result);
                     scope.view.loading = false;
                 });
@@ -40,7 +60,7 @@ angular.module('registryApp')
                 scope.logOut = function() {
                     scope.view.processing = true;
 
-                    Model.logOut().then(function() {
+                    User.logOut().then(function() {
                         scope.view.user = {};
                         scope.view.showOptions = false;
                         scope.view.processing = false;
@@ -58,6 +78,12 @@ angular.module('registryApp')
                     });
 
                 };
+
+                scope.$watch('HeaderService.active', function (n, o) {
+                    if (n !== o) {
+                        scope.view.active = n;
+                    }
+                });
 
             }
         };
