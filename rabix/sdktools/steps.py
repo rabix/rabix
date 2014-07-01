@@ -5,7 +5,7 @@ import re
 from os import getenv
 
 import rabix.common.six as six
-from rabix.runtime.builtins.dockr import Container, get_image
+from rabix.runtime.builtins.dockr import Container
 from rabix.common.errors import RabixError
 
 log = logging.getLogger(__name__)
