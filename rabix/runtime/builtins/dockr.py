@@ -171,6 +171,10 @@ class Container(object):
             'WorkingDir': self.mount_point,
             'Dns': None
         }
+        entrypoint = docker_client.inspect_image(image_id)['config'][
+            'Entrypoint']
+        if not entrypoint:
+            self.config['Entrypoint'] = ['/bin/sh', '-c']
         self.config.update(container_config or {})
         self.binds = {os.path.abspath('.'): self.mount_point}
         self.container = None
@@ -237,6 +241,8 @@ class Container(object):
 
     def run(self, command):
         log.info("Running command %s", command)
+        if self.config.get('Entrypoint') == ['/bin/sh', '-c']:
+            command = [' && '.join(command)]
         self.container = self.docker.create_container_from_config(
             dict(self.config, Cmd=command)
         )

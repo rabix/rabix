@@ -63,7 +63,7 @@ def make_cmd(cmd):
     if isinstance(cmd, six.string_types):
         cmd = [cmd]
 
-    return ['/bin/sh', '-c', ' && '.join(cmd)]
+    return cmd
 
 
 class Runner(object):
