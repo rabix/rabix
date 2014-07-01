@@ -9,7 +9,10 @@
                     <li ng-class="{active: view.tab === 'details'}"><a ng-href="#/builds/{{ view.build.id }}">Details</a></li>
                     <li ng-class="{active: view.tab === 'log'}"><a ng-href="#/builds/{{ view.build.id }}/log">Log</a></li>
                 </ul>
-                <span class="label pull-right" ng-class="{'label-success': view.build.status === 'success', 'label-warning': view.build.status === 'running', 'label-danger': view.build.status === 'failed'}">{{ view.build.status }}</span>
+                <span class="label pull-right" ng-class="{'label-success': view.build.status === 'success', 'label-warning': view.build.status === 'running', 'label-danger': view.build.status === 'failed'}">
+                    <i class="glyphicon" ng-class="{'glyphicon-ok-circle': view.build.status === 'success', 'glyphicon-time': view.build.status === 'running', 'glyphicon-remove-circle': view.build.status === 'failed'}"></i>
+                    <span>{{ view.build.status }}</span>
+                </span>
             </h1>
         </div>
     </div>
