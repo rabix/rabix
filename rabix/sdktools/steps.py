@@ -12,7 +12,9 @@ log = logging.getLogger(__name__)
 
 
 def build(client, from_img, cmd, **kwargs):
-    container = Container(client, from_img, mount_point='/build')
+    entrypoint = ['/bin/sh', '-c']
+    cfg = make_config(entrypoint=entrypoint)
+    container = Container(client, from_img, cfg, mount_point='/build')
 
     run_cmd = make_cmd(cmd)
 
