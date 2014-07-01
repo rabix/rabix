@@ -1,16 +1,25 @@
 import logging
+import logging.config
 import functools
 import re
 import os
+import json
+import sys
 import random
 
-from flask import Flask, request, g, session, redirect, jsonify
+import rq
+import redis
+import requests
+from flask import Flask, request, g, session, redirect, jsonify, Response, \
+    send_from_directory
 from flask.ext.github import GitHub, GitHubError
 
 from rabix import CONFIG
 from rabix.common.util import update_config
 from rabix.common.errors import ResourceUnavailable
-from rabix.registry.util import ApiError, validate_app, add_links
+from rabix.registry.tasks import build_task
+from rabix.registry.util import ApiError, validate_app, add_links, \
+    verify_webhook, get_query_args
 from rabix.registry.store import RethinkStore
 
 if __name__ == '__main__':
@@ -111,11 +120,6 @@ def teardown_request(_):
     g.store.disconnect()
 
 
-# @flapp.route('/static/<path:path>', methods=['GET'])
-# def static_route(path):
-#     return flapp.send_static_file(path)
-
-
 @github.access_token_getter
 def token_getter():
     user = g.user
@@ -154,7 +158,7 @@ def login():
         g.store.create_or_update_user({'username': mock_user['login']})
         session['username'] = mock_user['login']
         return redirect('/')
-    return github.authorize()
+    return github.authorize(scope='repo:status read:org')
 
 
 @flapp.route('/logout', methods=['POST'])
@@ -180,27 +184,16 @@ def user_info():
 @flapp.route('/', methods=['GET'])
 @ApiView()
 def index():
-    return {}
+    return jsonify()
 
 
 @flapp.route('/apps', methods=['GET'])
 @ApiView()
 def apps_index():
-    query = {k[len('field_'):]: v for k, v in request.args.iteritems()
-             if k.startswith('field_')}
+    filter, skip, limit = get_query_args()
     text = request.args.get('q')
-    try:
-        skip = int(request.args.get('skip', 0))
-        limit = int(request.args.get('limit', 25))
-        if skip < 0 or limit < 0:
-            raise ValueError('Negative value for skip or limit.')
-    except ValueError:
-        raise ApiError(400, 'skip and limit must be positive integers')
-    apps, total = store.filter_apps(query, text, skip, limit)
-    return {
-        'items': map(add_links, apps),
-        'total': total,
-    }
+    apps, total = store.filter_apps(filter, text, skip, limit)
+    return {'items': map(add_links, apps), 'total': total}
 
 
 @flapp.route('/apps/<app_id>', methods=['GET'])
@@ -246,6 +239,135 @@ def token_crud():
     return jsonify(token=token)
 
 
+@flapp.route('/github-webhook', methods=['POST'])
+def handle_event():
+    event = request.get_json()
+    delivery_id = request.headers.get('X-Github-Delivery', '')
+    event_type = request.headers.get('X-Github-Event', '')
+    signature = request.headers.get('X-Hub-Signature', '')
+    log.debug('%s:%s:%s:%s', delivery_id, event_type, signature, event)
+    log.info('Webhook: %s:%s', event_type, delivery_id)
+    if event_type != 'push':
+        return jsonify(status='ignored')
+    mock = flapp.config.get('MOCK_USER', False)
+    if not mock and not verify_webhook(request.data, signature, event):
+        raise ApiError(403, 'Failed to verify HMAC.')
+    # Submit task
+    cmt = event.get('head_commit')
+    if not cmt:
+        return jsonify(status='ignored')
+    repo = event['repository']['owner']['name'], event['repository']['name']
+    repo = '/'.join(repo)
+    build = {
+        'head_commit': cmt,
+        'pusher': event.get('pusher', {}).get('name'),
+        'status': 'pending',
+        'repo': repo,
+    }
+    build = g.store.create_build(build)
+    target_url = request.url_root + 'builds/' + build['id']
+    build['target_url'] = target_url
+    g.store.update_build(build)
+    queue = rq.Queue('builds', 600, redis.Redis())
+    queue.enqueue(build_task, build['id'], mock)
+    res = 'repos/%s/statuses/%s' % (repo, cmt['id'])
+    status = {
+        'state': 'pending',
+        'context': 'continuous-integration/rabix',
+        'description': 'Build pending.',
+        'target_url': target_url,
+    }
+    log.info('New status: %s', status)
+    if not mock:
+        endpoint = 'https://api.github.com/' + res
+        token = g.store.get_user(g.store.get_repo(repo)['created_by'])['token']
+        headers = {'Authorization': 'token %s' % token}
+        r = requests.post(endpoint, data=json.dumps(status), headers=headers)
+        r.raise_for_status()
+    return jsonify(status='ok', build_id=build['id'])
+
+
+@flapp.route('/github-repos', methods=['GET'])
+@ApiView(login_required=True)
+def list_github_repos():
+    repos = github.get('user/%s/repos' % g.user['username'])
+    repos_short = [{
+        'id': repo['full_name'],
+        'html_url': repo['html_url'],
+    } for repo in repos]
+    return jsonify(items=repos_short)
+
+
+@flapp.route('/repos', methods=['GET'])
+@ApiView()
+def repo_index():
+    filter, skip, limit = get_query_args()
+    repos, total = store.filter_repos(filter, skip, limit)
+    return {'items': list(repos), 'total': total}
+
+
+@flapp.route('/repos/<owner>/<name>', methods=['GET'])
+@ApiView()
+def get_repo(owner, name):
+    repo_id = '/'.join([owner, name])
+    return jsonify(**g.store.get_repo(repo_id))
+
+
+@flapp.route('/repos/<owner>/<name>', methods=['PUT'])
+@ApiView(login_required=True)
+def put_repo(owner, name):
+    username = g.user['username']
+    if username != owner:
+        raise ApiError(403, 'You can only setup repos owned by you.')
+    repo_id = '/'.join([owner, name])
+    repo = g.store.create_repo(repo_id, username)
+    return jsonify(**repo)
+
+
+@flapp.route('/builds', methods=['GET'])
+@ApiView()
+def build_index():
+    filter, skip, limit = get_query_args()
+    builds, total = store.filter_builds(filter, skip, limit)
+    return {'items': list(builds), 'total': total}
+
+
+@flapp.route('/builds/<build_id>', methods=['GET'])
+@ApiView()
+def get_build(build_id):
+    return jsonify(**g.store.get_build(build_id))
+
+
+@flapp.route('/builds/<build_id>/log', methods=['GET'])
+@ApiView()
+def get_build_log(build_id):
+    h = {'X-BUILD-STATUS': g.store.get_build(build_id)['status']}
+    builds_dir = os.path.abspath(flapp.config['BUILDS_DIR'])
+    log_file = os.path.join(builds_dir, build_id + '.log')
+    if not os.path.isfile(log_file):
+        return Response('', headers=h)
+    range_header = request.headers.get('range', '')
+    if not range_header:
+        with open(os.path.join(builds_dir, build_id + '.log')) as fp:
+            return Response(fp.read(), content_type='text/plain', headers=h)
+    try:
+        one, two = range_header[len('bytes='):].split('-')
+        two = two or os.path.getsize(log_file)
+        one, two = map(int, [one, two])
+        assert two >= one
+        assert os.path.getsize(log_file) >= two
+    except:
+        raise ApiError(416, 'Invalid range.')
+    with open(log_file) as fp:
+        fp.seek(one)
+        content = fp.read(two - one + 1)
+        return Response(content, 206, content_type='text/plain', headers=h)
+
+
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    if len(sys.argv) > 1:
+        with open(sys.argv[1]) as fp:
+            logging.config.dictConfig(json.load(fp))
+    else:
+        logging.basicConfig(level=logging.DEBUG)
     flapp.run(port=4280)

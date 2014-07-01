@@ -27,6 +27,7 @@ CONFIG = {
         'GITHUB_CALLBACK_URL': '',
         'MOCK_USER': False,
         'STATIC_DIR': 'static',
+        'BUILDS_DIR': '.',
     },
     'docker': {},
     'nodes': [{'node_id': 'some-id', 'ram_mb': 2*1024, 'cpu': 1}],

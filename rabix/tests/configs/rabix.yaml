@@ -1,0 +1,43 @@
+steps:
+  - make:
+      type: run
+      from: ubuntu:14.04
+      cmd:
+        - apt-get update
+        - apt-get install -y --no-install-recommends gcc
+        - make
+        - ./bin/mytool  # Just print usage
+
+  - package_tool:
+      type: build
+      from: ubuntu:14.04
+      cmd: cp ./bin/mytool /usr/bin
+      # set this as an entrypoint to createt image
+      entrypoint: /usr/bin/mytool
+      message: My message
+
+  - test_tool:
+      type: run
+      from: ${package_tool}
+      cmd: --input ./test-data/simple.vcf
+
+  - install_wrappers:
+      type: build
+      from: ${package_tool}
+      cmd:
+        - pip install ./wrappers
+        - rabix package rabix_mytool
+      entrypoint: rabix
+      register:
+        repo: boysha/tool
+        # tag: ${version}
+        wrappers: Yes
+
+  - test_wrappers:
+      type: run
+      from: ${install_wrappers}
+      # set this as an entry point prior to running
+      entrypoint: /bin/bash
+      cmd:
+        - nosetests mytool_rabix.tests
+        - rabix run-full --input ./test-data/simple.vcf

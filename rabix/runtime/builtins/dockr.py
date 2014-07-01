@@ -3,8 +3,10 @@ import copy
 import signal
 import logging
 import subprocess
-
 import docker
+
+from docker.errors import APIError
+from docker.utils.utils import parse_repository_tag
 
 from rabix import CONFIG
 from rabix.common.errors import ResourceUnavailable
@@ -144,8 +146,18 @@ class Container(object):
     def __init__(self, docker_client, image_id, container_config=None,
                  mount_point='/rabix'):
         self.docker = docker_client
+        try:
+            self.base_cmd = docker_client.inspect_image(image_id)['config']['Cmd']
+        except APIError as e:
+            # 404 means image was not found
+            if e.response.status_code == 404:
+                logging.info("Trying to fetch image %s" % image_id)
+                repo, tag = parse_repository_tag(image_id)
+                image_id = get_image(self.docker, repo=repo, tag=tag)['Id']
+                self.base_cmd = docker_client.inspect_image(image_id)['config']['Cmd']
+            else:
+                raise
         self.base_image_id = image_id
-        self.base_cmd = docker_client.inspect_image(image_id)['config']['Cmd']
         self.mount_point = mount_point
         self.config = {
             'Image': self.base_image_id,
@@ -159,8 +171,12 @@ class Container(object):
             'WorkingDir': self.mount_point,
             'Dns': None
         }
+        entrypoint = docker_client.inspect_image(image_id)['config'][
+            'Entrypoint']
+        if not entrypoint:
+            self.config['Entrypoint'] = ['/bin/sh', '-c']
         self.config.update(container_config or {})
-        self.binds = {os.path.abspath('.'): self.mount_point + ':rw'}
+        self.binds = {os.path.abspath('.'): self.mount_point}
         self.container = None
         self.image = None
 
@@ -215,15 +231,18 @@ class Container(object):
             print(self.docker.logs(self.container))
         return self
 
-    def commit(self, message=None, conf=None):
+    def commit(self, message=None, conf=None, repository=None, tag=None):
         self._check_container_ready()
         self.image = self.docker.commit(
-            self.container['Id'], message=message, conf=conf
+            self.container['Id'], message=message, conf=conf,
+            repository=repository, tag=tag
         )
         return self
 
     def run(self, command):
         log.info("Running command %s", command)
+        if self.config.get('Entrypoint') == ['/bin/sh', '-c']:
+            command = [' && '.join(command)]
         self.container = self.docker.create_container_from_config(
             dict(self.config, Cmd=command)
         )
