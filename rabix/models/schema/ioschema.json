@@ -1,0 +1,62 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "Reproducible Analyses - Tool description schema",
+    "type": "object",
+    "required": ["$$type"],
+    "properties": {
+        "$$type": {"enum": ["schema/app/sbgsdk"]},
+        "inputs": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/input"
+            }
+        },
+        "params": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/param"
+            }
+        },
+        "outputs": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/output"
+            }
+        }
+    },
+    "definitions": {
+        "input": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "list": {"type": ["null", "boolean"]},
+                "name": {"type": ["null", "string"]},
+                "description": {"type": ["null", "string"]},
+                "required": {"type": ["null", "boolean"]}
+            },
+            "required": ["id"]
+        },
+        "param": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "list": {"type": ["null", "boolean"]},
+                "name": {"type": ["null", "string"]},
+                "description": {"type": ["null", "string"]},
+                "required": {"type": ["null", "boolean"]}
+            },
+            "required": ["id", "type"]
+        },
+        "output": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "list": {"type": ["null", "boolean"]},
+                "name": {"type": ["null", "string"]},
+                "description": {"type": ["null", "string"]},
+                "required": {"type": ["null", "boolean"]}
+            },
+            "required": ["id"]
+        }
+    }
+}

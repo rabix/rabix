@@ -128,18 +128,18 @@ class Pipeline(Model):
                     if '.' in conn:
                         continue
                     # Look in the app to get the schema for this input
-                    app_inputs = self['apps'][step['app']].schema.inputs
-                    schema = [
-                        i for i in app_inputs if i['id'] == app_inp_id
-                    ][0]
+                    app = step['app']
+                    if isinstance(app, six.string_types):
+                        app = self.apps[app]
+                    inp_desc = app.schema.describe_input(app_inp_id)
                     if conn not in inputs:
-                        inputs[conn] = copy.deepcopy(schema)
+                        inputs[conn] = copy.deepcopy(inp_desc)
                     else:
                         # Input goes to multiple steps, check list/required:
                         inp = inputs[conn]
-                        if schema.get('required'):
+                        if inp_desc.get('required'):
                             inp['required'] = True
-                        if not schema.get('list'):
+                        if not inp_desc.get('list'):
                             inp['list'] = False
         return inputs
 
@@ -154,10 +154,10 @@ class Pipeline(Model):
                 'id': list(app.apps.keys())[0],
                 'app': list(app.apps.keys())[0],
                 'inputs': {
-                    inp['id']: 'inp_' + inp['id'] for inp in app.schema.inputs
+                    inp_id: 'inp_' + inp_id for inp_id in app.schema.inputs
                 },
                 'outputs': {
-                    out['id']: 'out_' + out['id'] for out in app.schema.outputs
+                    out_id: 'out_' + out_id for out_id in app.schema.outputs
                 },
             }]
         })

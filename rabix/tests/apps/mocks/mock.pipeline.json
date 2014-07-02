@@ -3,8 +3,7 @@
     "apps": {
         "generator": {"$ref": "mocks.json#generator"},
         "incrementor": {
-            "$ref": "mocks.json#incrementor",
-            "checksum": "md5$62b3ffa779afcc989a17ada62a668674"
+            "$ref": "mocks.json#incrementor"
         },
         "two_step_increment": {"$ref": "mocks.json#two_step_increment"}
     },

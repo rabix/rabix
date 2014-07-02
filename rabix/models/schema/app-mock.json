@@ -8,7 +8,10 @@
             "type": "string"
         },
         "schema": {
-            "$ref": "sbgsdk.json"
+            "oneOf": [
+                {"$ref": "sbgsdk.json"},
+                {"$ref": "ioschema.json"}
+            ]
         }
     }
 }

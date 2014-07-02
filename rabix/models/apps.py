@@ -10,17 +10,14 @@ class App(Model):
     schema = property(lambda self: self['schema'])
     apps = property(lambda self: {'app': self})
 
-    def get_inputs(self):
-        return {inp['id']: inp for inp in self.schema.inputs}
-
 
 class AppSchema(Model):
     TYPE = 'schema/app/sbgsdk'
     SCHEMA = 'schema/sbgsdk.json'
 
-    inputs = property(lambda self: self.get('inputs', []))
-    params = property(lambda self: self.get('params', []))
-    outputs = property(lambda self: self.get('outputs', []))
+    inputs = property(lambda self: [i['id'] for i in self.get('inputs', [])])
+    params = property(lambda self: [i['id'] for i in self.get('outputs', [])])
+    outputs = property(lambda self: [i['id'] for i in self.get('outputs', [])])
 
     def _check_is_list_and_has_unique_ids(self, field,
                                           required_element_fields=None):
@@ -39,3 +36,35 @@ class AppSchema(Model):
         self._check_is_list_and_has_unique_ids(
             'params', required_element_fields=['type']
         )
+
+    def describe_input(self, inp_id):
+        return [i for i in self.get('inputs', []) if i['id'] == inp_id][0]
+
+
+class AppJsonSchema(AppSchema):
+    TYPE = 'schema/app'
+    SCHEMA = 'schema/ioschema.json'
+
+    @property
+    def inputs(self):
+        return self.get('inputs', {}).get('properties', {}).keys()
+
+    @property
+    def params(self):
+        return self.get('params', {}).get('properties', {}).keys()
+
+    @property
+    def outputs(self):
+        return self.get('outputs', {}).get('properties', {}).keys()
+
+    def _validate(self):
+        pass
+
+    def describe_input(self, inp_id):
+        d = self['inputs']['properties'][inp_id]
+        return {
+            'name': d.get('title', inp_id),
+            'description': d.get('description', ''),
+            'required': inp_id in self['inputs']['required'],
+            'list': d.get('type') in (['array', None], 'array'),
+        }

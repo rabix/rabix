@@ -13,6 +13,11 @@
                 "image_tag": {"type": "string"}
             }
         },
-        "schema": {"$ref": "sbgsdk.json"}
+        "schema": {
+            "oneOf": [
+                {"$ref": "sbgsdk.json"},
+                {"$ref": "ioschema.json"}
+            ]
+        }
     }
 }

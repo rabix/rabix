@@ -102,10 +102,6 @@ def test_mock_pipeline_mp():
                   MultiprocessingEngine)
 
 
-def test_mock_pipeline_remote_ref():
-    test_pipeline('rabix/tests/apps/mocks/mock.pipeline.remote_ref.json')
-
-
 # noinspection PyClassicStyleClass
 class RQEngineTest(unittest.TestCase):
     def setUp(self):

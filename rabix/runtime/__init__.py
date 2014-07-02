@@ -1,6 +1,6 @@
 from rabix.common.protocol import MAPPINGS
 from rabix.common.loadsave import from_url, to_json
-from rabix.models import Pipeline, AppSchema
+from rabix.models import Pipeline, AppSchema, AppJsonSchema
 from rabix.runtime.builtins.dockr import DockerApp
 from rabix.runtime.builtins.mocks import MockApp
 
@@ -10,6 +10,7 @@ MAPPINGS.update({
     'app/pipeline': Pipeline,
     'app/tool/docker': DockerApp,
     'schema/app/sbgsdk': AppSchema,
+    'schema/app': AppJsonSchema,
 })
 
 
