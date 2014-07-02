@@ -4,6 +4,7 @@ $gray: #f3f3f3;
 $orange: #f0ad4e;
 $green: #5cb85c;
 $red: #d9534f;
+$blue: #428bca;
 
 html, body {
   height: 100%;
@@ -28,11 +29,6 @@ body {
         height: 90%;
         overflow: auto;
       }
-//      &.app, &.build {
-//        & > .container {
-//          height: 94%;
-//        }
-//      }
     }
   }
 }
@@ -113,11 +109,9 @@ body {
           width: 30%;
         }
         &.field-commit,
-        &.field-duration,
-        &.field-finished {
-          width: 15%;
-        }
-        &.field-committer {
+        &.field-committer,
+        &.field-repo,
+        &.field-date {
           width: 15%;
         }
       }
@@ -125,6 +119,16 @@ body {
         p {
           &:not(.alert) {
             max-width: 500px;
+          }
+        }
+        &.field-commit {
+          a {
+            width: 100px;
+          }
+        }
+        &.field-id {
+          a {
+            width: 50px;
           }
         }
       }
@@ -137,16 +141,23 @@ body {
     font-size: 30px;
     .label {
       font-size: 18px;
-      padding: 5px 20px 5px 5px;
+      padding: 6px 20px 8px 7px;
       font-weight: normal;
-      @include border-radius(17px 4px 4px 17px);
+      @include border-radius(16px 4px 4px 16px);
     }
     span, span > i {
       display: inline-block;
       vertical-align: middle;
       i {
-        font-size: 25px;
-        margin-right: 5px;
+//        font-size: 25px;
+//        line-height: 25px;
+//        margin-right: 5px;
+        &.running {
+          @include animation(rotate 1.2s infinite linear);
+        }
+      }
+      span {
+        margin-left: 5px;
       }
     }
   }
@@ -163,13 +174,17 @@ body {
           float: left;
         }
       }
+      a {
+        width: 100%;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        display: block;
+        white-space: nowrap;
+      }
     }
     .status {
       width: 20px;
-//      height: 15px;
-//      line-height: 15px;
       font-size: 20px;
-//      color: #fff;
       display: block;
       margin: 0 auto;
       padding: 0;
@@ -179,10 +194,14 @@ body {
         color: $green;
       }
       &.running {
-        color: $orange;
+        color: $blue;
+        @include animation(rotate 1.2s infinite linear);
       }
-      &.failed {
+      &.failure {
         color: $red;
+      }
+      &.pending {
+        color: $orange;
       }
     }
   }
@@ -196,60 +215,6 @@ body {
   .heading {
     .go-back {
       margin: 12px 0;
-    }
-    &.navigation {
-      .nav {
-        display: inline-block;
-        vertical-align: middle;
-        margin-left: 30px;
-        margin-bottom: -20px;
-        li {
-          margin: 0 5px;
-          position: relative;
-          &.active {
-            a, a:hover, a:focus {
-              background-color: #fff;
-              color: #555;
-              border: 1px solid #ddd;
-            }
-
-            &:before, &:after {
-              content: '';
-              display: block;
-              position: absolute;
-              left: 0;
-              width: 100%;
-            }
-            &:before {
-              bottom: -15px;
-              border-top: 15px solid #ddd;
-              border-left: 50px solid transparent;
-              border-right: 50px solid transparent;
-              z-index: 1;
-            }
-            &:after {
-              bottom: -14px;
-              border-top: 15px solid #fff;
-              border-left: 50px solid transparent;
-              border-right: 50px solid transparent;
-              z-index: 2;
-            }
-
-          }
-          a {
-            font-size: 14px;
-            font-weight: normal;
-            border: 1px solid transparent;
-            width: 100px;
-            text-align: center;
-            @include border-radius(3px 3px 0 0);
-            &:hover {
-              background-color: #fefefe;
-              border: 1px solid #ddd;
-            }
-          }
-        }
-      }
     }
   }
 
@@ -327,6 +292,50 @@ body {
         .line {
           color: $orange;
         }
+      }
+    }
+
+    &.list {
+      pre {
+        padding: 0 10px;
+      }
+    }
+  }
+
+  .nav-tabs {
+    margin-top: 0;
+    li {
+      &.active {
+        a, a:hover, a:focus {
+          border-bottom-color: #ddd;
+          border-top-color: $gray;
+          @include border-radius(0 0 4px 4px);
+        }
+      }
+      a {
+        padding: 5px 15px;
+        &:hover {
+          @include border-radius(0 0 4px 4px);
+          border-bottom-color: transparent;
+          border-top-color: $gray;
+        }
+      }
+    }
+  }
+
+  section {
+    margin: 0 0 30px 0;
+  }
+
+  &.loading {
+    @extend .loading-abs;
+    &:after {
+      opacity: 0;
+      @include transition(opacity 0.3s ease);
+    }
+    &.loading-fade {
+      &:after {
+        opacity: 1;
       }
     }
   }
@@ -427,4 +436,29 @@ body {
       }
     }
   }
+}
+
+@mixin rotate-rule($prefix: '') {
+  0% {
+    #{$prefix}transform: rotate(0deg);
+  }
+  100% {
+    #{$prefix}transform: rotate(359deg);
+  }
+}
+
+@keyframes rotate {
+  @include rotate-rule();
+}
+@-webkit-keyframes rotate {
+  @include rotate-rule(-webkit-);
+}
+@-moz-keyframes rotate {
+  @include rotate-rule(-moz-);
+}
+@-o-keyframes anim-rotate {
+  @include rotate-rule(-o-);
+}
+@-ms-keyframes rotate {
+  @include rotate-rule(-ms-);
 }

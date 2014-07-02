@@ -1,16 +1,12 @@
-<div class="page build" ng-class="{loading: view.loading}">
+<div class="page build" loading ng-class="{loading: view.loadingDelayed, 'loading-fade': view.loadingFaded}">
 
-    <div class="heading navigation">
+    <div class="heading">
         <div class="container">
             <button class="btn btn-default pull-left go-back" ng-click="goBack()"><i class="glyphicon glyphicon-chevron-left"></i> Back</button>
             <h1>
                 <span>Build #{{ view.build.id }}</span>
-                <ul class="nav nav-pills">
-                    <li ng-class="{active: view.tab === 'details'}"><a ng-href="#/builds/{{ view.build.id }}">Details</a></li>
-                    <li ng-class="{active: view.tab === 'log'}"><a ng-href="#/builds/{{ view.build.id }}/log">Log</a></li>
-                </ul>
-                <span class="label pull-right" ng-class="{'label-success': view.build.status === 'success', 'label-warning': view.build.status === 'running', 'label-danger': view.build.status === 'failed'}">
-                    <i class="glyphicon" ng-class="{'glyphicon-ok-circle': view.build.status === 'success', 'glyphicon-time': view.build.status === 'running', 'glyphicon-remove-circle': view.build.status === 'failed'}"></i>
+                <span class="label pull-right" ng-class="{'label-success': view.build.status === 'success', 'label-info': view.build.status === 'running', 'label-danger': view.build.status === 'failure', 'label-warning': view.build.status === 'pending'}">
+                    <i class="glyphicon {{ view.build.status }}" ng-class="{'glyphicon-ok-circle': view.build.status === 'success', 'glyphicon-repeat': view.build.status === 'running', 'glyphicon-remove-circle': view.build.status === 'failure', 'glyphicon-time': view.build.status === 'pending'}"></i>
                     <span>{{ view.build.status }}</span>
                 </span>
             </h1>
@@ -19,30 +15,65 @@
 
     <div ng-if="!view.loading" class="container" height>
 
+        <ul class="nav nav-tabs">
+            <li ng-class="{active: view.tab === 'details'}"><a ng-href="#/build/{{ view.build.id }}">Details</a></li>
+            <li ng-class="{active: view.tab === 'log'}"><a ng-href="#/build/{{ view.build.id }}/log">Log</a></li>
+        </ul>
+
         <div class="description">
             <div class="panel panel-warning">
                 <div class="panel-heading"><h4 class="panel-title">Info</h4></div>
                 <div class="panel-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Commit:</strong> {{ view.build.commit }}</p>
-                            <p><strong>Committer:</strong> {{ view.build.committer }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Finished:</strong> {{ view.build.finished }}</p>
-                            <p><strong>Duration:</strong> {{ view.build.duration }}</p>
-                        </div>
-                    </div>
+                    <p><strong>Repo/User:</strong> <a ng-href="#/builds/{{ view.build.repo | encode }}" target="_blank">{{ view.build.repo }}</a></p>
+                    <p><strong>Date:</strong> {{ view.build.head_commit.timestamp | date:'short' }}</p>
                 </div>
             </div>
-            <strong>{{ view.build.branch }}</strong> - {{ view.build.message }}
+            <strong>Message:</strong> {{ view.build.head_commit.message }}
         </div>
 
+        <div ng-if="view.tab !== 'log'">
+
+            <section>
+                <h4>Author</h4>
+                <p>{{ view.build.head_commit.author.name }}</p>
+            </section>
+
+            <section>
+                <h4>Committer</h4>
+                <p>{{ view.build.head_commit.committer.name }}</p>
+            </section>
+
+            <section>
+                <h4>Url</h4>
+                <p><a href="{{ view.build.head_commit.url }}">{{ view.build.head_commit.url }}</a></p>
+            </section>
+
+            <div class="snippet list" ng-if="view.build.head_commit.added.length > 0">
+                <p>Added files</p>
+                <pre>
+                    <div ng-repeat="file in view.build.head_commit.added" class="line">{{ file }}</div>
+                </pre>
+            </div>
+
+            <div class="snippet list" ng-if="view.build.head_commit.modified.length > 0">
+                <p>Modified files</p>
+                <pre>
+                    <div ng-repeat="file in view.build.head_commit.modified" class="line">{{ file }}</div>
+                </pre>
+            </div>
+
+            <div class="snippet list" ng-if="view.build.head_commit.removed.length > 0">
+                <p>Removed files</p>
+                <pre>
+                    <div ng-repeat="file in view.build.head_commit.removed" class="line">{{ file }}</div>
+                </pre>
+            </div>
+        </div>
 
         <div class="snippet log" ng-if="view.tab === 'log'">
             <p>Log trace</p>
             <pre>
-                <div ng-repeat="line in view.log" class="line">{{ line }}</div>
+                <div ng-repeat="line in view.log track by $index" class="line">{{ line }}</div>
             </pre>
         </div>
 

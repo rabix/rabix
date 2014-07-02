@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('registryApp')
-    .controller('BuildCtrl', ['$scope', '$routeParams', '$window', '$interval', 'Build', 'Header', function ($scope, $routeParams, $window, $interval, Build, Header) {
+    .controller('BuildCtrl', ['$scope', '$routeParams', '$window', '$interval', 'Build', 'Header', 'Repo', function ($scope, $routeParams, $window, $interval, Build, Header, Repo) {
 
         var logIntervalId;
 
@@ -12,9 +12,39 @@ angular.module('registryApp')
         $scope.view.build = null;
         $scope.view.tab = angular.isUndefined($routeParams.tab) ? 'details': $routeParams.tab;
 
+        /* get the build details */
         Build.getBuild($routeParams.id).then(function(result) {
-            $scope.view.loading = false;
+
             $scope.view.build = result;
+
+            /* and if in log tab */
+            if ($routeParams.tab === 'log') {
+
+                $scope.view.log = [];
+                $scope.view.contentLength = 0;
+
+                /* start log polling if build is running */
+                if (result.status === 'running') {
+
+                    $scope.view.loading = false;
+
+                    logIntervalId = $interval(function() {
+
+                        console.log('log polling started');
+                        Build.getLog($routeParams.id, $scope.view.contentLength).then(logLoaded);
+
+                    }, 1000);
+
+                } else {
+                    /* other than that take the log for the current build */
+                    Build.getLog($routeParams.id, 0).then(function(result) {
+                        $scope.view.loading = false;
+                        $scope.view.log.push(result.content);
+                    });
+                }
+            } else {
+                $scope.view.loading = false;
+            }
         });
 
         /**
@@ -24,41 +54,32 @@ angular.module('registryApp')
             $window.history.back();
         };
 
-        $scope.view.log = [];
-        _.times(100, function(i) {
-            $scope.view.log.push('Line ' + i);
-        });
-
+        /**
+         * Callback when log for the build is loaded
+         *
+         * @param result
+         */
         var logLoaded = function(result) {
 
-            console.log('logLoaded ', $scope.view.skip, status);
-
-            //if (result.status !== 'running') {
-            if ($scope.view.skip / 25 > 10) {
+            if (result.status !== 'running') {
                 $scope.stopLogInterval();
             }
 
-            $scope.view.log = $scope.view.log.concat(result);
-            $scope.view.skip += 25;
+            console.log('log polling at ', $scope.view.contentLength);
+
+            $scope.view.log.push(result.content);
+            $scope.view.contentLength = result.contentLength;
 
         };
 
-        if ($routeParams.tab === 'log') {
-
-            $scope.view.log = [];
-            $scope.view.skip = 0;
-
-
-            logIntervalId = $interval(function() {
-                Build.getLog($scope.view.skip).then(logLoaded);
-            }, 1000);
-        }
-
+        /**
+         * Stop the log polling
+         */
         $scope.stopLogInterval = function() {
             if (angular.isDefined(logIntervalId)) {
                 $interval.cancel(logIntervalId);
                 logIntervalId = undefined;
-                console.log('logIntervalId canceled');
+                console.log('log polling canceled');
             }
         };
 

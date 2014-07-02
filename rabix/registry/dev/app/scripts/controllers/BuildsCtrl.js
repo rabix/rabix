@@ -24,9 +24,10 @@ angular.module('registryApp')
         $scope.view = {};
         $scope.view.loading = true;
         $scope.view.builds = [];
-        if ($routeParams.repo) {
-            $scope.view.repo = $routeParams.repo.replace(/&/g, '/');
-        }
+//        if ($routeParams.repo) {
+//            $scope.view.repo = $routeParams.repo.replace(/&/g, '/');
+//        }
+        $scope.view.repo = $routeParams.repo;
 
         $scope.view.paginator = {
             prev: false,

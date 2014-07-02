@@ -19,10 +19,6 @@ angular.module('registryApp')
 
             'response': function(response) {
                 // intercept response success
-
-                if (!_.isObject(response.data) && response.config.url.indexOf('.html') === -1) {
-                    $rootScope.$broadcast('httpError', 'An error occurred. Check the error log from ' + host + response.config.url);
-                }
                 return response || $q.when(response);
             },
 
