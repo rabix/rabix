@@ -9,8 +9,8 @@
         },
         "schema": {
             "oneOf": [
-                {"$ref": "sbgsdk.json"},
-                {"$ref": "ioschema.json"}
+                {"$ref": "iodef-sbgsdk.json"},
+                {"$ref": "iodef-jsonschema.json"}
             ]
         }
     }

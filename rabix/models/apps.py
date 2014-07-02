@@ -13,7 +13,7 @@ class App(Model):
 
 class AppSchema(Model):
     TYPE = 'schema/app/sbgsdk'
-    SCHEMA = 'schema/sbgsdk.json'
+    SCHEMA = 'schema/iodef-sbgsdk.json'
 
     inputs = property(lambda self: [i['id'] for i in self.get('inputs', [])])
     params = property(lambda self: [i['id'] for i in self.get('outputs', [])])
@@ -43,7 +43,7 @@ class AppSchema(Model):
 
 class AppJsonSchema(AppSchema):
     TYPE = 'schema/app'
-    SCHEMA = 'schema/ioschema.json'
+    SCHEMA = 'schema/iodef-jsonschema.json'
 
     @property
     def inputs(self):
