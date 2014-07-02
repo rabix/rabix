@@ -1,6 +1,6 @@
 {
     "$$type": "app/mock/python",
-    "importable": "rabix.tests.test_mocks.generator",
+    "importable": "rabix.tests.test_runtime.test_mocks.generator",
     "schema": {
         "$$type": "schema/app/sbgsdk",
         "inputs": [],

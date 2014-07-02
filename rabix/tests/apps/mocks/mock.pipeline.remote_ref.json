@@ -7,7 +7,7 @@
         },
         "incrementor": {
             "$ref": "mocks.json#incrementor",
-            "checksum": "sha1$90a4abf163cb01dba4dd676a1fa47f72900c45e0"
+            "checksum": "sha1$e2565d3616cd042a6df20ef9a2b21f8dd3d960d9"
         },
         "two_step_increment": {
             "$$type": "app/mock/python",

@@ -4,7 +4,7 @@
         "generator": {"$ref": "mocks.json#generator"},
         "incrementor": {
             "$ref": "mocks.json#incrementor",
-            "checksum": "md5$62b3ffa779afcc989a17ada62a668674"
+            "checksum": "md5$6eaef78b27a0e5856f6afda32a996873"
         },
         "two_step_increment": {"$ref": "mocks.json#two_step_increment"}
     },

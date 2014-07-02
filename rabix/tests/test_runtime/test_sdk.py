@@ -41,6 +41,6 @@ class UselessWrapper(define.Wrapper):
 @with_setup(teardown=remove_test_dir)
 def test_useless_wrapper():
     inp = os.path.join(os.path.dirname(__file__),
-                       'test-files/example_human_reference.fasta')
+                       '../test-files/example_human_reference.fasta')
     w = UselessWrapper({'inp': inp}, {'p_int': 10})
     assert os.path.getsize(w.test().out)

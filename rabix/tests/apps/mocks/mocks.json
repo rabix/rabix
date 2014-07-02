@@ -2,7 +2,7 @@
     "generator": {"$ref": "generator.mock.json"},
     "incrementor": {
         "$$type": "app/mock/python",
-        "importable": "rabix.tests.test_mocks.incrementor",
+        "importable": "rabix.tests.test_runtime.test_mocks.incrementor",
         "schema": {
             "$$type": "schema/app/sbgsdk",
             "inputs": [{"id": "to_increment", "list": false}],
@@ -12,7 +12,7 @@
     },
     "two_step_increment": {
         "$$type": "app/mock/python",
-        "importable": "rabix.tests.test_mocks.two_step_increment",
+        "importable": "rabix.tests.test_runtime.test_mocks.two_step_increment",
         "schema": {
             "$$type": "schema/app/sbgsdk",
             "inputs": [{"id": "to_increment", "list": false}],
