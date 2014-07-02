@@ -1,16 +1,26 @@
 import argparse
 import sys
 import logging
+import yaml
 
 from os import getcwd
-from os.path import abspath, join
+from os.path import abspath, join, exists
 
+from rabix.common.errors import RabixError
 from rabix.sdktools.build import init
-from rabix.sdktools.util import yaml_load
-from rabix.sdktools.steps import Runner
+from rabix.sdktools.steps import run_steps
 
 
 log = logging.getLogger(__name__)
+
+
+def yaml_load(path='./rabix.yaml'):
+    if exists(path):
+        with open(path) as cfg:
+            config = yaml.load(cfg)
+            return config
+    else:
+        raise RabixError('Config file %s not found!' % path)
 
 
 def create_parser():
@@ -46,8 +56,7 @@ def create_parser():
 
 
 def cmd_build(config):
-    r = Runner()
-    r.run(yaml_load(config))
+    run_steps(yaml_load(config))
 
 
 def cmd_test():
