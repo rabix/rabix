@@ -2,6 +2,7 @@ import os
 import glob
 import logging
 import shutil
+import jsonschema
 
 from nose.tools import nottest, with_setup
 
@@ -42,5 +43,15 @@ class UselessWrapper(define.Wrapper):
 def test_useless_wrapper():
     inp = os.path.join(os.path.dirname(__file__),
                        'test-files/example_human_reference.fasta')
-    w = UselessWrapper({'inp': inp}, {'p_int': 10})
-    assert os.path.getsize(w.test().out)
+
+    inputs = {'inp': inp}
+    params = {'p_int': 10}
+    w = UselessWrapper(inputs, params)
+    w.test()
+    assert os.path.getsize(w.outputs.out)
+
+    schema = UselessWrapper._get_schema()
+    validate = lambda sch, val: jsonschema.Draft4Validator(sch).validate(val)
+    validate(schema['inputs'], inputs)
+    validate(schema['params'], params)
+    validate(schema['outputs'], w.outputs.__json__())

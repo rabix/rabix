@@ -44,15 +44,13 @@ def validate_type(val, t_tuple, **_):
 
 
 @validator
-def validate_range(val, min=None, max=None, step=None, **_):
+def validate_range(val, min=None, max=None, **_):
     if val is None:
         return
     if min is not None and val < min:
         raise ValueError('Value cannot be less than %s. Got %s.' % (min, val))
     if max is not None and val > max:
         raise ValueError('Value cannot be more than %s. Got %s.' % (max, val))
-    if step is not None and val-min % step:
-        raise ValueError('%s - %s mod %s is not 0.' % (val, min, step))
 
 
 @validator
@@ -107,6 +105,7 @@ class BaseAttr(object):
     def __init__(self, name=None, description='', required=False, list=False,
                  **extra):
         self._order = next(BaseAttr._count)
+        self.type = None
         self.name = name
         self.description = description
         self.required = required
@@ -139,13 +138,27 @@ class BaseAttr(object):
         if self.list and not instance:
             raise ValueError('You must specify a value.')
 
-    def get_schema(self):
-        get_value = (lambda val: val._get_schema()
-                     if callable(getattr(val, '_get_schema', None)) else val)
-        return {
-            k: get_value(v)
-            for k, v in six.iteritems(self.__dict__) if k[0] != '_'
+    def _get_schema_list(self):
+        schema = {
+            'type': 'array' if self.required else ['array', 'null'],
+            'items': self._get_schema_single(as_item=True),
         }
+        if self.required:
+            schema['minItems'] = 1
+        return schema
+
+    def _get_schema_single(self, as_item=False):
+        t = self.type if self.required or as_item else [self.type, 'null']
+        return {'type': t}
+
+    def get_schema(self):
+        schema = self._get_schema_list() \
+            if self.list else self._get_schema_single()
+        schema.update({
+            'title': self.name,
+            'description': self.description
+        })
+        return schema
 
 
 class BaseParam(BaseAttr):
@@ -166,36 +179,40 @@ class BaseParam(BaseAttr):
 
 class IntAttr(BaseParam):
     def __init__(self, name=None, description='', required=False, default=None,
-                 category=None, list=False, min=None, max=None, step=None,
-                 **extra):
+                 category=None, list=False, min=None, max=None, **extra):
         BaseParam.__init__(self, name, description, required, default,
                            category, list, **extra)
         self.type = 'integer'
         self.min = min
         self.max = max
-        self.step = step
 
     def validate(self, instance):
         BaseParam.validate(self, instance)
         validate_type(instance, six.integer_types, list=self.list)
-        validate_range(instance, self.min, self.max, self.step, list=self.list)
+        validate_range(instance, self.min, self.max, list=self.list)
+
+    def _get_schema_single(self, as_item=False):
+        schema = super(IntAttr, self)._get_schema_single(as_item)
+        if self.min is not None:
+            schema['minimum'] = self.min
+        if self.max is not None:
+            schema['maximum'] = self.max
+        return schema
 
 
-class RealAttr(BaseParam):
+class RealAttr(IntAttr):
     def __init__(self, name=None, description='', required=False, default=None,
-                 category=None, list=False, min=None, max=None, step=None,
-                 **extra):
-        BaseParam.__init__(self, name, description, required, default,
-                           category, list, **extra)
-        self.type = 'float'
-        self.min = min
-        self.max = max
-        self.step = step
+                 category=None, list=False, min=None, max=None, **extra):
+        IntAttr.__init__(
+            self, name, description, required, default,
+            category, list, min, max, **extra
+        )
+        self.type = 'number'
 
     def validate(self, instance):
         BaseParam.validate(self, instance)
         validate_type(instance, (float,) + six.integer_types, list=self.list)
-        validate_range(instance, self.min, self.max, self.step, list=self.list)
+        validate_range(instance, self.min, self.max, list=self.list)
 
 
 class StringAttr(BaseParam):
@@ -210,6 +227,12 @@ class StringAttr(BaseParam):
         BaseParam.validate(self, instance)
         validate_type(instance, (six.string_types,), list=self.list)
         validate_pattern(instance, self.pattern, list=self.list)
+
+    def _get_schema_single(self, as_item=False):
+        schema = super(StringAttr, self)._get_schema_single(as_item)
+        if self.pattern:
+            schema['pattern'] = self.pattern
+        return schema
 
 
 class BoolAttr(BaseParam):
@@ -260,6 +283,12 @@ class EnumAttr(BaseParam):
         BaseParam.validate(self, instance)
         validate_enum(instance, [v[0] for v in self.values], list=self.list)
 
+    def _get_schema_single(self, as_item=False):
+        schema = super(EnumAttr, self)._get_schema_single(as_item)
+        schema.pop('type')
+        schema['enum'] = self.values + ([None] if not self.required else [])
+        return schema
+
 
 class StructAttr(BaseParam):
     def __init__(self, schema, item_label=None, name=None, description='',
@@ -269,7 +298,7 @@ class StructAttr(BaseParam):
                            category, list, **extra)
         self.schema = schema
         self.item_label = item_label or schema.__name__
-        self.type = 'struct'
+        self.type = 'object'
 
     def validate(self, instance):
         BaseParam.validate(self, instance)
@@ -284,6 +313,12 @@ class StructAttr(BaseParam):
         if not data:
             return []
         return [self.schema(**to_dict(item)) for item in data]
+
+    def _get_schema_single(self, as_item=False):
+        schema = self.schema._get_schema()
+        if not as_item and not self.required:
+            schema['type'] = ['object', None]
+        return schema
 
 
 class SchemaBased(object):
@@ -302,15 +337,16 @@ class SchemaBased(object):
 
     @classmethod
     def _get_schema(cls):
-        schema = []
-        attr_defs = list(cls._attr_defs().items())
-        for attr, attr_def in sorted(
-                attr_defs, cmp=lambda x, y: cmp(x[1]._order, y[1]._order)
-        ):
-            attr_def(attr)  # Set default name and desc if none supplied.
-            attr_schema = dict(attr_def.get_schema(), id=attr)
-            schema.append(attr_schema)
-        return schema
+        adefs = cls._attr_defs()
+        properties = {
+            key: val.get_schema() for key, val in six.iteritems(adefs)
+        }
+        required = [key for key, val in six.iteritems(adefs) if val.required]
+        return {
+            'type': 'object',
+            'required': required,
+            'properties': properties,
+        }
 
     def _validate(self, assert_=False):
         errors = {}
@@ -436,11 +472,10 @@ class IOValue(six.text_type):
 
 
 class IOAttr(BaseAttr):
-    def __init__(self, name=None, description='', file_types=None,
-                 required=False, list=False, **extra):
-        BaseAttr.__init__(self, name, description, required, list=list,
-                          **extra)
-        self.types = file_types or []
+    def __init__(self, name=None, description='', required=False,
+                 list=False, **extra):
+        BaseAttr.__init__(self, name, description, required, list=list, **extra)
+        self.type = 'string'
 
     def __call__(self, attr_name, data=None):
         data = BaseAttr.__call__(self, attr_name, data)
@@ -449,7 +484,6 @@ class IOAttr(BaseAttr):
     def validate(self, instance):
         BaseAttr.validate(self, instance)
         if instance:
-            validate_file_type(instance, self.types, list=self.list)
             validate_file_exists(instance, list=self.list)
         elif self.required:
             raise ValueError('This input is required')

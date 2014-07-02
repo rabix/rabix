@@ -61,7 +61,7 @@ class Wrapper(object):
     @classmethod
     def _get_schema(cls):
         return {
-            '$$type': 'schema/app/sbgsdk',
+            '$$type': 'schema/app',
             'inputs': cls.Inputs._get_schema(),
             'outputs': cls.Outputs._get_schema(),
             'params': cls.Params._get_schema(),
