@@ -28,6 +28,7 @@ body {
       & > .container {
         height: 90%;
         overflow: auto;
+        @include scrollBar($orange);
       }
     }
   }
@@ -145,13 +146,16 @@ body {
       font-weight: normal;
       @include border-radius(16px 4px 4px 16px);
     }
+    span:first-child {
+      max-width: 80%;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
     span, span > i {
       display: inline-block;
       vertical-align: middle;
       i {
-//        font-size: 25px;
-//        line-height: 25px;
-//        margin-right: 5px;
         &.running {
           @include animation(rotate 1.2s infinite linear);
         }
@@ -407,22 +411,21 @@ body {
 
 /* SCROLLBAR STYLE
 ================================================ */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: #eee;
-}
-
-::-webkit-scrollbar-thumb {
-  //background: lighten(#608dc1, 5%);
-  background: $orange;
-  &:hover {
-    background: darken($orange, 10%);
-  }
-}
+//::-webkit-scrollbar {
+//  width: 10px;
+//  height: 10px;
+//}
+//
+//::-webkit-scrollbar-track {
+//  background: #eee;
+//}
+//
+//::-webkit-scrollbar-thumb {
+//  background: $orange;
+//  &:hover {
+//    background: darken($orange, 10%);
+//  }
+//}
 
 .nav-tabs {
   border-bottom: none;
