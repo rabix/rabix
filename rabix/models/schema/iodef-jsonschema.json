@@ -1,0 +1,17 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "required": ["$$type"],
+    "properties": {
+        "$$type": {"enum": ["schema/app"]},
+        "inputs": {
+            "type": "object"
+        },
+        "params": {
+            "type": "object"
+        },
+        "outputs": {
+            "type": "object"
+        }
+    }
+}

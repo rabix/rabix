@@ -98,9 +98,8 @@ class PipelineStepTask(AppTask):
         self.step = step
         self.arguments = arguments
         if arguments is None:
-            inputs = list(inp['id'] for inp in app.schema.inputs)
             self.arguments = {
-                '$inputs': {inp: [] for inp in inputs},
+                '$inputs': {inp: [] for inp in app.schema.inputs},
                 '$params': {}
             }
 
