@@ -44,6 +44,7 @@
         },
         "app": {
             "oneOf": [
+                {"$ref": "app-docker-wrp.json#"},
                 {"$ref": "app-docker.json#"},
                 {"$ref": "app-mock.json#"}
             ]
