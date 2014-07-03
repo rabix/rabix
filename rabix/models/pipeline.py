@@ -90,7 +90,7 @@ class Pipeline(Model):
                 'app', (six.string_types, App), null=False, look_in=step
             )
             self.get_app_for_step(step)
-        for app in six.itervalues(self['apps']):
+        for app in six.itervalues(self.apps):
             if not isinstance(app, App):
                 raise ValidationError('Bad app: %s' % app)
             app.validate()
@@ -104,7 +104,7 @@ class Pipeline(Model):
         if isinstance(step_or_id['app'], App):
             return step_or_id['app']
         try:
-            return self['apps'][step_or_id['app']]
+            return self.apps[step_or_id['app']]
         except:
             raise ValidationError('No app for step %s' % step_or_id['id'])
 

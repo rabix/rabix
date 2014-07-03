@@ -156,7 +156,7 @@ def main():
     set_log_level(args['--verbose'])
     if args["run"]:
         pipeline_path = args['<file>']
-        pipeline = from_url(pipeline_path)
+        pipeline = Pipeline.from_app(from_url(pipeline_path))
         pipeline.validate()
         print(make_pipeline_usage_string(pipeline, pipeline_path))
     elif args["install"]:
