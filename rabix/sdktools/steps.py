@@ -123,3 +123,8 @@ class Runner(object):
             return resolved
         else:
             return val
+
+
+def run_steps(config, steps=None, context=None):
+    r = Runner(steps, context)
+    r.run(config)

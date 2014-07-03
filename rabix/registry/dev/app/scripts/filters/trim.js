@@ -1,10 +1,10 @@
 'use strict';
 
 angular.module('registryApp')
-    .filter('encode', [function() {
+    .filter('trim', [function() {
         return function(string) {
 
-            return string.replace(/\//g, '&');
+            return string.trim();
 
         };
     }]);

@@ -55,10 +55,12 @@ class JsonLoader(object):
         doc_url, pointer = urlparse.urldefrag(url)
         document = self.fetch(doc_url)
         fragment = copy.deepcopy(self.resolve_pointer(document, pointer))
-        self.verify_checksum(obj.get('checksum'), fragment)
-        result = self.resolve_all(fragment, doc_url)
-        self.resolved[url] = result
-        del self.resolving[url]
+        try:
+            self.verify_checksum(obj.get('checksum'), fragment)
+            result = self.resolve_all(fragment, doc_url)
+            self.resolved[url] = result
+        finally:
+            del self.resolving[url]
         return result
 
     def resolve_all(self, document, base_url):

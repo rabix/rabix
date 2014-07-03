@@ -4,8 +4,9 @@ import logging
 
 import docopt
 
-from rabix.common import six
 from rabix import __version__ as version
+from rabix.common import six
+from rabix.common.loadsave import JsonLoader
 from rabix.common.util import rnd_name, update_config
 from rabix.runtime import from_url
 from rabix.models import Pipeline
@@ -19,13 +20,23 @@ USAGE = """
 Usage:
   rabix run [-v...] <file>
   rabix install [-v...] <file>
+  rabix checksum [--method=(md5|sha1)] <jsonptr>
   rabix -h | --help
   rabix --version
 
+Commands:
+  run                       Run pipeline described in <file>. Depending on the
+                            pipeline, additional parameters must be provided.
+  install                   Install all the apps needed for running pipeline
+                            described in <file>.
+  checksum                  Calculate and print the checksum of json document
+                            (or fragment) pointed by <jsonptr>
+
 Options:
-  -h --help        Display this message.
-  --version        Print version to standard output and quit.
-  -v --verbose     Verbosity. More Vs more output.
+  -h --help                 Display this message.
+  -m --method (md5|sha1)    Checksum type [default: sha1]
+  --version                 Print version to standard output and quit.
+  -v --verbose              Verbosity. More Vs more output.
 """
 
 RUN_TPL = """
@@ -43,7 +54,9 @@ def make_pipeline_usage_string(pipeline, path):
         arg = '--%s=<%s_file>%s' % (
             inp_id, inp_id, '...' if inp_details['list'] else ''
         )
-        usage_str.append(arg if inp_details.get('required', False) else '[%s]' % arg)
+        usage_str.append(
+            arg if inp_details.get('required', False) else '[%s]' % arg
+        )
         options.append('{0: <40}{1}'.format(
             arg, inp_details.get('description', ''))
         )
@@ -105,6 +118,12 @@ def install(pipeline):
         sys.exit(1)
 
 
+def checksum(jsonptr, method='sha1'):
+    loader = JsonLoader()
+    obj = loader.load(jsonptr)
+    print(method + '$' + loader.checksum(obj, method))
+
+
 def main():
     logging.basicConfig(level=logging.WARN)
     if os.path.isfile('rabix.conf'):
@@ -127,6 +146,8 @@ def main():
         print(make_pipeline_usage_string(pipeline, pipeline_path))
     elif args["install"]:
         install(from_url(args['<file>']))
+    elif args["checksum"]:
+        checksum(args['<jsonptr>'], args['--method'])
 
 
 if __name__ == '__main__':

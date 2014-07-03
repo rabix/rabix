@@ -1,4 +1,4 @@
-<div class="page apps" ng-class="{loading: view.loading}">
+<div class="page apps" loading ng-class="{loading: view.loadingDelayed, 'loading-fade': view.loadingFaded}">
 
     <div class="filters">
         <div class="container">
@@ -22,7 +22,7 @@
     </div>
     <!-- # .filters -->
 
-    <div class="container" ng-if="!view.loading">
+    <div ng-if="!view.loading" class="container" height>
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -34,7 +34,7 @@
             <tbody>
                 <tr ng-repeat="app in view.apps">
                     <td><a ng-href="#/app/{{ app.id }}">{{ app.name }}</a></td>
-                    <td><a ng-href="#/repo/{{ app.repo | encode }}">{{ app.repo }}</a></td>
+                    <td><a ng-href="#/apps/{{ app.repo | encode }}">{{ app.repo }}</a></td>
                     <td><p tooltip="{{ app.description }}" tooltip-popup-delay="1000">{{ app.description }}</p></td>
                 </tr>
                 <tr ng-if="view.apps.length === 0">

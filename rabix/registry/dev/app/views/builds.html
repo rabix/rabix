@@ -1,46 +1,49 @@
-<div class="page builds" ng-class="{loading: view.loading}">
+<div class="page builds" loading ng-class="{loading: view.loadingDelayed, 'loading-fade': view.loadingFaded}">
 
     <div class="filters">
         <div class="container">
-            <div class="row">
-                <div class="col-md-4">
-
-                </div>
-                <div class="col-md-8 tags">
-                    <span ng-if="view.repo" class="label label-primary">{{ view.repo }} <a ng-href="#/" class="close">&times;</a></span>
-                </div>
+            <div class="tags">
+                <span ng-if="view.repo" class="label label-primary">{{ view.repo }} <a ng-href="#/builds" class="close">&times;</a></span>
             </div>
         </div>
     </div>
     <!-- # .filters -->
 
-    <div class="container" ng-if="!view.loading">
+    <div ng-if="!view.loading" class="container" height>
         <table class="table">
             <thead>
                 <tr>
                     <th class="field-status"></th>
                     <th class="field-id">Build</th>
+                    <th class="field-repo">Repo/User</th>
                     <th class="field-message">Message</th>
                     <th class="field-commit">Commit</th>
                     <th class="field-committer">Committer</th>
-                    <th class="field-duration">Duration</th>
-                    <th class="field-finished">Finished</th>
+                    <th class="field-date">Duration</th>
                 </tr>
             </thead>
             <tbody>
                 <tr ng-repeat="build in view.builds">
-                    <td>
+                    <td class="field-status">
                         <span class="status glyphicon {{ build.status }}"
                               tooltip="{{ build.status }}"
-                              ng-class="{'glyphicon-ok-circle': build.status === 'success', 'glyphicon-time': build.status === 'running', 'glyphicon-remove-circle': build.status === 'failed'}">
+                              ng-class="{'glyphicon-ok-circle': build.status === 'success', 'glyphicon-time': build.status === 'pending', 'glyphicon-remove-circle': build.status === 'failure', 'glyphicon-repeat': build.status === 'running'}">
                         </span>
                     </td>
-                    <td><a ng-href="#/builds/{{ build.id }}">#{{ build.id }}</a></td>
-                    <td><p tooltip="{{ build.message }}" tooltip-popup-delay="1000">{{ build.message }}</p></td>
-                    <td><a ng-href="#">{{ build.commit }} ({{ build.branch }})</a></td>
-                    <td>{{ build.committer }}</td>
-                    <td>{{ build.duration }}</td>
-                    <td>{{ build.finished }}</td>
+                    <td class="field-id">
+                        <a ng-href="#/build/{{ build.id }}" tooltip="{{ build.id }}" tooltip-popup-delay="1000">#{{ build.id }}</a>
+                    </td>
+                    <td class="field-repo">
+                        <a ng-href="#/builds?repo={{ build.repo }}">{{ build.repo }}</a>
+                    </td>
+                    <td class="field-message">
+                        <p tooltip="{{ build.head_commit.message }}" tooltip-popup-delay="1000">{{ build.head_commit.message }}</p>
+                    </td>
+                    <td class="field-commit">
+                        <a href="{{ build.head_commit.url }}" target="_blank" tooltip="{{ build.head_commit.id }}" tooltip-popup-delay="1000">{{ build.head_commit.id }}</a>
+                    </td>
+                    <td class="field-committer">{{ build.head_commit.committer.name }}</td>
+                    <td class="field-date">{{ build.head_commit.timestamp | date:'short' }}</td>
                 </tr>
                 <tr ng-if="view.builds.length === 0">
                     <td colspan="7"><p class="alert alert-info">There are no builds</p></td>

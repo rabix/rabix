@@ -42,7 +42,7 @@ class UselessWrapper(define.Wrapper):
 @with_setup(teardown=remove_test_dir)
 def test_useless_wrapper():
     inp = os.path.join(os.path.dirname(__file__),
-                       'test-files/example_human_reference.fasta')
+                       '../test-files/example_human_reference.fasta')
 
     inputs = {'inp': inp}
     params = {'p_int': 10}

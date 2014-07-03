@@ -13,43 +13,15 @@ angular.module('registryApp')
          */
         self.getBuilds = function(skip, repo) {
 
-//            var params = {skip: skip};
-//
-//            if (angular.isDefined(repo)) {
-//                params.field_repo = repo.replace(/&/g, '/');
-//            }
-//
-//            var promise = Api.builds.get(params).$promise;
-//
-//            return promise;
+            var params = {skip: skip};
 
-            var deferred = $q.defer();
-            var builds = [];
-            var total = 100;
-            var statuses = ['running', 'failed', 'success'];
+            if (angular.isDefined(repo)) {
+                params.field_repo = repo.replace(/&/g, '/');
+            }
 
-            _.times(total, function(i) {
+            var promise = Api.builds.get(params).$promise;
 
-                var status = statuses[_.random(0, 2)];
-
-                var build = {
-                    id: i,
-                    message: 'Build message No. ' + i,
-                    commit: i + 'fy890123',
-                    committer: 'Komit Komitovic',
-                    duration: '2 min 55 sec',
-                    finished: '2 days ago',
-                    status: status,
-                    branch: 'master'
-                };
-
-                builds.push(build);
-
-            });
-
-            deferred.resolve({items: builds.slice(skip, skip + 25), total: total});
-
-            return deferred.promise;
+            return promise;
 
         };
 
@@ -61,45 +33,31 @@ angular.module('registryApp')
          */
         self.getBuild = function(id) {
 
-//            var promise = Api.builds.get({id: id}).$promise;
-//
-//            return promise;
+            var promise = Api.builds.get({id: id}).$promise;
 
-            var deferred = $q.defer();
-
-            var statuses = ['running', 'failed', 'success'];
-            var status = statuses[_.random(0, 2)];
-
-            var build = {
-                id: 1,
-                message: 'Build message No. neki',
-                commit: 'fy890123',
-                committer: 'Komit Komitovic',
-                duration: '2 min 55 sec',
-                finished: '2 days ago',
-                status: status,
-                branch: 'master'
-            };
-
-            deferred.resolve(build);
-
-            return deferred.promise;
+            return promise;
 
         };
 
-        self.getLog = function(skip) {
+        /**
+         * Get log for particular build
+         * @param id
+         * @param range
+         * @returns {*}
+         */
+        self.getLog = function(id, range) {
 
             var deferred = $q.defer();
-            var total = 500;
-            var log = [];
 
-            _.times(total, function(i) {
+            Api.log(range).get({id: id, tab: 'log'}, function(result, headers) {
 
-                log.push('Log ' + i);
+                deferred.resolve({
+                    status: headers('X-BUILD-STATUS'),
+                    contentLength: headers('Content-Length'),
+                    content: result.content
+                });
 
             });
-
-            deferred.resolve(log.slice(skip, skip + 25));
 
             return deferred.promise;
 

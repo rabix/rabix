@@ -1,4 +1,4 @@
-<div class="page app" ng-class="{loading: view.loading}">
+<div class="page app" loading ng-class="{loading: view.loadingDelayed, 'loading-fade': view.loadingFaded}">
 
     <div class="heading">
         <div class="container">
@@ -6,8 +6,9 @@
             <h1>{{ view.app.name }}</h1>
         </div>
     </div>
+    <!-- # .heading -->
 
-    <div ng-if="!view.loading" class="container">
+    <div ng-if="!view.loading" class="container" height>
 
         <div class="description">
             <div class="panel panel-warning">
@@ -32,4 +33,5 @@
         </div>
 
     </div>
+    <!-- # .container -->
 </div>

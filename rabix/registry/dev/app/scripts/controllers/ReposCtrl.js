@@ -1,33 +1,29 @@
 'use strict';
 
 angular.module('registryApp')
-    .controller('BuildsCtrl', ['$scope', '$routeParams', '$window', 'Build', 'Header', function ($scope, $routeParams, $window, Build, Header) {
+    .controller('ReposCtrl', ['$scope', '$window', 'Repo', 'Header', function ($scope, $window, Repo, Header) {
 
-        Header.setActive('builds');
+        Header.setActive('repos');
 
         /**
-         * Callback when builds are loaded
+         * Callback when repos are loaded
          *
          * @param result
          */
-        var buildsLoaded = function(result) {
+        var reposLoaded = function(result) {
 
             $scope.view.paginator.prev = $scope.view.page > 1;
             $scope.view.paginator.next = ($scope.view.page * $scope.view.perPage) < result.total;
             $scope.view.total = Math.ceil(result.total / $scope.view.perPage);
 
-            $scope.view.builds = result.items;
+            $scope.view.repos = result.items;
             $scope.view.loading = false;
 
         };
 
         $scope.view = {};
         $scope.view.loading = true;
-        $scope.view.builds = [];
-//        if ($routeParams.repo) {
-//            $scope.view.repo = $routeParams.repo.replace(/&/g, '/');
-//        }
-        $scope.view.repo = $routeParams.repo;
+        $scope.view.repos = [];
 
         $scope.view.paginator = {
             prev: false,
@@ -38,7 +34,7 @@ angular.module('registryApp')
         $scope.view.perPage = 25;
         $scope.view.total = 0;
 
-        Build.getBuilds(0, $routeParams.repo).then(buildsLoaded);
+        Repo.getRepos(0).then(reposLoaded);
 
         /**
          * Go to the next/prev page
@@ -59,7 +55,7 @@ angular.module('registryApp')
                 $scope.view.loading = true;
                 var offset = ($scope.view.page - 1) * $scope.view.perPage;
 
-                Build.getBuilds(offset, $routeParams.repo).then(buildsLoaded);
+                Repo.getRepos(offset).then(reposLoaded);
 
             }
         };
