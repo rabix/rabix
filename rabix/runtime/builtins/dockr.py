@@ -210,15 +210,8 @@ class Container(object):
         self.docker = docker_client
         try:
             self.base_cmd = docker_client.inspect_image(image_id)['config']['Cmd']
-        except APIError as e:
-            # 404 means image was not found
-            if e.response.status_code == 404:
-                logging.info("Trying to fetch image %s" % image_id)
-                repo, tag = parse_repository_tag(image_id)
-                image_id = get_image(self.docker, repo=repo, tag=tag)['Id']
-                self.base_cmd = docker_client.inspect_image(image_id)['config']['Cmd']
-            else:
-                raise
+        except:
+            self.base_cmd = []
         self.base_image_id = image_id
         self.mount_point = mount_point
         self.config = {
