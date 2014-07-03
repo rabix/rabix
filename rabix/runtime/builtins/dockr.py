@@ -157,11 +157,11 @@ class DockerWrapperRunner(DockerRunner):
         inputs = six.iteritems(task_args.get('$inputs', {}))
         params = six.iteritems(task_args.get('$params', {}))
         for key, val in itertools.chain(inputs, params):
-            if not val or val not in wrapper['mappings']:
+            if not val or key not in wrapper['mappings']:
                 continue
             arg_key = wrapper['mappings'][key]
             if isinstance(arg_key, int):
-                positional += [arg_key, val]
+                positional.append([arg_key, val])
                 continue
             if isinstance(val, list):
                 for v in val:
