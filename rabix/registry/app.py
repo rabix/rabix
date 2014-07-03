@@ -366,8 +366,8 @@ def get_build_log(build_id):
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        with open(sys.argv[1]) as fp:
-            logging.config.dictConfig(json.load(fp))
+        with open(sys.argv[1]) as fp_log_cfg:
+            logging.config.dictConfig(json.load(fp_log_cfg))
     else:
         logging.basicConfig(level=logging.DEBUG)
     flapp.run(port=4280)

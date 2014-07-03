@@ -1,6 +1,5 @@
 import os
 import random
-import shutil
 import time
 import logging
 import json
@@ -13,21 +12,25 @@ log = logging.getLogger(__name__)
 
 
 def build_task(build_id, mock=False):
+    cwd = os.path.abspath('.')
     store = RethinkStore()
     build = store.get_build(build_id)
-    repo = store.get_repo(build['repo'])
-    user = store.get_user(repo['created_by'])
-    token = user['token']
-    cwd = os.path.abspath('.')
-    os.mkdir(build_id)
-    os.chdir(build_id)
     try:
+        repo = store.get_repo(build['repo'])
+        user = store.get_user(repo['created_by'])
+        token = user['token']
+        os.mkdir(build_id)
+        os.chdir(build_id)
+        build['status'] = 'running'
+        store.update_build(build)
         build['status'] = mock_build(build) if mock else do_build(build)
         store.update_build(build)
         if not mock:
             update_github_status(build, token)
     except:
         log.exception('Build error')
+        build['status'] = 'error'
+        store.update_build(build)
         os.chdir(cwd)
         raise
     else:
