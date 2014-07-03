@@ -39,12 +39,13 @@ from rabix.common.protocol import MAPPINGS
 from rabix.common.loadsave import from_url, to_json
 try:
     from rabix.models import Pipeline, AppSchema, AppJsonSchema
-    from rabix.runtime.builtins.dockr import DockerApp
+    from rabix.runtime.builtins.dockr import DockerApp, DockerWrapperApp
     from rabix.runtime.builtins.mocks import MockApp
     MAPPINGS.update({
         'app/mock/python': MockApp,
         'app/pipeline': Pipeline,
         'app/tool/docker': DockerApp,
+        'app/tool/docker-wrapper': DockerWrapperApp,
         'schema/app/sbgsdk': AppSchema,
         'schema/app': AppJsonSchema,
     })
