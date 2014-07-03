@@ -1,5 +1,5 @@
 #!/bin/sh
-python -m rabix.runtime.cli run -v \
+python -m rabix.cli run -v \
   rabix/tests/apps/pipeline_test_bwa_freebayes.json \
   --reference rabix/tests/test-files/example_human_reference.fasta \
   --read rabix/tests/test-files/example_human_Illumina.pe_1.fastq \
