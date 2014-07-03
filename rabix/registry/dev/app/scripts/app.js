@@ -20,7 +20,7 @@ angular
     ])
     .config(['$routeProvider', '$httpProvider', function ($routeProvider, $httpProvider) {
         $routeProvider
-            .when('/', {
+            .when('/apps', {
                 templateUrl: 'views/apps.html',
                 controller: 'AppsCtrl'
             })
@@ -53,7 +53,7 @@ angular
                 controller: 'RepoCtrl'
             })
             .otherwise({
-                redirectTo: '/'
+                redirectTo: '/apps'
             });
 
         $httpProvider.interceptors.push('HTTPInterceptor');

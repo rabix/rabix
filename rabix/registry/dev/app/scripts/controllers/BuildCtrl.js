@@ -25,10 +25,10 @@ angular.module('registryApp')
 
                 // TODO remove this later
                 // mock begin
-                var isSuccess = _.random(0, 1);
-                if (isSuccess) {
-                    result.status = 'running';
-                }
+//                var isSuccess = _.random(0, 1);
+//                if (isSuccess) {
+//                    result.status = 'running';
+//                }
                 // mock end
 
                 /* start log polling if build is running */
@@ -71,10 +71,10 @@ angular.module('registryApp')
 
             // TODO remove this later
             // mock begin
-            var isSuccess = _.random(0, 1);
-            if (isSuccess) {
-                result.status = 'running';
-            }
+//            var isSuccess = _.random(0, 1);
+//            if (isSuccess) {
+//                result.status = 'running';
+//            }
             // mock end
 
             if (result.status !== 'running') {
@@ -87,7 +87,7 @@ angular.module('registryApp')
 
             // TODO remove this later
             // mock begin
-            result.content = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n Nam ut augue nec elit dignissim tristique. Maecenas ipsum velit, egestas a elit a, feugiat euismod diam.\n Vestibulum eu felis vel odio faucibus euismod. Curabitur tincidunt volutpat sagittis.\n Phasellus suscipit facilisis accumsan. Phasellus sed purus ac nunc condimentum gravida.\n Nunc blandit sit amet tellus sed malesuada.\n Proin dapibus orci vitae purus laoreet, at rutrum magna blandit.';
+//            result.content = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n Nam ut augue nec elit dignissim tristique. Maecenas ipsum velit, egestas a elit a, feugiat euismod diam.\n Vestibulum eu felis vel odio faucibus euismod. Curabitur tincidunt volutpat sagittis.\n Phasellus suscipit facilisis accumsan. Phasellus sed purus ac nunc condimentum gravida.\n Nunc blandit sit amet tellus sed malesuada.\n Proin dapibus orci vitae purus laoreet, at rutrum magna blandit.';
             // mock end
 
             $scope.view.log = $scope.view.log.concat(result.content.split('\n'));

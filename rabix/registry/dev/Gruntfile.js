@@ -18,7 +18,7 @@ module.exports = function (grunt) {
     // Configurable paths for the application
     var appConfig = {
         app: require('./bower.json').appPath || 'app',
-        dist: 'dist'
+        dist: '../dist'
     };
 
     // Define the configuration for all the tasks
@@ -79,19 +79,64 @@ module.exports = function (grunt) {
             },
             livereload: {
                 options: {
-                    open: true,
-                    middleware: function (connect) {
+                    open: true
+                    /*
+                    middleware: function (connect, options) {
+                        if (!Array.isArray(options.base)) {
+                            options.base = [options.base];
+                        }
+
+                        // Setup the proxy
+                        var middlewares = [require('grunt-connect-proxy/lib/utils').proxyRequest];
+
+                        // Serve static files.
+                        options.base.forEach(function(base) {
+                            middlewares.push(connect.static(base));
+                        });
+
+                        // Make directory browse-able.
+                        var directory = options.directory || options.base[options.base.length - 1];
+                        middlewares.push(connect.directory(directory));
+
+                        return middlewares;
+                    }
+                    */
+                }
+//                proxies: [
+//                    {
+//                        context: '/api',
+//                        host: '5e9e1fd7.ngrok.com',
+//                        rewrite: {
+//                            '^/api': '/'
+//                        }
+//                    }
+//                ]
+            },
+            /*
+            server: {
+                options: {
+                    port: 4280,
+                    hostname: 'localhost',
+                    middleware: function (connect, options) {
+                        var proxy = require('grunt-connect-proxy/lib/utils').proxyRequest;
                         return [
-                            connect.static('.tmp'),
-                            connect().use(
-                                '/bower_components',
-                                connect.static('./bower_components')
-                            ),
-                            connect.static(appConfig.app)
+                            // Include the proxy first
+                            proxy,
+                            // Serve static files.
+                            connect.static(options.base),
+                            // Make empty directories browsable.
+                            connect.directory(options.base)
                         ];
                     }
-                }
+                },
+                proxies: [
+                    {
+                        context: '/',
+                        host: '5e9e1fd7.ngrok.com'
+                    }
+                ]
             },
+            */
             test: {
                 options: {
                     port: 9001,
@@ -138,6 +183,9 @@ module.exports = function (grunt) {
 
         // Empties folders to start fresh
         clean: {
+            options: {
+                force: true
+            },
             dist: {
                 files: [
                     {
@@ -189,8 +237,8 @@ module.exports = function (grunt) {
         compass: {
             options: {
                 sassDir: '<%= yeoman.app %>/styles',
-//                cssDir: '.tmp/styles',
-                cssDir: '<%= yeoman.app %>/styles',
+                cssDir: '.tmp/styles',
+//                cssDir: '<%= yeoman.app %>/styles',
                 generatedImagesDir: '.tmp/images/generated',
                 imagesDir: '<%= yeoman.app %>/images',
                 javascriptsDir: '<%= yeoman.app %>/scripts',
@@ -221,7 +269,7 @@ module.exports = function (grunt) {
                 src: [
                     '<%= yeoman.dist %>/scripts/{,*/}*.js',
                     '<%= yeoman.dist %>/styles/{,*/}*.css',
-                    '<%= yeoman.dist %>/images/{,*/}*.{png,jpg,jpeg,gif,webp,svg}',
+                    //'<%= yeoman.dist %>/images/{,*/}*.{png,jpg,jpeg,gif,webp,svg}',
                     '<%= yeoman.dist %>/styles/fonts/*'
                 ]
             }
@@ -363,9 +411,13 @@ module.exports = function (grunt) {
                             '*.{ico,png,txt}',
                             '.htaccess',
                             '*.html',
-                            'views/{,*/}*.html',
+                            //'views/{,*/}*.html',
+                            '!**/views/**',
                             'images/{,*/}*.{webp}',
-                            'fonts/*'
+                            'styles/fonts/*',
+//                            'bower_components/*'
+                            'bower_components/es5-shim/es5-shim.js',
+                            'bower_components/json3/lib/json3.min.js'
                         ]
                     },
                     {
@@ -422,6 +474,8 @@ module.exports = function (grunt) {
                 }
             }
         }
+
+
     });
 
 
@@ -435,6 +489,7 @@ module.exports = function (grunt) {
             //'wiredep',
             'concurrent:server',
             'autoprefixer',
+//            'configureProxies:livereload',
 //            'connect:livereload',
             'ngtemplates:app',
             'watch'
@@ -473,8 +528,8 @@ module.exports = function (grunt) {
     ]);
 
     grunt.registerTask('default', [
-        'newer:jshint',
-        'test',
+//        'newer:jshint',
+//        'test',
         'build'
     ]);
 };

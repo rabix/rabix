@@ -1,6 +1,4 @@
-<div class="general-error" ng-class="{show: errorMessages.length > 0}">
-    <p class="alert alert-danger" ng-repeat="message in errorMessages">
-        <button type="button" class="close" ng-click="closeError()"><span>&times;</span><span class="sr-only">Close</span></button>
-        {{ message }}
-    </p>
+<div class="general-error alert alert-danger" ng-class="{show: errorMessages.length > 0}">
+    <button type="button" class="close" ng-click="closeError()"><span>&times;</span><span class="sr-only">Close</span></button>
+    <p ng-repeat="message in errorMessages">{{ message }}</p>
 </div>

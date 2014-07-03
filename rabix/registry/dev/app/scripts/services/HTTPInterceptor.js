@@ -13,7 +13,7 @@ angular.module('registryApp')
 
             'requestError': function(rejection) {
                 // intercept request error
-                $rootScope.$broadcast('httpError', 'An error occurred while attempting to send request to ' + host + rejection.config.url);
+                $rootScope.$broadcast('httpError', 'An error occurred while attempting to send request to ' + rejection.config.url);
                 return $q.reject(rejection);
             },
 
@@ -24,7 +24,7 @@ angular.module('registryApp')
 
             'responseError': function(rejection) {
                 // intercept response error
-                $rootScope.$broadcast('httpError', 'An error occurred while attempting to retrieve response from ' + host + rejection.config.url);
+                $rootScope.$broadcast('httpError', 'An error occurred while attempting to retrieve response from ' + rejection.config.url);
                 return $q.reject(rejection);
             }
 

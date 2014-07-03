@@ -3,6 +3,7 @@
 angular.module('registryApp')
     .factory('Api', ['$resource', '$http', function ($resource, $http) {
 
+//        var apiUrl = 'http://5e9e1fd7.ngrok.com';
         var apiUrl = '';
 
 
@@ -16,7 +17,7 @@ angular.module('registryApp')
         api.builds = $resource(apiUrl + '/builds/:id', {id: '@id'});
 
         api.log = function(range) {
-            return $resource(apiUrl + '/builds/:id/:tab', {id: '@id', tab: '@tab'}, {
+            return $resource(apiUrl + '/builds/:id/:tab?json=1', {id: '@id', tab: '@tab'}, {
                 get: {
                     method: 'GET',
                     headers: {'range': 'bytes=' + range + '-'},
