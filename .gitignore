@@ -1,4 +1,5 @@
 *.log
+*.pid
 *.pyc
 .idea
 x-test-*
