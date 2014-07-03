@@ -226,8 +226,8 @@ class Container(object):
             'WorkingDir': self.mount_point,
             'Dns': None
         }
-        entrypoint = docker_client.inspect_image(image_id)['config'][
-            'Entrypoint']
+        entrypoint = docker_client.inspect_image(image_id) \
+            .get('config', {}).get('Entrypoint')
         if not entrypoint:
             self.config['Entrypoint'] = ['/bin/sh', '-c']
         self.config.update(container_config or {})
