@@ -151,11 +151,11 @@ class DockerRunner(Runner):
 
 
 class DockerWrapperRunner(DockerRunner):
-    def _run_task(self, task_dir, args):
+    def _run_task(self, task_dir, task_args):
         wrapper = self.task.app.wrapper
         args, positional = wrapper['base_cmd'], []
-        inputs = six.iteritems(args.get('$inputs', {}))
-        params = six.iteritems(args.get('$params', {}))
+        inputs = six.iteritems(task_args.get('$inputs', {}))
+        params = six.iteritems(task_args.get('$params', {}))
         for key, val in itertools.chain(inputs, params):
             if not val or val not in wrapper['mappings']:
                 continue
