@@ -1,0 +1,23 @@
+<div class="page repo" loading ng-class="{loading: view.loadingDelayed, 'loading-fade': view.loadingFaded}">
+
+    <div class="heading">
+        <div class="container">
+            <button class="btn btn-default pull-left go-back" ng-click="goBack()"><i class="glyphicon glyphicon-chevron-left"></i> Back</button>
+            <h1>{{ view.repo.id }}</h1>
+        </div>
+    </div>
+
+    <div ng-if="!view.loading" class="container" height>
+
+        <section>
+            <h4>Created By</h4>
+            <p>{{ view.repo.created_by }}</p>
+        </section>
+
+        <section>
+            <h4>Secret</h4>
+            <p>{{ view.repo.secret }}</p>
+        </section>
+
+    </div>
+</div>

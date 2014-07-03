@@ -24,7 +24,7 @@ angular
                 templateUrl: 'views/apps.html',
                 controller: 'AppsCtrl'
             })
-            .when('/repo/:repo', {
+            .when('/apps/:repo', {
                 templateUrl: 'views/apps.html',
                 controller: 'AppsCtrl'
             })
@@ -43,6 +43,14 @@ angular
             .when('/build/:id/:tab', {
                 templateUrl: 'views/build.html',
                 controller: 'BuildCtrl'
+            })
+            .when('/repos', {
+                templateUrl: 'views/repos.html',
+                controller: 'ReposCtrl'
+            })
+            .when('/repo/:id', {
+                templateUrl: 'views/repo.html',
+                controller: 'RepoCtrl'
             })
             .otherwise({
                 redirectTo: '/'

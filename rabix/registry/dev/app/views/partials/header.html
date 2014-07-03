@@ -11,6 +11,7 @@
                 <ul class="nav nav-tabs pull-left">
                     <li ng-class="{active: view.active === 'apps'}"><a ng-href="#/">Apps</a></li>
                     <li ng-class="{active: view.active === 'builds'}"><a ng-href="#/builds">Builds</a></li>
+                    <li ng-class="{active: view.active === 'repos'}"><a ng-href="#/repos">Repos</a></li>
                 </ul>
 
                 <a ng-if="(view.user | isEmpty)" href="/login" class="btn btn-primary btn-block">Log In With GitHub</a>

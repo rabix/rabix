@@ -136,6 +136,16 @@ body {
     }
   }
 
+  &.repos {
+    .table {
+      th {
+        &.field-id {
+          width: 20%;
+        }
+      }
+    }
+  }
+
   h1 {
     margin: 0;
     padding: 11px 0 11px 90px;
@@ -300,8 +310,13 @@ body {
     }
 
     &.list {
-      pre {
-        padding: 0 10px;
+      ul {
+        list-style: none;
+        border: 1px solid #ddd;
+        border-left-color: transparent;
+        @include border-radius(0 3px 3px 0);
+        padding: 10px 10px 10px 20px;
+        margin: 0;
       }
     }
   }

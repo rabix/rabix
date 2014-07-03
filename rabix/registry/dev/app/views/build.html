@@ -50,23 +50,23 @@
 
             <div class="snippet list" ng-if="view.build.head_commit.added.length > 0">
                 <p>Added files</p>
-                <pre>
-                    <div ng-repeat="file in view.build.head_commit.added" class="line">{{ file }}</div>
-                </pre>
+                <ul>
+                    <li ng-repeat="file in view.build.head_commit.added" class="line">{{ file }}</li>
+                </ul>
             </div>
 
             <div class="snippet list" ng-if="view.build.head_commit.modified.length > 0">
                 <p>Modified files</p>
-                <pre>
-                    <div ng-repeat="file in view.build.head_commit.modified" class="line">{{ file }}</div>
-                </pre>
+                <ul>
+                    <li ng-repeat="file in view.build.head_commit.modified" class="line">{{ file }}</li>
+                </ul>
             </div>
 
             <div class="snippet list" ng-if="view.build.head_commit.removed.length > 0">
                 <p>Removed files</p>
-                <pre>
-                    <div ng-repeat="file in view.build.head_commit.removed" class="line">{{ file }}</div>
-                </pre>
+                <ul>
+                    <li ng-repeat="file in view.build.head_commit.removed" class="line">{{ file }}</li>
+                </ul>
             </div>
         </div>
 

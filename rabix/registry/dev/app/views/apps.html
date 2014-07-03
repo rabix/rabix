@@ -34,7 +34,7 @@
             <tbody>
                 <tr ng-repeat="app in view.apps">
                     <td><a ng-href="#/app/{{ app.id }}">{{ app.name }}</a></td>
-                    <td><a ng-href="#/repo/{{ app.repo | encode }}">{{ app.repo }}</a></td>
+                    <td><a ng-href="#/apps/{{ app.repo | encode }}">{{ app.repo }}</a></td>
                     <td><p tooltip="{{ app.description }}" tooltip-popup-delay="1000">{{ app.description }}</p></td>
                 </tr>
                 <tr ng-if="view.apps.length === 0">
