@@ -9,13 +9,14 @@ CONFIG = {
         'InputTask': 'rabix.runtime.builtins.io.InputRunner',
         'OutputTask': 'rabix.runtime.tasks.Runner',
         'AppInstallTask': {
-            'app/tool/docker': 'rabix.runtime.builtins.dockr.'
-                               'DockerAppInstaller',
-            'app/mock/python': 'rabix.runtime.tasks.Runner'
+            'app/mock/python': 'rabix.runtime.tasks.Runner',
+            'app/tool/docker': 'rabix.runtime.builtins.dockr.DockerAppInstaller',
+            'app/tool/docker-wrapper': 'rabix.runtime.builtins.dockr.DockerAppInstaller',
         },
         'PipelineStepTask': {
+            'app/mock/python': 'rabix.runtime.builtins.mocks.MockRunner',
             'app/tool/docker': 'rabix.runtime.builtins.dockr.DockerRunner',
-            'app/mock/python': 'rabix.runtime.builtins.mocks.MockRunner'
+            'app/tool/docker-wrapper': 'rabix.runtime.builtins.dockr.DockerWrapperRunner',
         }
     },
     'registry': {

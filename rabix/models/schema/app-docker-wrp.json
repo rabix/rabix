@@ -1,0 +1,32 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "required": ["$$type", "docker_image_ref", "schema", "wrapper"],
+    "properties": {
+        "$$type": {"enum": ["app/tool/docker"]},
+        "wrapper_id": {"type": "string"},
+        "docker_image_ref": {
+            "type": "object",
+            "properties": {
+                "image_id": {"type": "string"},
+                "image_repo": {"type": "string"},
+                "image_tag": {"type": "string"}
+            }
+        },
+        "schema": {
+            "oneOf": [
+                {"$ref": "iodef-sbgsdk.json"},
+                {"$ref": "iodef-jsonschema.json"}
+            ]
+        },
+        "wrapper": {
+            "type": "object",
+            "properties": {
+                "base_cmd": {"type": "array", "items": {"type": "string"}},
+                "mappings": {"type": "object"},
+                "outputs": {"type": "object"},
+                "redirect": {"type": "array", "items": {"type": "string"}}
+            }
+        }
+    }
+}

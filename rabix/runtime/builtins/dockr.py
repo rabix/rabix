@@ -1,10 +1,12 @@
 import os
 import copy
+import glob
 import signal
 import logging
 import subprocess
-import docker
+import itertools
 
+import docker
 from docker.errors import APIError
 from docker.utils.utils import parse_repository_tag
 
@@ -23,6 +25,7 @@ MOUNT_POINT = '/rabix'
 
 class DockerApp(App):
     TYPE = 'app/tool/docker'
+    SCHEMA = 'schema/app-docker.json'
 
     image_ref = property(lambda self: self['docker_image_ref'])
     wrapper_id = property(lambda self: self['wrapper_id'])
@@ -30,6 +33,20 @@ class DockerApp(App):
     def _validate(self):
         self._check_field('docker_image_ref', dict, null=False)
         self._check_field('wrapper_id', six.string_types, null=False)
+        self._check_field('schema', AppSchema, null=False)
+        self.schema.validate()
+
+
+class DockerWrapperApp(App):
+    TYPE = 'app/tool/docker-wrapper'
+    SCHEMA = 'schema/app-docker-wrp.json'
+
+    image_ref = property(lambda self: self['docker_image_ref'])
+    wrapper = property(lambda self: self['wrapper'])
+
+    def _validate(self):
+        self._check_field('docker_image_ref', dict, null=False)
+        self._check_field('wrapper', dict, null=False)
         self._check_field('schema', AppSchema, null=False)
         self.schema.validate()
 
@@ -55,11 +72,18 @@ class DockerRunner(Runner):
                                    mount_point=MOUNT_POINT)
         args = (self.task.arguments if self.task.is_replacement
                 else self._fix_input_paths(self.task.arguments))
+        task_dir = self.task.task_id
+        os.mkdir(task_dir)
+        result = self._run_task(task_dir, args)
+        self._fix_uid()
+        if isinstance(result, Exception):
+            raise result
+        return self._fix_output_paths(result)
+
+    def _run_task(self, task_dir, args):
         wrp_job = WrapperJob(self.task.app.wrapper_id,
                              self.task.task_id, args,
                              self.task.resources)
-        task_dir = self.task.task_id
-        os.mkdir(task_dir)
         in_file = os.path.join(task_dir, '__in__.json')
         out_file = os.path.join(task_dir, '__out__.json')
         with open(in_file, 'w') as fp:
@@ -67,13 +91,9 @@ class DockerRunner(Runner):
         self.container.run_job(
             '__in__.json', '__out__.json', cwd=task_dir
         ).remove(success_only=True)
-        self._fix_uid()
         if not os.path.isfile(out_file):
             raise JobError('Job failed.')
-        result = from_url(out_file)
-        if isinstance(result, Exception):
-            raise result
-        return self._fix_output_paths(result)
+        return from_url(out_file)
 
     def _fix_output_paths(self, result):
         if not isinstance(result, Outputs):
@@ -128,6 +148,48 @@ class DockerRunner(Runner):
         if self._docker_client is None:
             self._docker_client = docker.Client()
         return self._docker_client
+
+
+class DockerWrapperRunner(DockerRunner):
+    def _run_task(self, task_dir, args):
+        wrapper = self.task.app.wrapper
+        args, positional = wrapper['base_cmd'], []
+        inputs = six.iteritems(args.get('$inputs', {}))
+        params = six.iteritems(args.get('$params', {}))
+        for key, val in itertools.chain(inputs, params):
+            if not val or val not in wrapper['mappings']:
+                continue
+            arg_key = wrapper['mappings'][key]
+            if isinstance(arg_key, int):
+                positional += [arg_key, val]
+                continue
+            if isinstance(val, list):
+                for v in val:
+                    self._add_arg(args, arg_key, v)
+            else:
+                self._add_arg(args, key, val)
+        positional.sort(key=lambda x: x[0])
+        for pos, val in positional:
+            args += val if isinstance(val, list) else [val]
+        args += wrapper.get('redirect', [])
+
+        self.container.run(args).remove(success_only=True).wait()
+        if self.container.exit_code():
+            return JobError('Exit code %s' % self.container.exit_code())
+        result = {}
+        for key, expr in six.iteritems(wrapper.get('outputs', {})):
+            outs = glob.glob(os.path.join(task_dir, expr))
+            result[key] = map(os.path.abspath, outs)
+        return Outputs(result)
+
+    def _add_arg(self, args, key, val):
+        if val is None:
+            return args
+        if isinstance(val, bool):
+            args += [key] if val else []
+        else:
+            args += [key, val]
+        return args
 
 
 class DockerAppInstaller(Runner):
@@ -203,9 +265,12 @@ class Container(object):
             self.docker.wait(self.container)
         return self
 
-    def is_success(self):
+    def exit_code(self):
         self._check_container_ready()
-        return self.wait().inspect()['State']['ExitCode'] == 0
+        return self.wait().inspect()['State']['ExitCode']
+
+    def is_success(self):
+        return not self.exit_code()
 
     def remove(self, success_only=False):
         self._check_container_ready()
