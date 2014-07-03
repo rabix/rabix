@@ -1,37 +1,45 @@
-import os
-import sys
-import logging
-
 import docopt
+import logging
+import sys
+import yaml
+
+from os.path import isfile
 
 from rabix import __version__ as version
 from rabix.common import six
+from rabix.common.errors import RabixError
 from rabix.common.loadsave import JsonLoader, from_url
 from rabix.common.util import rnd_name, update_config
 from rabix.models import Pipeline
 from rabix.runtime.engine import get_engine
 from rabix.runtime.jobs import RunJob, InstallJob
+from rabix.sdktools.steps import run_steps
+
 
 log = logging.getLogger(__name__)
 
 
 USAGE = """
 Usage:
-  rabix run [-v...] <file>
-  rabix install [-v...] <file>
+  rabix build [--config=<cfg_path>]
   rabix checksum [--method=(md5|sha1)] <jsonptr>
+  rabix install [-v...] <file>
+  rabix run [-v...] <file>
   rabix -h | --help
   rabix --version
 
 Commands:
-  run                       Run pipeline described in <file>. Depending on the
-                            pipeline, additional parameters must be provided.
-  install                   Install all the apps needed for running pipeline
-                            described in <file>.
+  build                     Execute steps for app building, wrapping and
+                            deployment.
   checksum                  Calculate and print the checksum of json document
                             (or fragment) pointed by <jsonptr>
+  install                   Install all the apps needed for running pipeline
+                            described in <file>.
+  run                       Run pipeline described in <file>. Depending on the
+                            pipeline, additional parameters must be provided.
 
 Options:
+  -c --config=<cfg_path>    Specify path to config file [default: .rabix.yml]
   -h --help                 Display this message.
   -m --method (md5|sha1)    Checksum type [default: sha1]
   --version                 Print version to standard output and quit.
@@ -123,9 +131,17 @@ def checksum(jsonptr, method='sha1'):
     print(method + '$' + loader.checksum(obj, method))
 
 
+def build(path='.rabix.yml'):
+    if not isfile(path):
+        raise RabixError('Config file %s not found!' % path)
+    with open(path) as cfg:
+        config = yaml.load(cfg)
+        run_steps(config)
+
+
 def main():
     logging.basicConfig(level=logging.WARN)
-    if os.path.isfile('rabix.conf'):
+    if isfile('rabix.conf'):
         update_config()
 
     try:
@@ -147,6 +163,8 @@ def main():
         install(from_url(args['<file>']))
     elif args["checksum"]:
         checksum(args['<jsonptr>'], args['--method'])
+    elif args["build"]:
+        build(args.get("--config"))
 
 
 if __name__ == '__main__':

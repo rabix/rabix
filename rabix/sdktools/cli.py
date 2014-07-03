@@ -1,39 +1,19 @@
 import argparse
 import sys
 import logging
-import yaml
 
 from os import getcwd
-from os.path import abspath, join, exists
+from os.path import abspath, join
 
-from rabix.common.errors import RabixError
 from rabix.sdktools.build import init
-from rabix.sdktools.steps import run_steps
 
 
 log = logging.getLogger(__name__)
 
 
-def yaml_load(path='./rabix.yaml'):
-    if exists(path):
-        with open(path) as cfg:
-            config = yaml.load(cfg)
-            return config
-    else:
-        raise RabixError('Config file %s not found!' % path)
-
-
 def create_parser():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
-
-    build = subparsers.add_parser(
-        'build',
-        help='Install Rabix adapter to docker image.')
-    build.add_argument('-c', '--config', default='.rabix.yml',
-                       help="Rabix config file to read. Default is .rabix.yml")
-
-    build.set_defaults(cmd_func=cmd_build)
 
     test = subparsers.add_parser(
         'test', help='Run wrapper job.')
@@ -53,10 +33,6 @@ def create_parser():
                       help='Overwrite existing files in target directory.')
 
     return parser
-
-
-def cmd_build(config):
-    run_steps(yaml_load(config))
 
 
 def cmd_test():
