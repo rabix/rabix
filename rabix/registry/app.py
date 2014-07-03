@@ -10,8 +10,7 @@ import random
 import rq
 import redis
 import requests
-from flask import Flask, request, g, session, redirect, jsonify, Response, \
-    send_from_directory
+from flask import Flask, request, g, session, redirect, jsonify, Response
 from flask.ext.github import GitHub, GitHubError
 
 from rabix import CONFIG
@@ -54,7 +53,8 @@ class ApiView(object):
                 return flapp.send_static_file('index.html')
             resp = func(*args, **kwargs)
             if isinstance(resp, dict):
-                return jsonify(**resp)
+                resp = jsonify(**resp)
+            resp.headers['Access-Control-Allow-Origin'] = '*'
             return resp
         return decorated
 
