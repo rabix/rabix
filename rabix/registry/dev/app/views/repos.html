@@ -18,7 +18,7 @@
             <tbody>
                 <tr ng-repeat="repo in view.repos">
                     <td class="field-id">
-                        <a ng-href="#/repo/{{ repo.id | encode }}">#{{ repo.id }}</a>
+                        <a ng-href="#/repo/{{ repo.id | encode }}">{{ repo.id }}</a>
                     </td>
                     <td class="field-created-by">{{ repo.created_by }}</td>
                 </tr>

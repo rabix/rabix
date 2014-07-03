@@ -303,8 +303,19 @@ body {
         border-color: $orange;
         background-color: #222;
         padding: 0 10px;
+        counter-reset: counter;
         .line {
           color: $orange;
+          &:before {
+            content: counter(counter);
+            counter-increment: counter;
+            display: inline-block;
+            width: 25px;
+            text-align: right;
+            padding: 0 5px 0 0;
+            margin: 0 5px 0 0;
+            color: #666;
+          }
         }
       }
     }
