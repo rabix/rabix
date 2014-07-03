@@ -10,7 +10,7 @@ from rabix.common import six
 from rabix.common.protocol import Outputs, WrapperJob
 from rabix.common.util import rnd_name
 from rabix.common.errors import ValidationError
-from rabix.runtime import from_url
+from rabix.common.loadsave import from_url
 from rabix.runtime.engine import get_engine
 from rabix.runtime.engine.base import SequentialEngine
 from rabix.runtime.engine.base import MultiprocessingEngine
