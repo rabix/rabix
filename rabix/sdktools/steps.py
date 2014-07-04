@@ -10,11 +10,14 @@ from rabix.common.errors import RabixError
 
 log = logging.getLogger(__name__)
 
+MOUNT_POINT = '/build'
+
 
 def build(client, from_img, cmd, **kwargs):
     entrypoint = ['/bin/sh', '-c']
     cfg = make_config(entrypoint=entrypoint)
-    container = Container(client, from_img, cfg, mount_point='/build')
+    mount_point = kwargs.pop('mount_point', MOUNT_POINT)
+    container = Container(client, from_img, cfg, mount_point=mount_point)
 
     run_cmd = make_cmd(cmd)
 
@@ -38,7 +41,8 @@ def build(client, from_img, cmd, **kwargs):
 def run(client, from_img, cmd, **kwargs):
     cfg = make_config(**kwargs)
     run_cmd = make_cmd(cmd)
-    container = Container(client, from_img, cfg, mount_point='/build')
+    mount_point = kwargs.pop('mount_point', MOUNT_POINT)
+    container = Container(client, from_img, cfg, mount_point=mount_point)
     container.run(run_cmd)
     container.print_log()
     if not container.is_success():
@@ -70,7 +74,7 @@ def make_cmd(cmd):
 
 class Runner(object):
 
-    def __init__(self, steps=None, context=None):
+    def __init__(self, docker, steps=None, context=None):
         self.types = {
             "run": run,
             "build": build
@@ -79,8 +83,7 @@ class Runner(object):
 
         self.context = context or {}
 
-        docker_host = getenv("DOCKER_HOST", None)
-        self.docker = docker.Client(docker_host, version="1.8")
+        self.docker = docker
         pass
 
     def run(self, config):
@@ -125,6 +128,7 @@ class Runner(object):
             return val
 
 
-def run_steps(config, steps=None, context=None):
-    r = Runner(steps, context)
+def run_steps(config, docker_host=None, steps=None, context=None):
+    docker_host = docker_host or getenv("DOCKER_HOST", None)
+    r = Runner(docker.Client(docker_host, version="1.8"), steps, context)
     r.run(config)
