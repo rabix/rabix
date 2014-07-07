@@ -59,7 +59,17 @@ class ApiView(object):
         return decorated
 
 
+def xorigin(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        resp = func(*args, **kwargs)
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
+    return wrapper
+
+
 @flapp.errorhandler(ApiError)
+@xorigin
 def error_handler(exc):
     resp = jsonify(message=exc.message)
     resp.status_code = exc.code
@@ -67,6 +77,7 @@ def error_handler(exc):
 
 
 @flapp.errorhandler(ResourceUnavailable)
+@xorigin
 def error_handler(exc):
     resp = jsonify(message=unicode(exc))
     resp.status_code = 404
@@ -74,6 +85,7 @@ def error_handler(exc):
 
 
 @flapp.errorhandler(500)
+@xorigin
 def server_error(exc):
     rnd = str(random.randint(0, 2 ** 42))
     log.error('%s: %s', rnd, exc)
@@ -83,12 +95,14 @@ def server_error(exc):
 
 
 @flapp.errorhandler(404)
+@xorigin
 def handle_404(*_):
     return error_handler(ApiError(404, 'Not found.'))\
         if g.json_api else flapp.send_static_file('index.html')
 
 
 @flapp.errorhandler(400)
+@xorigin
 def handle_400(*_):
     return error_handler(ApiError(400, 'Bad request'))
 
@@ -151,6 +165,7 @@ def authorized(access_token):
 
 
 @flapp.route('/login')
+@xorigin
 def login():
     if 'username' in session:
         return redirect('/')
@@ -162,6 +177,7 @@ def login():
 
 
 @flapp.route('/logout', methods=['POST'])
+@xorigin
 def logout():
     username = session.pop('username', None)
     g.store.logout(username)
@@ -169,6 +185,7 @@ def logout():
 
 
 @flapp.route('/user')
+@xorigin
 def user_info():
     if not g.user:
         return jsonify()

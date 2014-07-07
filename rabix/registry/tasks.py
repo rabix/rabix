@@ -53,7 +53,7 @@ def do_build(build):
     cmd_clone = 'git clone https://github.com/%s/%s' % (owner, name)
     cmd_cd = 'cd %s' % name
     cmd_checkout = 'git checkout %s' % sha
-    cmd_run = 'rabix-sdk build'
+    cmd_run = 'rabix build'
     cmd_list = cmd_clone, cmd_cd, cmd_checkout, cmd_run
     log_file = '../%s.log' % build_id
     cmd = '(' + '&&'.join(cmd_list) + ') 1>%s 2>&1' % log_file
