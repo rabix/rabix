@@ -23,14 +23,6 @@ angular.module('registryApp')
                 $scope.view.log = [];
                 $scope.view.contentLength = 0;
 
-                // TODO remove this later
-                // mock begin
-//                var isSuccess = _.random(0, 1);
-//                if (isSuccess) {
-//                    result.status = 'running';
-//                }
-                // mock end
-
                 /* start log polling if build is running */
                 if (result.status === 'running') {
 
@@ -47,7 +39,7 @@ angular.module('registryApp')
                     /* other than that take the log for the current build */
                     Build.getLog($routeParams.id, 0).then(function(result) {
                         $scope.view.loading = false;
-                        $scope.view.log.push(result.content);
+                        $scope.view.log = $scope.view.log.concat(result.content.split('\n'));
                     });
                 }
             } else {
@@ -69,14 +61,6 @@ angular.module('registryApp')
          */
         var logLoaded = function(result) {
 
-            // TODO remove this later
-            // mock begin
-//            var isSuccess = _.random(0, 1);
-//            if (isSuccess) {
-//                result.status = 'running';
-//            }
-            // mock end
-
             if (result.status !== 'running') {
                 $scope.stopLogInterval();
             }
@@ -85,13 +69,10 @@ angular.module('registryApp')
 
             console.log('log polling at ', $scope.view.contentLength);
 
-            // TODO remove this later
-            // mock begin
-//            result.content = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n Nam ut augue nec elit dignissim tristique. Maecenas ipsum velit, egestas a elit a, feugiat euismod diam.\n Vestibulum eu felis vel odio faucibus euismod. Curabitur tincidunt volutpat sagittis.\n Phasellus suscipit facilisis accumsan. Phasellus sed purus ac nunc condimentum gravida.\n Nunc blandit sit amet tellus sed malesuada.\n Proin dapibus orci vitae purus laoreet, at rutrum magna blandit.';
-            // mock end
-
             $scope.view.log = $scope.view.log.concat(result.content.split('\n'));
-            $scope.view.contentLength = result.contentLength;
+            if (result.contentLength > 0) {
+                $scope.view.contentLength = result.contentLength;
+            }
 
         };
 

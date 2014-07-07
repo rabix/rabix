@@ -14,7 +14,7 @@
                     <li ng-class="{active: view.active === 'repos'}"><a ng-href="#/repos">Repos</a></li>
                 </ul>
 
-                <a ng-if="(view.user | isEmpty)" href="/login" class="btn btn-primary btn-block">Log In With GitHub</a>
+                <a ng-if="(view.user | isEmpty)" href="/login" class="btn btn-primary pull-right">Log In With GitHub</a>
 
                 <div ng-if="!(view.user | isEmpty)" class="actions pull-right">
                     <span class="welcome">Welcome {{ view.user.name }}!</span>
