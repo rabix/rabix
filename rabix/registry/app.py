@@ -352,7 +352,10 @@ def build_index():
 @flapp.route('/builds/<build_id>', methods=['GET'])
 @ApiView()
 def get_build(build_id):
-    return jsonify(**g.store.get_build(build_id))
+    build = g.store.get_build(build_id)
+    if not build:
+        raise ApiError(404, 'Build not found')
+    return jsonify(**build)
 
 
 @flapp.route('/builds/<build_id>/log', methods=['GET'])
