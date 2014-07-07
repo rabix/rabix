@@ -21,6 +21,7 @@ from rabix.common import six
 
 log = logging.getLogger(__name__)
 MOUNT_POINT = '/rabix'
+DOCKER_PROTOCOL_VERSION = '1.8'
 
 
 class DockerApp(App):
@@ -146,7 +147,7 @@ class DockerRunner(Runner):
     @property
     def docker_client(self):
         if self._docker_client is None:
-            self._docker_client = docker.Client()
+            self._docker_client = docker.Client(version=DOCKER_PROTOCOL_VERSION)
         return self._docker_client
 
 
