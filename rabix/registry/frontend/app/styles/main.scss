@@ -306,8 +306,10 @@ body {
         background-color: #222;
         padding: 0 10px;
         counter-reset: counter;
+        @include scrollBar($orange);
         .line {
           color: $orange;
+          white-space: nowrap;
           &:before {
             content: counter(counter);
             counter-increment: counter;

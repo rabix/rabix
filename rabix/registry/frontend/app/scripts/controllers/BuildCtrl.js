@@ -1,9 +1,10 @@
 'use strict';
 
 angular.module('registryApp')
-    .controller('BuildCtrl', ['$scope', '$routeParams', '$window', '$interval', 'Build', 'Header', function ($scope, $routeParams, $window, $interval, Build, Header) {
+    .controller('BuildCtrl', ['$scope', '$routeParams', '$window', '$interval', '$document', '$timeout', 'Build', 'Header', function ($scope, $routeParams, $window, $interval, $document, $timeout, Build, Header) {
 
         var logIntervalId;
+        var scrollTimeoutId;
 
         Header.setActive('builds');
 
@@ -26,13 +27,12 @@ angular.module('registryApp')
                 /* start log polling if build is running */
                 if (result.status === 'running') {
 
+                    console.log('log polling started');
+
                     $scope.view.loading = false;
 
                     logIntervalId = $interval(function() {
-
-                        console.log('log polling started');
                         Build.getLog($routeParams.id, $scope.view.contentLength).then(logLoaded);
-
                     }, 2000);
 
                 } else {
@@ -69,9 +69,16 @@ angular.module('registryApp')
 
             console.log('log polling at ', $scope.view.contentLength);
 
-            $scope.view.log = $scope.view.log.concat(result.content.split('\n'));
             if (result.contentLength > 0) {
+                $scope.view.log = $scope.view.log.concat(result.content.split('\n'));
                 $scope.view.contentLength = result.contentLength;
+
+                $scope.stopScrollTimeout();
+
+                var logContainer = $document[0].getElementById('log-content');
+                scrollTimeoutId = $timeout(function () {
+                    logContainer.scrollTop = logContainer.scrollHeight;
+                }, 100);
             }
 
         };
@@ -87,8 +94,20 @@ angular.module('registryApp')
             }
         };
 
+
+        /**
+         * Stop the scroll timeout
+         */
+        $scope.stopScrollTimeout = function() {
+            if (angular.isDefined(scrollTimeoutId)) {
+                $timeout.cancel(scrollTimeoutId);
+                scrollTimeoutId = undefined;
+            }
+        };
+
         $scope.$on('$destroy', function() {
             $scope.stopLogInterval();
+            $scope.stopScrollTimeout();
         });
 
 
