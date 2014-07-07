@@ -3,7 +3,7 @@
 angular.module('registryApp')
     .factory('Api', ['$resource', '$http', function ($resource, $http) {
 
-//        var apiUrl = 'http://5e9e1fd7.ngrok.com';
+        var apiUrlRemote = 'http://5e9e1fd7.ngrok.com';
         var apiUrl = '';
 
 
