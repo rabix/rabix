@@ -33,7 +33,7 @@ angular.module('registryApp')
                         console.log('log polling started');
                         Build.getLog($routeParams.id, $scope.view.contentLength).then(logLoaded);
 
-                    }, 1000);
+                    }, 2000);
 
                 } else {
                     /* other than that take the log for the current build */
