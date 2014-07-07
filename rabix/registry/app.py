@@ -361,6 +361,7 @@ def get_build_log(build_id):
     h = {'X-BUILD-STATUS': g.store.get_build(build_id)['status']}
     builds_dir = os.path.abspath(flapp.config['BUILDS_DIR'])
     log_file = os.path.join(builds_dir, build_id + '.log')
+    size = os.path.getsize(log_file)
     if not os.path.isfile(log_file):
         return Response('', headers=h)
     range_header = request.headers.get('range', '')
@@ -368,16 +369,17 @@ def get_build_log(build_id):
         with open(os.path.join(builds_dir, build_id + '.log')) as fp:
             return Response(fp.read(), content_type='text/plain', headers=h)
     try:
-        one, two = range_header[len('bytes='):].split('-')
-        two = two or os.path.getsize(log_file)
-        one, two = map(int, [one, two])
-        assert two >= one
-        assert os.path.getsize(log_file) >= two
+        assert range_header.startswith('bytes=')
+        frm, _ = range_header[len('bytes='):].split('-')
+        frm = int(frm)
+        if size == frm:
+            return Response('', 206, content_type='text/plain', headers=h)
+        assert size > frm
     except:
         raise ApiError(416, 'Invalid range.')
     with open(log_file) as fp:
-        fp.seek(one)
-        content = fp.read(two - one + 1)
+        fp.seek(frm)
+        content = fp.read()
         return Response(content, 206, content_type='text/plain', headers=h)
 
 
