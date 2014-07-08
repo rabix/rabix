@@ -71,7 +71,7 @@ angular.module('registryApp')
 
             if (result.contentLength > 0) {
                 $scope.view.log = $scope.view.log.concat(result.content.split('\n'));
-                $scope.view.contentLength = result.contentLength;
+                $scope.view.contentLength += result.contentLength;
 
                 $scope.stopScrollTimeout();
 
