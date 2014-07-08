@@ -24,6 +24,7 @@ angular.module('registryApp')
                 $scope.view.log = [];
                 $scope.view.contentLength = 0;
 
+
                 /* start log polling if build is running */
                 if (result.status === 'running') {
 
@@ -71,7 +72,7 @@ angular.module('registryApp')
 
             if (result.contentLength > 0) {
                 $scope.view.log = $scope.view.log.concat(result.content.split('\n'));
-                $scope.view.contentLength += result.contentLength;
+                $scope.view.contentLength += parseInt(result.contentLength, 10);
 
                 $scope.stopScrollTimeout();
 
