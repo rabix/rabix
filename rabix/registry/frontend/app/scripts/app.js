@@ -52,6 +52,10 @@ angular
                 templateUrl: 'views/repo.html',
                 controller: 'RepoCtrl'
             })
+            .when('/settings', {
+                templateUrl: 'views/settings.html',
+                controller: 'SettingsCtrl'
+            })
             .otherwise({
                 redirectTo: '/apps'
             });

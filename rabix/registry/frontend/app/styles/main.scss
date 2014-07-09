@@ -57,6 +57,7 @@ body {
     vertical-align: middle;
     font-size: 16px;
     line-height: 40px;
+    padding: 0 10px;
   }
 
   .options {
@@ -138,6 +139,7 @@ body {
     }
   }
 
+  /* Repos page */
   &.repos {
     .table {
       th {
@@ -148,10 +150,31 @@ body {
     }
   }
 
+  /* Settings page */
+  &.settings {
+    .actions {
+      margin: 30px 0;
+      .col-md-4 {
+        text-align: center;
+        &:first-child {
+          border-right: 1px solid #ddd;
+        }
+      }
+      .alert {
+        margin: 30px 0 0 0;
+        text-align: center;
+      }
+    }
+
+    section {
+
+    }
+  }
+
   h1 {
     margin: 0;
-    padding: 11px 0 11px 90px;
-    font-size: 30px;
+    padding: 15px 0 15px 90px;
+    font-size: 26px;
     .label {
       font-size: 18px;
       padding: 6px 20px 8px 7px;
@@ -446,24 +469,6 @@ body {
     right: 6px;
   }
 }
-
-/* SCROLLBAR STYLE
-================================================ */
-//::-webkit-scrollbar {
-//  width: 10px;
-//  height: 10px;
-//}
-//
-//::-webkit-scrollbar-track {
-//  background: #eee;
-//}
-//
-//::-webkit-scrollbar-thumb {
-//  background: $orange;
-//  &:hover {
-//    background: darken($orange, 10%);
-//  }
-//}
 
 .nav-tabs {
   border-bottom: none;

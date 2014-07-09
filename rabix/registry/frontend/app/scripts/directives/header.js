@@ -7,10 +7,18 @@ angular.module('registryApp')
 
         self.active = 'apps';
 
+        /**
+         * Set the active page
+         * @param active
+         */
         self.setActive = function (active) {
             self.active = active;
         };
 
+        /**
+         * Get the active page
+         * @returns {string}
+         */
         self.getActive = function () {
             return self.active;
         };
@@ -18,7 +26,7 @@ angular.module('registryApp')
         return self;
 
     }])
-    .directive('header', ['$templateCache', '$timeout', '$route', '$modal', 'User', 'Header', function ($templateCache, $timeout, $route, $modal, User, Header) {
+    .directive('header', ['$templateCache', '$timeout', '$route', 'User', 'Header', function ($templateCache, $timeout, $route, User, Header) {
         return {
             restrict: 'E',
             replace: true,
@@ -28,13 +36,15 @@ angular.module('registryApp')
 
                 scope.view = {};
                 scope.view.loading = true;
-                scope.view.loggingIn = false;
-                scope.view.processing = false;
-                scope.view.showOptions = false;
                 scope.view.active = Header.getActive();
 
                 scope.HeaderService = Header;
 
+                /**
+                 * Parse the user data
+                 * @param result
+                 * @returns {object}
+                 */
                 var parseUser = function (result) {
 
                     var params = ['avatar_url', 'gravatar_id', 'html_url', 'name'];
@@ -58,25 +68,11 @@ angular.module('registryApp')
                  * Log Out the user
                  */
                 scope.logOut = function() {
-                    scope.view.processing = true;
 
                     User.logOut().then(function() {
                         scope.view.user = {};
-                        scope.view.showOptions = false;
-                        scope.view.processing = false;
                         $route.reload();
                     });
-                };
-
-                scope.showOptions = function () {
-
-                    $modal.open({
-                        template: $templateCache.get('views/partials/options.html'),
-                        controller: 'OptionsCtrl',
-                        windowClass: 'modal-options',
-                        resolve: { data: function () { return {user: scope.view.user}; } }
-                    });
-
                 };
 
                 scope.$watch('HeaderService.active', function (n, o) {

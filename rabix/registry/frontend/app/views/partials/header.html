@@ -12,13 +12,13 @@
                     <li ng-class="{active: view.active === 'apps'}"><a ng-href="#/apps">Apps</a></li>
                     <li ng-class="{active: view.active === 'builds'}"><a ng-href="#/builds">Builds</a></li>
                     <li ng-class="{active: view.active === 'repos'}"><a ng-href="#/repos">Repos</a></li>
+                    <li ng-class="{active: view.active === 'settings'}"><a ng-href="#/settings">Settings</a></li>
                 </ul>
 
                 <a ng-if="(view.user | isEmpty)" href="/login" class="btn btn-primary pull-right">Log In With GitHub</a>
 
                 <div ng-if="!(view.user | isEmpty)" class="actions pull-right">
                     <span class="welcome">Welcome {{ view.user.name }}!</span>
-                    <a href ng-click="showOptions()" class="options"><i class="glyphicon glyphicon-cog"></i></a>
                     <a href ng-click="logOut()" class="btn btn-primary">Log Out</a>
                 </div>
 

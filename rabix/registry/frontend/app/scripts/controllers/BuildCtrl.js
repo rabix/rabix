@@ -25,10 +25,10 @@ angular.module('registryApp')
                 $scope.view.contentLength = 0;
 
 
-                /* start log polling if build is running */
+                /* start lo(n)g polling if build is running */
                 if (result.status === 'running') {
 
-                    console.log('log polling started');
+                    console.log('lo(n)g polling started');
 
                     $scope.view.loading = false;
 
@@ -68,11 +68,10 @@ angular.module('registryApp')
 
             $scope.view.build.status = result.status;
 
-            console.log('log polling at ', $scope.view.contentLength);
-
             if (result.contentLength > 0) {
                 $scope.view.log = $scope.view.log.concat(result.content.split('\n'));
                 $scope.view.contentLength += parseInt(result.contentLength, 10);
+                console.log('lo(n)g polling at ', $scope.view.contentLength);
 
                 $scope.stopScrollTimeout();
 
@@ -85,13 +84,13 @@ angular.module('registryApp')
         };
 
         /**
-         * Stop the log polling
+         * Stop the lo(n)g polling
          */
         $scope.stopLogInterval = function() {
             if (angular.isDefined(logIntervalId)) {
                 $interval.cancel(logIntervalId);
                 logIntervalId = undefined;
-                console.log('log polling canceled');
+                console.log('lo(n)g polling canceled');
             }
         };
 
