@@ -34,19 +34,22 @@ angular.module('registryApp')
 
         var repoId = $routeParams.id.replace(/&/g, '/');
 
-        $q.all([
-            Repo.getRepo(repoId),
-            App.getApps(0),
-            Build.getBuilds(0)
-        ]).then(function (result) {
+        Repo.getRepo(repoId).then(function (repo) {
 
-            $scope.view.loading = false;
+            $scope.view.repo = repo;
 
-            $scope.view.repo = result[0];
-            $scope.view.apps = itemsLoaded(result[1], 'apps');
-            $scope.view.builds = itemsLoaded(result[2], 'builds');
+            $q.all([
+                App.getApps(0, repoId),
+                Build.getBuilds(0, repoId)
+            ]).then(function (result) {
+
+                $scope.view.loading = false;
+
+                $scope.view.apps = itemsLoaded(result[0], 'apps');
+                $scope.view.builds = itemsLoaded(result[1], 'builds');
+            });
+
         });
-
 
         /**
          * Callback when items are loaded
@@ -86,7 +89,6 @@ angular.module('registryApp')
          */
         $scope.goToPage = function(dir) {
 
-            //if (!$scope.view.loading) {
             if (!$scope.view.paginator[$scope.view.tab].loading) {
 
                 if (dir === 'prev') {
@@ -96,22 +98,19 @@ angular.module('registryApp')
                     $scope.view.paginator[$scope.view.tab].page += 1;
                 }
 
-                //$scope.view.loading = true;
                 $scope.view.paginator[$scope.view.tab].loading = true;
                 var offset = ($scope.view.paginator[$scope.view.tab].page - 1) * $scope.view.paginator[$scope.view.tab].perPage;
 
                 if ($scope.view.tab === 'apps') {
-                    App.getApps(offset).then(function (result) {
+                    App.getApps(offset, repoId).then(function (result) {
                         $scope.view.apps = itemsLoaded(result, 'apps');
-                        //$scope.view.loading = false;
                         $scope.view.paginator.apps.loading = false;
                     });
                 }
 
                 if ($scope.view.tab === 'builds') {
-                    Build.getBuilds(offset).then(function (result) {
+                    Build.getBuilds(offset, repoId).then(function (result) {
                         $scope.view.builds = itemsLoaded(result, 'builds');
-                        //$scope.view.loading = false;
                         $scope.view.paginator.builds.loading = false;
                     });
                 }
