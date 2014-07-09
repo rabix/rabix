@@ -14,13 +14,17 @@
             <div class="panel panel-warning">
                 <div class="panel-heading"><h4 class="panel-title">Details</h4></div>
                 <div class="panel-body">
-                    <h5>Docker Image Details</h5>
-                    <p><strong>Image Repo:</strong> {{ view.app.app.docker_image_ref.image_repo }}</p>
-                    <p><strong>Image Tag:</strong> {{ view.app.app.docker_image_ref.image_tag }}</p>
+                    <section>
+                        <h5>Docker Image Details</h5>
+                        <p><strong>Image Repo:</strong> {{ view.app.app.docker_image_ref.image_repo }}</p>
+                        <p><strong>Image Tag:</strong> {{ view.app.app.docker_image_ref.image_tag }}</p>
+                    </section>
 
-                    <h5>App Details</h5>
-                    <p><strong>Toolkit Name:</strong> {{ view.app.toolkit_name }}</p>
-                    <p><strong>Toolkit Version:</strong> {{ view.app.toolkit_version }}</p>
+                    <section>
+                        <h5>App Details</h5>
+                        <p><strong>Toolkit Name:</strong> {{ view.app.toolkit_name }}</p>
+                        <p><strong>Toolkit Version:</strong> {{ view.app.toolkit_version }}</p>
+                    </section>
                 </div>
             </div>
             {{ view.app.description }}

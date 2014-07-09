@@ -339,7 +339,7 @@ body {
       p {
         white-space: nowrap;
         strong {
-          width: 90px;
+          width: 110px;
           display: inline-block;
         }
         &:last-of-type {
@@ -351,6 +351,12 @@ body {
           margin: -15px -15px 0;
           padding: 10px 15px;
           background-color: lighten(#fcf8e3, 5%);
+        }
+        section {
+          margin: 0 0 20px 0;
+          &:last-child {
+            margin: 0;
+          }
         }
       }
     }
