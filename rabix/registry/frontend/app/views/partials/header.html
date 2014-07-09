@@ -18,8 +18,8 @@
                 <a ng-if="(view.user | isEmpty)" href="/login" class="btn btn-primary pull-right">Log In With GitHub</a>
 
                 <div ng-if="!(view.user | isEmpty)" class="actions pull-right">
-                    <span class="welcome">Welcome {{ view.user.name }}!</span>
-                    <a href ng-click="logOut()" class="btn btn-primary">Log Out</a>
+                    <span class="welcome">Welcome <strong>{{ view.user.name }}</strong></span>
+                    <a href ng-click="logOut()" tooltip="Log out" tooltip-placement="bottom" tooltip-append-to-body="true" class="glyphicon glyphicon-log-out log-out-btn"></a>
                 </div>
 
             </div>

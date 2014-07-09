@@ -55,9 +55,8 @@ body {
   .welcome {
     display: inline-block;
     vertical-align: middle;
-    font-size: 16px;
+    font-size: 14px;
     line-height: 40px;
-    padding: 0 10px;
   }
 
   .nav-tabs {
@@ -73,6 +72,17 @@ body {
       font-size: 25px;
       padding: 8px 10px;
       cursor: pointer;
+    }
+  }
+  
+  .log-out-btn {
+    text-decoration: none;
+    color: #555;
+    font-size: 20px;
+    vertical-align: middle;
+    margin-left: 10px;
+    &:hover {
+      color: #666;
     }
   }
 
