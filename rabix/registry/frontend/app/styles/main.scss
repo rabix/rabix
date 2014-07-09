@@ -94,6 +94,13 @@ body {
   position: relative;
   background-color: #fff;
 
+  /* Build page */
+  &.build {
+    .heading {
+      margin: 0;
+    }
+  }
+
   /* Repos page */
   &.repos {
     .table {
@@ -120,9 +127,13 @@ body {
         text-align: center;
       }
     }
+  }
 
-    section {
-
+  &.home {
+    .log-in-btn {
+      width: 300px;
+      margin: 20px auto;
+      display: block;
     }
   }
 
@@ -130,6 +141,18 @@ body {
     margin: 0;
     padding: 15px 0 15px 90px;
     font-size: 26px;
+
+    &.main-title {
+      padding: 15px 0;
+      text-align: center;
+      font-size: 28px;
+      width: 610px;
+      margin: 0 auto;
+      border-left: 5px solid $orange;
+      border-right: 5px solid $orange;
+      font-weight: normal;
+    }
+
     .label {
       font-size: 18px;
       padding: 6px 20px 8px 7px;
@@ -154,6 +177,11 @@ body {
         margin-left: 5px;
       }
     }
+  }
+  
+  h2 {
+    font-size: 24px;
+    font-weight: normal;
   }
 
   .table {
@@ -262,6 +290,7 @@ body {
   }
 
   .heading {
+    margin: 0 0 20px 0;
     .go-back {
       margin: 12px 0;
     }
@@ -315,6 +344,13 @@ body {
         }
         &:last-of-type {
           margin-bottom: 0;
+        }
+      }
+      .panel-body {
+        h5 {
+          margin: -15px -15px 0;
+          padding: 10px 15px;
+          background-color: lighten(#fcf8e3, 5%);
         }
       }
     }
@@ -507,8 +543,6 @@ body {
 }
 
 .nav-tabs {
-//  border-bottom: none;
-//  margin-top: 1px;
   li {
     &.active {
       a, a:focus, a:hover {

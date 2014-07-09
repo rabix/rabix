@@ -1,0 +1,63 @@
+<div class="page home" loading ng-class="{loading: view.loadingDelayed, 'loading-fade': view.loadingFaded}">
+
+    <div class="heading">
+        <div class="container">
+            <h1 class="main-title">Reproducible Analyses for Bioinformatics</h1>
+        </div>
+    </div>
+    <!-- # .heading -->
+
+    <div ng-if="!view.loading" class="container">
+
+        <div class="row" ng-if="(view.user | isEmpty)">
+            <a href="/login" class="btn btn-lg btn-primary log-in-btn">Log In With GitHub</a>
+        </div>
+
+        <section>
+            <h2>Overview</h2>
+            <p>The goal of this project is to provide an easy way to package, distribute and run tools and pipelines using docker images.</p>
+            <p>There are three main components:</p>
+            <ul>
+                <li>Format and protocol specification.</li>
+                <li>Tools to run apps and pipelines.</li>
+                <li>An SDK to easily package tools and pipelines into reusable components.</li>
+            </ul>
+            <p>Note that this project is still under development. You can run pipelines, but can't (easily) make them yet.</p>
+        </section>
+
+        <section>
+            <h2>Install</h2>
+
+
+            <div class="snippet">
+                <p><strong>1.</strong> First, install <a href="https://docs.docker.com/installation/#installation" target="_blank">docker</a> on a linux machine.</p>
+            </div>
+
+            <div class="snippet">
+                <p><strong>2.</strong> Second, install rabix via pip:</p>
+                <pre>$ pip install git+https://github.com/rabix/rabix</pre>
+            </div>
+
+            <div class="snippet">
+                <p><strong>3.</strong> Check if everything works by installing an example pipeline:</p>
+                <pre>$ rabix install https://s3.amazonaws.com/boysha/pipeline_test_bwa_freebayes.json</pre>
+            </div>
+
+            <div class="snippet">
+                <p><strong>4.</strong> The "install" command simply pre-fetches referenced docker images. If you don't want to download hundreds of megabytes, you can just attempt to run the pipeline, which should fetch only the JSON files and present you with input options:</p>
+                <pre>$ rabix run https://s3.amazonaws.com/boysha/pipeline_test_bwa_freebayes.json</pre>
+            </div>
+
+            <div class="snippet">
+                <p><strong>5.</strong> Optionally, run the pipeline with some example data. It won't take long:</p>
+                <pre>$ rabix run https://s3.amazonaws.com/boysha/pipeline_test_bwa_freebayes.json \
+  --reference https://s3.amazonaws.com/boysha/testfiles/example_human_reference.fasta \
+  --read https://s3.amazonaws.com/boysha/testfiles/example_human_Illumina.pe_1.fastq \
+  --read https://s3.amazonaws.com/boysha/testfiles/example_human_Illumina.pe_2.fastq</pre>
+            </div>
+
+        </section>
+
+    </div>
+    <!-- # .container -->
+</div>

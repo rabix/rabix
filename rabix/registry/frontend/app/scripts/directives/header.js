@@ -40,27 +40,8 @@ angular.module('registryApp')
 
                 scope.HeaderService = Header;
 
-                /**
-                 * Parse the user data
-                 * @param result
-                 * @returns {object}
-                 */
-                var parseUser = function (result) {
-
-                    var params = ['avatar_url', 'gravatar_id', 'html_url', 'name'];
-                    var user = {};
-
-                    _.each(params, function (param) {
-                        if (angular.isDefined(result[param])) {
-                            user[param] = result[param];
-                        }
-                    });
-
-                    return user;
-                };
-
                 User.getUser().then(function(result) {
-                    scope.view.user = parseUser(result);
+                    scope.view.user = User.parseUser(result);
                     scope.view.loading = false;
                 });
 

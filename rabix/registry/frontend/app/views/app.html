@@ -12,10 +12,15 @@
 
         <div class="description">
             <div class="panel panel-warning">
-                <div class="panel-heading"><h4 class="panel-title">Docker Image Details</h4></div>
+                <div class="panel-heading"><h4 class="panel-title">Details</h4></div>
                 <div class="panel-body">
+                    <h5>Docker Image Details</h5>
                     <p><strong>Image Repo:</strong> {{ view.app.app.docker_image_ref.image_repo }}</p>
                     <p><strong>Image Tag:</strong> {{ view.app.app.docker_image_ref.image_tag }}</p>
+
+                    <h5>App Details</h5>
+                    <p><strong>Toolkit Name:</strong> {{ view.app.toolkit_name }}</p>
+                    <p><strong>Toolkit Version:</strong> {{ view.app.toolkit_version }}</p>
                 </div>
             </div>
             {{ view.app.description }}
@@ -28,8 +33,8 @@
         </div>
 
         <div class="snippet">
-            <p>Use this command to run the pipeline</p>
-            <pre>$ rabix run {{ view.app.links.app_ref }}</pre>
+            <p>Use this command to run the app</p>
+            <pre>$ rabix run "{{ view.app.links.app_ref }}"</pre>
         </div>
 
     </div>
