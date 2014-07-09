@@ -60,6 +60,11 @@ body {
     padding: 0 10px;
   }
 
+  .nav-tabs {
+    border-bottom: none;
+    margin-top: 1px;
+  }
+
   .options {
     color: #555;
     display: inline-block;
@@ -78,66 +83,6 @@ body {
 .page {
   position: relative;
   background-color: #fff;
-
-  /* Apps page */
-  &.apps {
-    .table {
-      th {
-        &:nth-child(1),
-        &:nth-child(2) {
-          width: 20%;
-        }
-        &:nth-child(3) {
-          width: 60%;
-        }
-      }
-      td {
-        p {
-          &:not(.alert) {
-            max-width: 500px;
-          }
-        }
-      }
-    }
-  }
-
-  /* Builds page */
-  &.builds {
-    .table {
-      th {
-        &.field-status,
-        &.field-id {
-          width: 5%;
-        }
-        &.field-message {
-          width: 30%;
-        }
-        &.field-commit,
-        &.field-committer,
-        &.field-repo,
-        &.field-date {
-          width: 15%;
-        }
-      }
-      td {
-        p {
-          &:not(.alert) {
-            max-width: 500px;
-          }
-        }
-        &.field-commit {
-          a {
-            width: 100px;
-          }
-        }
-        &.field-id {
-          a {
-            width: 50px;
-          }
-        }
-      }
-    }
-  }
 
   /* Repos page */
   &.repos {
@@ -212,6 +157,9 @@ body {
           overflow: hidden;
           float: left;
         }
+        &.alert {
+          padding: 15px;
+        }
       }
       a {
         width: 100%;
@@ -241,6 +189,58 @@ body {
       }
       &.pending {
         color: $orange;
+      }
+    }
+    &.apps {
+      th {
+        &:nth-child(1),
+        &:nth-child(2) {
+          width: 20%;
+        }
+        &:nth-child(3) {
+          width: 60%;
+        }
+      }
+      td {
+        p {
+          &:not(.alert) {
+            max-width: 500px;
+          }
+        }
+      }
+    }
+    &.builds {
+      th {
+        &.field-status,
+        &.field-id {
+          width: 5%;
+        }
+        &.field-message {
+          width: 30%;
+        }
+        &.field-commit,
+        &.field-committer,
+        &.field-repo,
+        &.field-date {
+          width: 15%;
+        }
+      }
+      td {
+        p {
+          &:not(.alert) {
+            max-width: 500px;
+          }
+        }
+        &.field-commit {
+          a {
+            width: 100px;
+          }
+        }
+        &.field-id {
+          a {
+            width: 50px;
+          }
+        }
       }
     }
   }
@@ -359,8 +359,9 @@ body {
     }
   }
 
-  .nav-tabs {
+  .nav-tabs.reverse {
     margin-top: 0;
+    border-bottom: none;
     li {
       &.active {
         a, a:hover, a:focus {
@@ -383,6 +384,27 @@ body {
 
   section {
     margin: 0 0 30px 0;
+    table {
+      &.apps {
+        th {
+          &:nth-child(1) {
+            width: 30% !important;
+          }
+          &:nth-child(2) {
+            width: 70% !important;
+          }
+        }
+      }
+      thead {
+        tr {
+          background-color: $gray;
+          border: {
+            left: 1px solid #ddd;
+            right: 1px solid #ddd;
+          }
+        }
+      }
+    }
   }
 
   &.loading {
@@ -471,8 +493,8 @@ body {
 }
 
 .nav-tabs {
-  border-bottom: none;
-  margin-top: 1px;
+//  border-bottom: none;
+//  margin-top: 1px;
   li {
     &.active {
       a, a:focus, a:hover {

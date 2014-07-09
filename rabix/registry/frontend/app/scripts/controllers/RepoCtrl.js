@@ -1,19 +1,31 @@
 'use strict';
 
 angular.module('registryApp')
-    .controller('RepoCtrl', ['$scope', '$routeParams', '$window', 'Repo', 'Header', function ($scope, $routeParams, $window, Repo, Header) {
+    .controller('RepoCtrl', ['$scope', '$routeParams', '$window', '$q', 'Repo', 'App', 'Build', 'Header', function ($scope, $routeParams, $window, $q, Repo, App, Build, Header) {
 
         Header.setActive('repos');
 
         $scope.view = {};
         $scope.view.loading = true;
+        $scope.view.active = 'apps';
         $scope.view.repo = null;
+        $scope.view.apps = [];
+        $scope.view.builds = [];
+
 
         var repoId = $routeParams.id.replace(/&/g, '/');
 
-        Repo.getRepo(repoId).then(function(result) {
+        $q.all([
+            Repo.getRepo(repoId),
+            App.getApps(),
+            Build.getBuilds()
+        ]).then(function (result) {
+
             $scope.view.loading = false;
-            $scope.view.repo = result;
+
+            $scope.view.repo = result[0];
+            $scope.view.apps = result[1].items;
+            $scope.view.builds = result[2].items;
         });
 
         /**
@@ -23,5 +35,8 @@ angular.module('registryApp')
             $window.history.back();
         };
 
+        $scope.switchTab = function (active) {
+            $scope.view.active = active;
+        };
 
     }]);

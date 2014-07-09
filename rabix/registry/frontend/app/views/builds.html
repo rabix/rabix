@@ -10,7 +10,7 @@
     <!-- # .filters -->
 
     <div ng-if="!view.loading" class="container" height>
-        <table class="table">
+        <table class="table table-striped builds">
             <thead>
                 <tr>
                     <th class="field-status"></th>
@@ -34,7 +34,7 @@
                         <a ng-href="#/build/{{ build.id }}" tooltip="{{ build.id }}" tooltip-popup-delay="1000">#{{ build.id }}</a>
                     </td>
                     <td class="field-repo">
-                        <a ng-href="#/builds?repo={{ build.repo }}">{{ build.repo }}</a>
+                        <a ng-href="#/repo/{{ build.repo | encode }}">{{ build.repo }}</a>
                     </td>
                     <td class="field-message">
                         <p tooltip="{{ build.head_commit.message }}" tooltip-popup-delay="1000">{{ build.head_commit.message }}</p>

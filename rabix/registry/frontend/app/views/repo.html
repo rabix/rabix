@@ -20,6 +20,72 @@
             <p>{{ view.repo.secret }}</p>
         </section>
 
+        <div class="nav nav-tabs">
+            <li ng-class="{active: view.active === 'apps'}" class=""><a href ng-click="switchTab('apps')">Apps</a></li>
+            <li ng-class="{active: view.active === 'builds'}" class=""><a href ng-click="switchTab('builds')">Builds</a></li>
+        </div>
+
+        <section ng-if="view.active === 'apps'">
+            <table class="table table-hover apps">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="app in view.apps">
+                        <td><a ng-href="#/app/{{ app.id }}">{{ app.name }}</a></td>
+                        <td><p tooltip="{{ app.description }}" tooltip-popup-delay="1000">{{ app.description }}</p></td>
+                    </tr>
+                    <tr ng-if="view.apps.length === 0">
+                        <td colspan="3"><p class="alert alert-info">There are no apps found in this repo</p></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section ng-if="view.active === 'builds'">
+            <table class="table table-hover builds">
+                <thead>
+                    <tr>
+                        <th class="field-status"></th>
+                        <th class="field-id">Build</th>
+                        <th class="field-message">Message</th>
+                        <th class="field-commit">Commit</th>
+                        <th class="field-committer">Committer</th>
+                        <th class="field-date">Duration</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="build in view.builds">
+                        <td class="field-status">
+                            <span class="status glyphicon {{ build.status }}"
+                                  tooltip="{{ build.status }}"
+                                  ng-class="{'glyphicon-ok-circle': build.status === 'success', 'glyphicon-time': build.status === 'pending', 'glyphicon-remove-circle': build.status === 'failure', 'glyphicon-repeat': build.status === 'running'}">
+                            </span>
+                        </td>
+                        <td class="field-id">
+                            <a ng-href="#/build/{{ build.id }}" tooltip="{{ build.id }}" tooltip-popup-delay="1000">#{{ build.id }}</a>
+                        </td>
+                        <td class="field-message">
+                            <p tooltip="{{ build.head_commit.message }}" tooltip-popup-delay="1000">{{ build.head_commit.message }}</p>
+                        </td>
+                        <td class="field-commit">
+                            <a href="{{ build.head_commit.url }}" target="_blank" tooltip="{{ build.head_commit.id }}" tooltip-popup-delay="1000">{{ build.head_commit.id }}</a>
+                        </td>
+                        <td class="field-committer">{{ build.head_commit.committer.name }}</td>
+                        <td class="field-date">{{ build.head_commit.timestamp | date:'short' }}</td>
+                    </tr>
+                    <tr ng-if="view.builds.length === 0">
+                        <td colspan="7"><p class="alert alert-info">There are no builds found in this repo</p></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+
+
     </div>
     <!-- # .container -->
 </div>

@@ -16,7 +16,7 @@
 
     <div ng-if="!view.loading" class="container" id="log-content" height>
 
-        <ul class="nav nav-tabs">
+        <ul class="nav nav-tabs reverse">
             <li ng-class="{active: view.tab === 'details'}"><a ng-href="#/build/{{ view.build.id }}">Details</a></li>
             <li ng-class="{active: view.tab === 'log'}"><a ng-href="#/build/{{ view.build.id }}/log">Log</a></li>
         </ul>
