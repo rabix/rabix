@@ -384,6 +384,7 @@ body {
 
   section {
     margin: 0 0 30px 0;
+    position: relative;
     table {
       &.apps {
         th {
@@ -404,6 +405,9 @@ body {
           }
         }
       }
+    }
+    &.loading {
+      @extend .loading-abs;
     }
   }
 

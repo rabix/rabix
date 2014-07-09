@@ -25,7 +25,7 @@
             <li ng-class="{active: view.tab === 'builds'}" class=""><a href ng-click="switchTab('builds')">Builds</a></li>
         </div>
 
-        <section ng-if="view.tab === 'apps'">
+        <section ng-if="view.tab === 'apps'" ng-class="{loading: view.paginator.apps.loading}">
             <table class="table table-hover apps">
                 <thead>
                     <tr>
@@ -45,7 +45,7 @@
             </table>
         </section>
 
-        <section ng-if="view.tab === 'builds'">
+        <section ng-if="view.tab === 'builds'" ng-class="{loading: view.paginator.builds.loading}">
             <table class="table table-hover builds">
                 <thead>
                     <tr>

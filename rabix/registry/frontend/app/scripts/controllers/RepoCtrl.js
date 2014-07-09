@@ -19,14 +19,16 @@ angular.module('registryApp')
                 next: false,
                 page: 1,
                 total: 0,
-                perPage: 25
+                perPage: 25,
+                loading: false
             },
             builds: {
                 prev: false,
                 next: false,
                 page: 1,
                 total: 0,
-                perPage: 25
+                perPage: 25,
+                loading: false
             }
         };
 
@@ -84,7 +86,8 @@ angular.module('registryApp')
          */
         $scope.goToPage = function(dir) {
 
-            if (!$scope.view.loading) {
+            //if (!$scope.view.loading) {
+            if (!$scope.view.paginator[$scope.view.tab].loading) {
 
                 if (dir === 'prev') {
                     $scope.view.paginator[$scope.view.tab].page -= 1;
@@ -93,20 +96,23 @@ angular.module('registryApp')
                     $scope.view.paginator[$scope.view.tab].page += 1;
                 }
 
-                $scope.view.loading = true;
+                //$scope.view.loading = true;
+                $scope.view.paginator[$scope.view.tab].loading = true;
                 var offset = ($scope.view.paginator[$scope.view.tab].page - 1) * $scope.view.paginator[$scope.view.tab].perPage;
 
                 if ($scope.view.tab === 'apps') {
                     App.getApps(offset).then(function (result) {
                         $scope.view.apps = itemsLoaded(result, 'apps');
-                        $scope.view.loading = false;
+                        //$scope.view.loading = false;
+                        $scope.view.paginator.apps.loading = false;
                     });
                 }
 
                 if ($scope.view.tab === 'builds') {
                     Build.getBuilds(offset).then(function (result) {
                         $scope.view.builds = itemsLoaded(result, 'builds');
-                        $scope.view.loading = false;
+                        //$scope.view.loading = false;
+                        $scope.view.paginator.builds.loading = false;
                     });
                 }
             }
