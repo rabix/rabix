@@ -25,7 +25,7 @@ angular.module('registryApp')
                         return { content: data };
                     }].concat($http.defaults.transformResponse)
                 }
-            })
+            });
         };
 
         api.repos = $resource(apiUrl + '/repos/:owner/:name', {owner: '@owner', name: '@name'});
