@@ -21,11 +21,11 @@
         </section>
 
         <div class="nav nav-tabs">
-            <li ng-class="{active: view.active === 'apps'}" class=""><a href ng-click="switchTab('apps')">Apps</a></li>
-            <li ng-class="{active: view.active === 'builds'}" class=""><a href ng-click="switchTab('builds')">Builds</a></li>
+            <li ng-class="{active: view.tab === 'apps'}" class=""><a href ng-click="switchTab('apps')">Apps</a></li>
+            <li ng-class="{active: view.tab === 'builds'}" class=""><a href ng-click="switchTab('builds')">Builds</a></li>
         </div>
 
-        <section ng-if="view.active === 'apps'">
+        <section ng-if="view.tab === 'apps'">
             <table class="table table-hover apps">
                 <thead>
                     <tr>
@@ -45,7 +45,7 @@
             </table>
         </section>
 
-        <section ng-if="view.active === 'builds'">
+        <section ng-if="view.tab === 'builds'">
             <table class="table table-hover builds">
                 <thead>
                     <tr>
@@ -84,8 +84,24 @@
             </table>
         </section>
 
-
-
     </div>
     <!-- # .container -->
+
+    <div class="paginate" ng-if="!view.loading && view.tab === 'apps' && view.apps.length > 0">
+        <div class="container">
+            <button ng-disabled="!view.paginator.apps.prev" class="btn btn-default pull-left" ng-click="goToPage('prev')"><i class="glyphicon glyphicon-chevron-left"></i></button>
+            <span class="page-number">{{ view.paginator.apps.page }} / {{ view.paginator.apps.total }}</span>
+            <button ng-disabled="!view.paginator.apps.next" class="btn btn-default pull-right" ng-click="goToPage('next')"><i class="glyphicon glyphicon-chevron-right"></i></button>
+        </div>
+    </div>
+    <!-- # .paginate -->
+
+    <div class="paginate" ng-if="!view.loading && view.tab === 'builds' && view.builds.length > 0">
+        <div class="container">
+            <button ng-disabled="!view.paginator.builds.prev" class="btn btn-default pull-left" ng-click="goToPage('prev')"><i class="glyphicon glyphicon-chevron-left"></i></button>
+            <span class="page-number">{{ view.paginator.builds.page }} / {{ view.paginator.builds.total }}</span>
+            <button ng-disabled="!view.paginator.builds.next" class="btn btn-default pull-right" ng-click="goToPage('next')"><i class="glyphicon glyphicon-chevron-right"></i></button>
+        </div>
+    </div>
+    <!-- # .paginate -->
 </div>

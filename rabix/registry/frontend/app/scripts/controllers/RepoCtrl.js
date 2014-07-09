@@ -7,26 +7,59 @@ angular.module('registryApp')
 
         $scope.view = {};
         $scope.view.loading = true;
-        $scope.view.active = 'apps';
+        $scope.view.tab = 'apps';
         $scope.view.repo = null;
         $scope.view.apps = [];
         $scope.view.builds = [];
+        $scope.view.resize = false;
 
+        $scope.view.paginator = {
+            apps: {
+                prev: false,
+                next: false,
+                page: 1,
+                total: 0,
+                perPage: 25
+            },
+            builds: {
+                prev: false,
+                next: false,
+                page: 1,
+                total: 0,
+                perPage: 25
+            }
+        };
 
         var repoId = $routeParams.id.replace(/&/g, '/');
 
         $q.all([
             Repo.getRepo(repoId),
-            App.getApps(),
-            Build.getBuilds()
+            App.getApps(0),
+            Build.getBuilds(0)
         ]).then(function (result) {
 
             $scope.view.loading = false;
 
             $scope.view.repo = result[0];
-            $scope.view.apps = result[1].items;
-            $scope.view.builds = result[2].items;
+            $scope.view.apps = itemsLoaded(result[1], 'apps');
+            $scope.view.builds = itemsLoaded(result[2], 'builds');
         });
+
+
+        /**
+         * Callback when items are loaded
+         *
+         * @param result
+         */
+        var itemsLoaded = function (result, tab) {
+
+            $scope.view.paginator[tab].prev = $scope.view.paginator[tab].page > 1;
+            $scope.view.paginator[tab].next = ($scope.view.paginator[tab].page * $scope.view.paginator[tab].perPage) < result.total;
+            $scope.view.paginator[tab].total = Math.ceil(result.total / $scope.view.paginator[tab].perPage);
+
+            return result.items;
+
+        };
 
         /**
          * Go back to the previous screen
@@ -35,8 +68,49 @@ angular.module('registryApp')
             $window.history.back();
         };
 
-        $scope.switchTab = function (active) {
-            $scope.view.active = active;
+        /**
+         * Switch the tab
+         * @param tab
+         */
+        $scope.switchTab = function (tab) {
+            $scope.view.tab = tab;
+            $scope.view.resize = true;
         };
+
+        /**
+         * Go to the next/prev page
+         *
+         * @param dir
+         */
+        $scope.goToPage = function(dir) {
+
+            if (!$scope.view.loading) {
+
+                if (dir === 'prev') {
+                    $scope.view.paginator[$scope.view.tab].page -= 1;
+                }
+                if (dir === 'next') {
+                    $scope.view.paginator[$scope.view.tab].page += 1;
+                }
+
+                $scope.view.loading = true;
+                var offset = ($scope.view.paginator[$scope.view.tab].page - 1) * $scope.view.paginator[$scope.view.tab].perPage;
+
+                if ($scope.view.tab === 'apps') {
+                    App.getApps(offset).then(function (result) {
+                        $scope.view.apps = itemsLoaded(result, 'apps');
+                        $scope.view.loading = false;
+                    });
+                }
+
+                if ($scope.view.tab === 'builds') {
+                    Build.getBuilds(offset).then(function (result) {
+                        $scope.view.builds = itemsLoaded(result, 'builds');
+                        $scope.view.loading = false;
+                    });
+                }
+            }
+        };
+
 
     }]);

@@ -15,11 +15,16 @@ angular.module('registryApp')
                     element[0].style.height = height + 'px';
                 };
 
-                var timeoutId = $timeout(function() {
-
+                /**
+                 * Prepare variables for height calculation
+                 */
+                var setVariables = function () {
                     scope.header = element[0].parentNode.children[0].offsetHeight;
                     scope.footer = angular.isDefined(element[0].parentNode.children[2]) ? element[0].parentNode.children[2].offsetHeight : 0;
+                };
 
+                var timeoutId = $timeout(function() {
+                    setVariables();
                     setHeight();
                 });
 
@@ -28,8 +33,20 @@ angular.module('registryApp')
                 angular.element($window).on('resize', lazySetHeight);
 
                 element.on('$destroy', function() {
+
                     angular.element($window).off('resize', lazySetHeight);
-                    $timeout.cancel(timeoutId);
+
+                    if (angular.isDefined(timeoutId)) {
+                        $timeout.cancel(timeoutId);
+                        timeoutId = undefined;
+                    }
+                });
+
+                scope.$watch('view.tab', function (n, o) {
+                    if (n !== o) {
+                        setVariables();
+                        setHeight();
+                    }
                 });
 
             }
