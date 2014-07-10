@@ -55,10 +55,31 @@ container for that step. If you specify the entrypoint in step it will be set as
 image entrypoint if step type is build, otherwise it will be set as entrypoint for container 
 while executing commands.
 
+```
+steps:
+  - step_1
+    type: build
+    from: ubuntu
+    cmd: cmd1 param1 param2
+    entrypoint: /bin/app
+    register:
+      repo: username/tool
+      tag: version
+      wrappers: Yes
+```
 
-### rabix test
+If wrappers is set to Yes, build command will install wrappers on docker image. Prerequisit 
+to install wrappers is to have pip installed on docker image. 
+
+###Types of wrappers:
+
 _TODO
 
 
-### rabix init
-_TODO
+##Continuous Integration 
+
+You can use our CI service simply by creating webhook from your GitHub repository to Rabix.
+On every push it will run rabix build command using your .rabix.yml file, which needs to be 
+placed in project root directory. On our website you can follow logs of all your builds.
+
+
