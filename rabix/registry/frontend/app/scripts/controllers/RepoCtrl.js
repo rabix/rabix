@@ -39,7 +39,7 @@ angular.module('registryApp')
             $scope.view.repo = repo;
 
             $q.all([
-                App.getApps(0, repoId),
+                App.getApps(0, '', repoId),
                 Build.getBuilds(0, repoId)
             ]).then(function (result) {
 
@@ -95,7 +95,7 @@ angular.module('registryApp')
                 var offset = ($scope.view.paginator[$scope.view.tab].page - 1) * $scope.view.paginator[$scope.view.tab].perPage;
 
                 if ($scope.view.tab === 'apps') {
-                    App.getApps(offset, repoId).then(function (result) {
+                    App.getApps(offset, '', repoId).then(function (result) {
                         $scope.view.apps = itemsLoaded(result, 'apps');
                         $scope.view.paginator.apps.loading = false;
                     });
