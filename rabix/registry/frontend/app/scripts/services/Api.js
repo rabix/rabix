@@ -1,7 +1,7 @@
 "use strict";
 
 angular.module('registryApp')
-    .factory('Api', ['$resource', '$http', function ($resource, $http) {
+    .factory('Api', ['$resource', '$http', '$q', function ($resource, $http, $q) {
 
         var apiUrlRemote = 'http://5e9e1fd7.ngrok.com';
         var apiUrl = '';
@@ -40,6 +40,16 @@ angular.module('registryApp')
         api.logout = $resource(apiUrl + '/logout', {}, {
             confirm: {method: 'POST'}
         });
+
+        //api.subscribe = $resource(apiUrl + '/subscribe';
+
+        api.subscribe = {
+            post: function(email) {
+                var deferred = $q.defer();
+                deferred.resolve({message: 'ok', email: email});
+                return {$promise: deferred.promise};
+            }
+        };
 
         return api;
 

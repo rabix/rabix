@@ -68,6 +68,19 @@ angular.module('registryApp')
         };
 
         /**
+         * Subscribe user to the mailin list
+         *
+         * @params {string} email
+         * @returns {object} $promise
+         */
+        self.subscribe = function(email) {
+
+            var promise = Api.subscribe.post({email: email}).$promise;
+
+            return promise;
+        };
+
+        /**
          * Parse the user data
          *
          * @param result

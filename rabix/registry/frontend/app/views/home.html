@@ -58,6 +58,27 @@
 
         </section>
 
+        <section class="subscribe">
+
+            <form name="view.form" ng-submit="subscribeToMailingList()" novalidate>
+                <div class="form-group" ng-class="{'has-error': view.form.email.$invalid && view.showError}">
+                    <div class="input-group input-group-lg">
+
+                        <input type="email" class="form-control" name="email" ng-model="subscribe.email" placeholder="Join our mailing list" required>
+
+                        <span class="input-group-btn">
+                            <button type="submit" class="btn btn-primary" type="button">Subscribe</button>
+                        </span>
+
+                    </div>
+
+                    <p ng-if="!(view.message | isEmpty)" class="alert alert-success" ng-class="{'alert-success': view.message.status, 'alert-danger': !view.message.status}">{{ view.message.trace }}</p>
+
+                </div>
+            </form>
+
+        </section>
+
     </div>
     <!-- # .container -->
 </div>
