@@ -11,40 +11,33 @@ angular.module('registryApp')
         $scope.view = {};
         $scope.view.loading = true;
         $scope.view.build = null;
-        $scope.view.tab = angular.isUndefined($routeParams.tab) ? 'details': $routeParams.tab;
 
         /* get the build details */
         Build.getBuild($routeParams.id).then(function(result) {
 
             $scope.view.build = result;
 
-            /* and if in log tab */
-            if ($routeParams.tab === 'log') {
-
-                $scope.view.log = [];
-                $scope.view.contentLength = 0;
+            $scope.view.log = [];
+            $scope.view.contentLength = 0;
 
 
-                /* start lo(n)g polling if build is running */
-                if (result.status === 'running') {
+            /* start lo(n)g polling if build is running */
+            if (result.status === 'running') {
 
-                    console.log('lo(n)g polling started');
+                console.log('lo(n)g polling started');
 
-                    $scope.view.loading = false;
-
-                    logIntervalId = $interval(function() {
-                        Build.getLog($routeParams.id, $scope.view.contentLength).then(logLoaded);
-                    }, 2000);
-
-                } else {
-                    /* other than that take the log for the current build */
-                    Build.getLog($routeParams.id, 0).then(function(result) {
-                        $scope.view.loading = false;
-                        $scope.view.log = $scope.view.log.concat(result.content.split('\n'));
-                    });
-                }
-            } else {
                 $scope.view.loading = false;
+
+                logIntervalId = $interval(function() {
+                    Build.getLog($routeParams.id, $scope.view.contentLength).then(logLoaded);
+                }, 2000);
+
+            } else {
+                /* other than that take the log for the current build */
+                Build.getLog($routeParams.id, 0).then(function(result) {
+                    $scope.view.loading = false;
+                    $scope.view.log = $scope.view.log.concat(result.content.split('\n'));
+                });
             }
         });
 

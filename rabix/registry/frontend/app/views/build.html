@@ -16,12 +16,6 @@
 
     <div ng-if="!view.loading" class="container" id="log-content" height>
 
-        <ul class="nav nav-tabs reverse">
-            <li ng-class="{active: view.tab === 'details'}"><a ng-href="#/build/{{ view.build.id }}">Details</a></li>
-            <li ng-class="{active: view.tab === 'log'}"><a ng-href="#/build/{{ view.build.id }}/log">Log</a></li>
-        </ul>
-        <!-- # .nav-tabs -->
-
         <div class="description">
             <div class="panel panel-warning">
                 <div class="panel-heading"><h4 class="panel-title">Info</h4></div>
@@ -34,7 +28,7 @@
         </div>
         <!-- # .description -->
 
-        <div class="details" ng-if="view.tab !== 'log'">
+        <div class="details">
 
             <section>
                 <h4>Author</h4>
@@ -47,7 +41,7 @@
             </section>
 
             <section>
-                <h4>Url</h4>
+                <h4>Commit URL</h4>
                 <p><a href="{{ view.build.head_commit.url }}" target="_blank">{{ view.build.head_commit.url }}</a></p>
             </section>
 
@@ -74,7 +68,7 @@
         </div>
         <!-- # .details -->
 
-        <div class="snippet log" ng-if="view.tab === 'log'">
+        <div class="snippet log">
             <p>Log trace</p>
             <pre>
                 <div class="line" ng-repeat="line in view.log track by $index">{{ line | trim }}</div>

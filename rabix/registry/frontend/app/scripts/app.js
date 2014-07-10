@@ -44,10 +44,6 @@ angular
                 templateUrl: 'views/build.html',
                 controller: 'BuildCtrl'
             })
-            .when('/build/:id/:tab', {
-                templateUrl: 'views/build.html',
-                controller: 'BuildCtrl'
-            })
             .when('/repos', {
                 templateUrl: 'views/repos.html',
                 controller: 'ReposCtrl'
