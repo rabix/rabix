@@ -1,4 +1,4 @@
-<div class="page settings">
+<div class="page settings" loading ng-class="{loading: view.loadingDelayed, 'loading-fade': view.loadingFaded}">
 
     <div class="heading">
         <div class="container">
@@ -27,7 +27,7 @@
 
         </section>
 
-        <section class="token-info">
+        <section ng-if="!view.loading" class="token-info">
             <p ng-if="view.token"><strong>Your token:</strong> {{ view.token }}</p>
             <p ng-if="!view.token">You don't have generated token at this moment</p>
         </section>

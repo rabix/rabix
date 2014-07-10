@@ -14,6 +14,13 @@ angular.module('registryApp')
         $scope.view.trace = {generate: '', revoke: ''};
         $scope.view.token = '';
 
+        $scope.view.loading = true;
+
+        User.getToken().then(function (result) {
+            $scope.view.token = result.token;
+            $scope.view.loading = false;
+        });
+
         /**
          * Generate the token for the user
          */
@@ -51,10 +58,6 @@ angular.module('registryApp')
 
             });
         };
-
-        User.getToken().then(function (result) {
-            $scope.view.token = result.token;
-        });
 
         /**
          * Cancel token generate timeout
