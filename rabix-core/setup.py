@@ -7,7 +7,7 @@ from rabix import __version__
 
 
 setup(
-    name="rabix-lib",
+    name="rabix-core",
     version=__version__,
     packages=['rabix', 'rabix.common', 'rabix.sdk'],
     scripts=['scripts/rabix-adapter'],
