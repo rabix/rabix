@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('registryApp')
-    .controller('BuildCtrl', ['$scope', '$routeParams', '$window', '$interval', '$document', '$timeout', 'Build', 'Header', function ($scope, $routeParams, $window, $interval, $document, $timeout, Build, Header) {
+    .controller('BuildCtrl', ['$scope', '$routeParams', '$interval', '$document', '$timeout', 'Build', 'Header', function ($scope, $routeParams, $interval, $document, $timeout, Build, Header) {
 
         var logIntervalId;
         var scrollTimeoutId;
@@ -47,13 +47,6 @@ angular.module('registryApp')
                 $scope.view.loading = false;
             }
         });
-
-        /**
-         * Go back to the previous screen
-         */
-        $scope.goBack = function () {
-            $window.history.back();
-        };
 
         /**
          * Callback when log for the build is loaded

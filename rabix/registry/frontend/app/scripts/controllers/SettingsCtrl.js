@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('registryApp')
-    .controller('SettingsCtrl', ['$scope', '$window', 'Header', 'User', function ($scope, $window, Header, User) {
+    .controller('SettingsCtrl', ['$scope', 'Header', 'User', function ($scope, Header, User) {
 
         Header.setActive('settings');
 
@@ -9,13 +9,6 @@ angular.module('registryApp')
         $scope.view.generating = false;
         $scope.view.revoking = false;
         $scope.view.trace = '';
-
-        /**
-         * Go back to the previous screen
-         */
-        $scope.goBack = function () {
-            $window.history.back();
-        };
 
         /**
          * Generate the token for the user

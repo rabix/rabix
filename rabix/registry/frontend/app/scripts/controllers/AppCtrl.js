@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('registryApp')
-    .controller('AppCtrl', ['$scope', '$routeParams', '$window', 'App', 'Header', function ($scope, $routeParams, $window, App, Header) {
+    .controller('AppCtrl', ['$scope', '$routeParams', 'App', 'Header', function ($scope, $routeParams, App, Header) {
 
         Header.setActive('apps');
 
@@ -13,13 +13,6 @@ angular.module('registryApp')
             $scope.view.loading = false;
             $scope.view.app = result;
         });
-
-        /**
-         * Go back to the previous screen
-         */
-        $scope.goBack = function () {
-            $window.history.back();
-        };
 
 
     }]);

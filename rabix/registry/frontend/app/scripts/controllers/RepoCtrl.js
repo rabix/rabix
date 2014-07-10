@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('registryApp')
-    .controller('RepoCtrl', ['$scope', '$routeParams', '$window', '$q', 'Repo', 'App', 'Build', 'Header', function ($scope, $routeParams, $window, $q, Repo, App, Build, Header) {
+    .controller('RepoCtrl', ['$scope', '$routeParams', '$q', 'Repo', 'App', 'Build', 'Header', function ($scope, $routeParams, $q, Repo, App, Build, Header) {
 
         Header.setActive('repos');
 
@@ -64,13 +64,6 @@ angular.module('registryApp')
 
             return result.items;
 
-        };
-
-        /**
-         * Go back to the previous screen
-         */
-        $scope.goBack = function () {
-            $window.history.back();
         };
 
         /**
