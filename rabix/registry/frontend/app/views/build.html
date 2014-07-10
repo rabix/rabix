@@ -17,6 +17,7 @@
     <div ng-if="!view.loading" class="container" id="log-content" height>
 
         <div class="description">
+
             <div class="panel panel-warning">
                 <div class="panel-heading"><h4 class="panel-title">Info</h4></div>
                 <div class="panel-body">
@@ -24,11 +25,8 @@
                     <p><strong>Date:</strong> {{ view.build.head_commit.timestamp | date:'short' }}</p>
                 </div>
             </div>
-            <strong>Message:</strong> {{ view.build.head_commit.message }}
-        </div>
-        <!-- # .description -->
 
-        <div class="details">
+            <p><strong>Message:</strong> {{ view.build.head_commit.message }}</p>
 
             <section>
                 <h4>Author</h4>
@@ -44,6 +42,11 @@
                 <h4>Commit URL</h4>
                 <p><a href="{{ view.build.head_commit.url }}" target="_blank">{{ view.build.head_commit.url }}</a></p>
             </section>
+
+        </div>
+        <!-- # .description -->
+
+        <div class="details">
 
             <div class="snippet list" ng-if="view.build.head_commit.added.length > 0">
                 <p>Added files</p>
