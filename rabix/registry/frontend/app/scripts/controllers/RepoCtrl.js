@@ -36,7 +36,7 @@ angular.module('registryApp')
 
         Repo.getRepo(repoId).then(function (repo) {
 
-            $scope.view.repo = repo;
+            $scope.view.repo = Repo.parseUser(repo);
 
             $q.all([
                 App.getApps(0, '', repoId),

@@ -1,0 +1,38 @@
+<div class="page add-your-github-repo" loading ng-class="{loading: view.loadingDelayed, 'loading-fade': view.loadingFaded}">
+
+    <div class="heading">
+        <div class="container">
+            <a ng-href="#/repos" class="btn btn-default pull-left go-back"><i class="glyphicon glyphicon-chevron-left"></i> Back</a>
+            <h1>Add Your GitHub Repo <strong class="mock-label">[mock]</strong></h1>
+        </div>
+    </div>
+    <!-- # .heading -->
+
+    <div ng-if="!view.loading" class="container">
+
+        <table class="table table-hover repos">
+            <thead>
+                <tr>
+                    <th class="field-repo-id">Owner/Name</th>
+                    <th class="field-action">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr ng-repeat="repo in view.repos">
+                    <td class="field-repo-id">
+                        <a ng-href="{{ repo.html_url }}" target="_blank">{{ repo.id }}</a>
+                    </td>
+                    <td class="field-action">
+                        <button ng-if="!repo.added" ng-click="addRepo(repo)" ng-disabled="repo.adding" class="btn btn-default glyphicon glyphicon-plus"></button>
+                        <span ng-if="repo.added" class="icon-added glyphicon glyphicon-ok"></span>
+                    </td>
+                </tr>
+                <tr ng-if="view.repos.length === 0">
+                    <td colspan="2"><p class="alert alert-info">There are no GitHub repos</p></td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+    <!-- # .container -->
+</div>

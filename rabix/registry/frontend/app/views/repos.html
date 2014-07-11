@@ -14,16 +14,19 @@
                         </div>
                     </form>
                 </div>
+                <div class="col-md-8">
+                    <a ng-href="#/add-your-github-repo" class="btn btn-default pull-right add-github">Add Your GitHub Repo</a>
+                </div>
             </div>
         </div>
     </div>
     <!-- # .filters -->
 
     <div ng-if="!view.loading" class="container" height>
-        <table class="table table-hover">
+        <table class="table table-hover repos">
             <thead>
                 <tr>
-                    <th class="field-id">Repo/User</th>
+                    <th class="field-id">User/Repo</th>
                     <th class="field-created-by">Created By</th>
                 </tr>
             </thead>

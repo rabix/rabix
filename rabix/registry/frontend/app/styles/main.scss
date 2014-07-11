@@ -103,12 +103,21 @@ body {
 
   /* Repos page */
   &.repos {
-    .table {
-      th {
-        &.field-id {
-          width: 20%;
-        }
-      }
+    .add-github {
+      background-image: url(../images/icon-github.png);
+      background-repeat: no-repeat;
+      background-position: center left 6px;
+      padding-left: 30px;
+    }
+
+  }
+
+  /* Add Your GitHub Repo */
+  &.add-your-github-repo {
+    .icon-added {
+      color: $green;
+      float: right;
+      padding: 7px 12px;
     }
   }
 
@@ -296,6 +305,28 @@ body {
         &.field-id {
           a {
             width: 50px;
+          }
+        }
+      }
+    }
+    &.repos {
+      th {
+        &.field-id, &.field-repo-id {
+          width: 20%;
+        }
+        &.field-action {
+          text-align: right;
+        }
+      }
+      td {
+        &.field-repo-id {
+          a {
+            padding: 7px 0;
+          }
+        }
+        &.field-action {
+          .btn {
+            float: right;
           }
         }
       }
@@ -507,6 +538,12 @@ body {
         opacity: 1;
       }
     }
+  }
+
+  .mock-label {
+    font-size: 14px;
+    padding: 6px 0;
+    float: right;
   }
 
 }

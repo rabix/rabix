@@ -28,7 +28,34 @@ angular.module('registryApp')
             });
         };
 
-        api.repos = $resource(apiUrl + '/repos/:owner/:name', {owner: '@owner', name: '@name'});
+        api.repos = $resource(apiUrl + '/repos/:owner/:name', {owner: '@owner', name: '@name'}, {
+            add: {method: 'PUT'}
+        });
+
+        //api.gitHubRepos = $resource(apiUrl + '/github-repos', {}, {});
+
+        api.reposMock = {
+            add: function() {
+                var deferred = $q.defer();
+                deferred.resolve({secred: 'blabla-bla-tra-la-bla'});
+                return {$promise: deferred.promise};
+            }
+        };
+
+        api.gitHubRepos = {
+            get: function() {
+                var deferred = $q.defer();
+
+                var items = [];
+                _.times(10, function (i) {
+                    var added = _.random(0, 1);
+                    items.push({id: 'owner/repo-'+i, 'html_url': 'http://www.github.com/repo-'+i, added: added });
+                });
+
+                deferred.resolve({items: items});
+                return {$promise: deferred.promise};
+            }
+        };
 
         api.user = $resource(apiUrl + '/user');
 

@@ -56,6 +56,14 @@ angular
                 templateUrl: 'views/settings.html',
                 controller: 'SettingsCtrl'
             })
+            .when('/add-your-github-repo', {
+                templateUrl: 'views/add-your-github-repo.html',
+                controller: 'AddYourGitHubRepoCtrl'
+            })
+            .when('/repo-instructions/:id', {
+                templateUrl: 'views/repo-instructions.html',
+                controller: 'RepoInstructionsCtrl'
+            })
             .otherwise({
                 redirectTo: '/'
             });

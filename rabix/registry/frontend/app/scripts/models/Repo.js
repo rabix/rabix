@@ -45,6 +45,58 @@ angular.module('registryApp')
 
         };
 
+        /**
+         * Add repo to the user
+         *
+         * @param id
+         * @returns {object} $promise
+         */
+        self.addRepo = function(id) {
+
+            var params = id.split('/');
+            var owner = params[0];
+            var name = params[1];
+
+            // TODO replace reposMock with repos when api handler ready
+            var promise = Api.reposMock.add({owner: owner, name: name}).$promise;
+
+            return promise;
+
+        };
+
+        /**
+         * List GitHub repos
+         *
+         * @returns {object} $promise
+         */
+        self.getHitHubRepos = function() {
+
+            var promise = Api.gitHubRepos.get().$promise;
+
+            return promise;
+
+        };
+
+        /**
+         * Parse the repo data
+         *
+         * @param result
+         * @returns {object}
+         */
+        self.parseUser = function (result) {
+
+            var params = ['created_by', 'id', 'secret'];
+            var repo = {};
+
+            _.each(params, function (param) {
+                if (angular.isDefined(result[param])) {
+                    repo[param] = result[param];
+                }
+            });
+
+            return repo;
+        };
+
         return self;
 
     }]);
