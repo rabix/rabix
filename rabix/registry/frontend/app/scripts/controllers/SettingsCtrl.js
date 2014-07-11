@@ -61,7 +61,7 @@ angular.module('registryApp')
                 $scope.cancelTokenTimeout();
 
                 $scope.view.getting = false;
-                $scope.view.trace.token = result.token;
+                $scope.view.trace.token = _.isEmpty(result.token) ? 'You didn\'t generate token' : result.token;
 
                 tokenTimeoutId = $timeout(function () {
                     $scope.view.trace.token = '';
