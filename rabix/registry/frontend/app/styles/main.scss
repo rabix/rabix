@@ -109,7 +109,13 @@ body {
       background-position: center left 6px;
       padding-left: 30px;
     }
+  }
 
+  /* Repo page */
+  &.repo {
+    .created-by {
+      font-size: 15px;
+    }
   }
 
   /* Add Your GitHub Repo */

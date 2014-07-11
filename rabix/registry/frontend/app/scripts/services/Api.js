@@ -32,8 +32,7 @@ angular.module('registryApp')
             add: {method: 'PUT'}
         });
 
-        //api.gitHubRepos = $resource(apiUrl + '/github-repos', {}, {});
-
+        // TODO remove later when /github-repos ready
         api.reposMock = {
             add: function() {
                 var deferred = $q.defer();
@@ -41,6 +40,9 @@ angular.module('registryApp')
                 return {$promise: deferred.promise};
             }
         };
+
+        // TODO uncomment later when api ready
+        //api.gitHubRepos = $resource(apiUrl + '/github-repos', {}, {});
 
         api.gitHubRepos = {
             get: function() {
@@ -68,6 +70,7 @@ angular.module('registryApp')
             confirm: {method: 'POST'}
         });
 
+        // TODO uncomment later when api ready
         //api.subscribe = $resource(apiUrl + '/subscribe';
 
         api.subscribe = {

@@ -3,21 +3,12 @@
     <div class="heading">
         <div class="container">
             <a ng-href="#/repos" class="btn btn-default pull-left go-back"><i class="glyphicon glyphicon-chevron-left"></i> Back</a>
-            <h1>{{ view.repo.id }}</h1>
+            <h1>{{ view.repo.id }} <span class="created-by">({{ view.repo.created_by }})</span></h1>
         </div>
     </div>
     <!-- # .heading -->
 
     <div ng-if="!view.loading" class="container" height>
-
-        <div class="description">
-            <div class="panel panel-warning">
-                <div class="panel-heading"><h4 class="panel-title">Info</h4></div>
-                <div class="panel-body">
-                    <p><strong>Created By</strong> {{ view.repo.created_by }}</p>
-                </div>
-            </div>
-        </div>
 
         <div class="nav nav-tabs">
             <li ng-class="{active: view.tab === 'apps'}" class=""><a href ng-click="switchTab('apps')">Apps</a></li>
