@@ -3,37 +3,29 @@
 angular.module('registryApp')
     .controller('SettingsCtrl', ['$scope', '$timeout', 'Header', 'User', function ($scope, $timeout, Header, User) {
 
-        var generateTimeoutId;
-        var revokeTimeoutId;
+        var tokenTimeoutId;
 
         Header.setActive('settings');
 
         $scope.view = {};
         $scope.view.generating = false;
         $scope.view.revoking = false;
-        $scope.view.trace = {generate: '', revoke: ''};
-        $scope.view.token = '';
-
-        $scope.view.loading = true;
-
-        User.getToken().then(function (result) {
-            $scope.view.token = result.token;
-            $scope.view.loading = false;
-        });
+        $scope.view.getting = false;
+        $scope.view.trace = {generate: '', revoke: '', token: ''};
 
         /**
          * Generate the token for the user
          */
         $scope.generateToken = function() {
             $scope.view.generating = true;
-            User.generateToken().then(function(result) {
+            User.generateToken().then(function() {
+
+                $scope.cancelTokenTimeout();
 
                 $scope.view.generating = false;
                 $scope.view.trace.generate = 'You successfully generated new token';
-                $scope.view.token = result.token;
 
-                $scope.cancelGenerateTimeout();
-                generateTimeoutId = $timeout(function () {
+                tokenTimeoutId = $timeout(function () {
                     $scope.view.trace.generate = '';
                 }, 3000);
 
@@ -47,12 +39,12 @@ angular.module('registryApp')
             $scope.view.revoking = true;
             User.revokeToken().then(function() {
 
+                $scope.cancelTokenTimeout();
+
                 $scope.view.revoking = false;
                 $scope.view.trace.revoke = 'Your token has been revoked';
-                $scope.view.token = '';
 
-                $scope.cancelRevokeTimeout();
-                revokeTimeoutId = $timeout(function () {
+                tokenTimeoutId = $timeout(function () {
                     $scope.view.trace.revoke = '';
                 }, 3000);
 
@@ -60,30 +52,37 @@ angular.module('registryApp')
         };
 
         /**
-         * Cancel token generate timeout
+         * Get the current token for the user
          */
-        $scope.cancelGenerateTimeout = function () {
-            if (angular.isDefined(generateTimeoutId)) {
-                $timeout.cancel(generateTimeoutId);
-                generateTimeoutId = undefined;
-            }
+        $scope.getToken = function () {
+            $scope.view.getting = true;
+            User.getToken().then(function(result) {
+
+                $scope.cancelTokenTimeout();
+
+                $scope.view.getting = false;
+                $scope.view.trace.token = result.token;
+
+                tokenTimeoutId = $timeout(function () {
+                    $scope.view.trace.token = '';
+                }, 3000);
+
+            });
         };
 
         /**
-         * Cancel token revoke timeout
+         * Cancel token timeout
          */
-        $scope.cancelRevokeTimeout = function () {
-            if (angular.isDefined(revokeTimeoutId)) {
-                $timeout.cancel(revokeTimeoutId);
-                revokeTimeoutId = undefined;
+        $scope.cancelTokenTimeout = function () {
+            if (angular.isDefined(tokenTimeoutId)) {
+                $scope.view.trace = {generate: '', revoke: '', token: ''};
+                $timeout.cancel(tokenTimeoutId);
+                tokenTimeoutId = undefined;
             }
         };
 
         $scope.$on('$destroy', function () {
-            $scope.cancelGenerateTimeout();
-            $scope.cancelRevokeTimeout();
+            $scope.cancelTokenTimeout();
         });
-
-
 
     }]);

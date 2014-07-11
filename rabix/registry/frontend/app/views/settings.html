@@ -1,4 +1,4 @@
-<div class="page settings" loading ng-class="{loading: view.loadingDelayed, 'loading-fade': view.loadingFaded}">
+<div class="page settings">
 
     <div class="heading">
         <div class="container">
@@ -10,27 +10,30 @@
 
     <div class="container">
 
-        <section class="actions">
-            <div class="row">
-                <div class="col-md-4 col-md-offset-2">
+        <div class="row actions">
+            <div class="col-md-4">
+                <div class="snippet token">
                     <p>You can (re)generate your token</p>
                     <button class="btn btn-primary" ng-click="generateToken()" ng-disabled="view.generating">(Re)generate Token</button>
-                    <p ng-if="view.trace.generate !== ''" class="alert alert-success">{{ view.trace.generate }}</p>
                 </div>
-
-                <div class="col-md-4">
+                <p ng-if="view.trace.generate !== ''" class="alert alert-success">{{ view.trace.generate }}</p>
+            </div>
+            <div class="col-md-4">
+                <div class="snippet token">
                     <p>You can revoke your token</p>
                     <button class="btn btn-danger" ng-click="revokeToken()" ng-disabled="view.revoking">Revoke Token</button>
-                    <p ng-if="view.trace.revoke !== ''" class="alert alert-success">{{ view.trace.revoke }}</p>
                 </div>
+                <p ng-if="view.trace.revoke !== ''" class="alert alert-success">{{ view.trace.revoke }}</p>
             </div>
+            <div class="col-md-4">
+                <div class="snippet token">
+                    <p>Check your token</p>
+                    <button class="btn btn-default" ng-click="getToken()" ng-disabled="view.getting">Check Token</button>
+                </div>
+                <p ng-if="view.trace.token !== ''" class="alert alert-success">{{ view.trace.token }}</p>
+            </div>
+        </div>
 
-        </section>
-
-        <section ng-if="!view.loading" class="token-info">
-            <p ng-if="view.token"><strong>Your token:</strong> {{ view.token }}</p>
-            <p ng-if="!view.token">You don't have generated token at this moment</p>
-        </section>
 
     </div>
     <!-- # .container -->

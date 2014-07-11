@@ -117,20 +117,10 @@ body {
     .actions {
       margin: 30px 0;
       .col-md-4 {
-        text-align: center;
-        padding: 40px 20px 0 20px;
-        height: 170px;
-        &:first-child {
-          border-right: 1px solid #ddd;
-        }
         .alert {
-          padding: 5px;
-          margin-top: 20px;
+          padding: 5px 10px;
+          margin-top: 10px;
         }
-      }
-      .alert {
-        margin: 30px 0 0 0;
-        text-align: center;
       }
     }
     .token-info {
@@ -139,7 +129,11 @@ body {
     }
   }
 
+  /* Home page */
   &.home {
+    & > .container {
+      height: auto !important;
+    }
     .log-in-btn {
       width: 300px;
       margin: 20px auto;
@@ -437,6 +431,13 @@ body {
         @include border-radius(0 3px 3px 0);
         padding: 10px 10px 10px 20px;
         margin: 0;
+      }
+    }
+
+    &.token {
+      margin-bottom: 10px;
+      .btn {
+        margin-left: 5px;
       }
     }
   }
