@@ -1,7 +1,7 @@
 "use strict";
 
 angular.module('registryApp')
-    .factory('Repo', ['Api', '$q', function (Api, $q) {
+    .factory('Repo', ['Api', function (Api) {
 
         var self = {};
 
@@ -9,11 +9,17 @@ angular.module('registryApp')
          * Get list of repos
          *
          * @params {integer} skip
+         * @params {string} searchTerm
          * @returns {object} $promise
          */
-        self.getRepos = function(skip) {
+        self.getRepos = function(skip, searchTerm) {
 
+            var isSearch = !(_.isUndefined(searchTerm) || _.isEmpty(searchTerm));
             var params = {skip: skip};
+
+            if (isSearch) {
+                params.q = searchTerm;
+            }
 
             var promise = Api.repos.get(params).$promise;
 

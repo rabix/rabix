@@ -64,7 +64,7 @@ angular.module('registryApp')
         };
 
         /**
-         * Search the apps by the term
+         * Search apps by the term
          */
         $scope.searchApps = function() {
 

@@ -23,22 +23,14 @@
                 <div class="panel-body">
                     <p><strong>Repo/User:</strong> <a ng-href="#/builds?repo={{ view.build.repo }}">{{ view.build.repo }}</a></p>
                     <p><strong>Date:</strong> {{ view.build.head_commit.timestamp | date:'short' }}</p>
+                    <p><strong>Author:</strong> {{ view.build.head_commit.author.name }}</p>
+                    <p><strong>Committer:</strong> {{ view.build.head_commit.committer.name }}</p>
                 </div>
             </div>
 
             <section>
                 <h4>Message</h4>
                 <p>{{ view.build.head_commit.message }}</p>
-            </section>
-
-            <section>
-                <h4>Author</h4>
-                <p>{{ view.build.head_commit.author.name }}</p>
-            </section>
-
-            <section>
-                <h4>Committer</h4>
-                <p>{{ view.build.head_commit.committer.name }}</p>
             </section>
 
             <section>

@@ -24,6 +24,7 @@ angular.module('registryApp')
         $scope.view = {};
         $scope.view.loading = true;
         $scope.view.repos = [];
+        $scope.view.searchTerm = '';
 
         $scope.view.paginator = {
             prev: false,
@@ -60,6 +61,26 @@ angular.module('registryApp')
             }
         };
 
+        /**
+         * Search repos by the term
+         */
+        $scope.searchRepos = function() {
+
+            $scope.view.page = 1;
+            Repo.getRepos(0, $scope.view.searchTerm).then(reposLoaded);
+
+        };
+
+        /**
+         * Reset the search
+         */
+        $scope.resetSearch = function() {
+
+            $scope.view.page = 1;
+            $scope.view.searchTerm = '';
+            Repo.getRepos(0).then(reposLoaded);
+
+        };
 
 
     }]);
