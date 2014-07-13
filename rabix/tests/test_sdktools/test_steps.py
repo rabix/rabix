@@ -70,7 +70,7 @@ def test_build_fail(container_mock):
     container_mock().is_success = mock.Mock(return_value=False)
 
     try:
-        steps.build('docker_client', 'image_id', ['cmd'], message='message',
+        steps.build('docker_client', 'image_id', cmd=['cmd'], message='message',
                     register={'repo': 'repo', 'tag': 'tag'})
     finally:
         assert_build(container_mock)
