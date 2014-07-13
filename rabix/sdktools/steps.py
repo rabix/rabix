@@ -13,7 +13,10 @@ log = logging.getLogger(__name__)
 MOUNT_POINT = '/build'
 
 
-def build(client, from_img, cmd, **kwargs):
+def build(client, from_img, **kwargs):
+    cmd = kwargs.pop('cmd', None)
+    if not cmd:
+        raise RabixError("Commands ('cmd') not specified!")
     entrypoint = ['/bin/sh', '-c']
     cfg = make_config(entrypoint=entrypoint)
     mount_point = kwargs.pop('mount_point', MOUNT_POINT)
@@ -38,7 +41,10 @@ def build(client, from_img, cmd, **kwargs):
     return container.image['Id']
 
 
-def run(client, from_img, cmd, **kwargs):
+def run(client, from_img, **kwargs):
+    cmd = kwargs.pop('cmd', None)
+    if not cmd:
+        raise RabixError("Commands ('cmd') not specified!")
     cfg = make_config(**kwargs)
     run_cmd = make_cmd(cmd)
     mount_point = kwargs.pop('mount_point', MOUNT_POINT)
@@ -47,6 +53,17 @@ def run(client, from_img, cmd, **kwargs):
     container.print_log()
     if not container.is_success():
         raise RabixError(container.docker.logs(container.container))
+
+
+def install_wrapper(client, from_img, **kwargs):
+    cmd = [
+        'pip install -e "git+https://github.com/rabix/rabix.git'
+        '@refactor/core#egg=rabix-core&subdirectory=rabix-core"',
+        'cd ' + MOUNT_POINT,
+        'pip install .'
+    ]
+    run(client, from_img, cmd=cmd)
+    pass
 
 
 def make_config(**kwargs):
@@ -104,13 +121,9 @@ class Runner(object):
             if not img:
                 raise RabixError("Base image ('from') not specified!")
 
-            cmd = resolved.pop('cmd', None)
-            if not cmd:
-                raise RabixError("Commands ('cmd') not specified!")
-
             log.info("Running step: %s" % step_name)
             self.context[step_name] = \
-                step_type(self.docker, img, cmd, **resolved)
+                step_type(self.docker, img, **resolved)
         pass
 
     def resolve(self, val):
