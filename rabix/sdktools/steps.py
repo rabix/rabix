@@ -58,7 +58,7 @@ def run(client, from_img, **kwargs):
 def install_wrapper(client, from_img, **kwargs):
     cmd = [
         'pip install -e "git+https://github.com/rabix/rabix.git'
-        '@refactor/core#egg=rabix-core&subdirectory=rabix-core"',
+        '@devel#egg=rabix-core&subdirectory=rabix-core"',
         'cd ' + MOUNT_POINT,
         'pip install .'
     ]
