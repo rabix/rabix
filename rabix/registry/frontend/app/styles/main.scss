@@ -14,6 +14,7 @@ html, body {
 body {
   color: #555;
   background-color: $gray;
+  background-image: url(../images/bg.png);
 }
 
 .main {
@@ -43,13 +44,16 @@ body {
   border-bottom: 1px solid #ddd;
   padding: 10px 0 0 0;
   min-height: $header;
-  background-color: #fff;
+  background-color: #29567D;
+  color: #fff;
   
   .logo {
     font-size: 30px;
     display: block;
-    color: #555;
+    color: #fff;
     text-decoration: none;
+    margin-top: -5px;
+    text-shadow: 2px 2px 2px #1A3852;
   }
   
   .welcome {
@@ -57,32 +61,41 @@ body {
     vertical-align: middle;
     font-size: 14px;
     line-height: 40px;
+    text-shadow: 1px 1px 1px #1A3852;
   }
 
   .nav-tabs {
     border-bottom: none;
-    margin-top: 1px;
-  }
-
-  .options {
-    color: #555;
-    display: inline-block;
-    vertical-align: middle;
-    .glyphicon {
-      font-size: 25px;
-      padding: 8px 10px;
-      cursor: pointer;
+    margin-bottom: -1px;
+    li {
+      a {
+        font-size: 16px;
+        margin-right: 5px;
+        text-shadow: 1px 1px 1px #1A3852;
+        color: $orange;
+        &:focus, &:hover {
+          text-shadow: 1px 1px 1px #fff;
+          color: darken($orange, 25%);
+        }
+      }
+      &.active {
+        a, a:hover, a:focus {
+          text-shadow: 1px 1px 1px #fff;
+        }
+      }
     }
   }
-  
+
   .log-out-btn {
     text-decoration: none;
-    color: #555;
+    color: #fff;
     font-size: 20px;
     vertical-align: middle;
+    display: inline-block;
     margin-left: 10px;
+    text-shadow: 1px 1px 1px #1A3852;
     &:hover {
-      color: #666;
+      color: #f3f3f3;
     }
   }
 
@@ -343,6 +356,7 @@ body {
   .filters {
     background-color: $gray;
     border-bottom: 1px solid #ddd;
+    background-image: url(../images/bg.png);
   }
 
   .heading {
@@ -377,6 +391,7 @@ body {
     padding: 10px 0;
     overflow: auto;
     background-color: $gray;
+    background-image: url(../images/bg.png);
     border-top: 1px solid #ddd;
     text-align: center;
     .page-number {
@@ -624,12 +639,19 @@ body {
   }
 }
 
+/* TB OVERRIDES
+================================================ */
 .nav-tabs {
   li {
+    a {
+      @include border-radius(0);
+      //color: #f3f3f3;
+    }
     &.active {
       a, a:focus, a:hover {
         color: #555;
         background-color: $gray;
+        background-image: url(../images/bg.png);
         border-bottom-color: $gray;
         cursor: pointer;
       }
@@ -640,6 +662,52 @@ body {
 form {
   .form-control {
     color: #555;
+    @include border-radius(0);
+  }
+}
+
+.alert {
+  @include border-radius(0);
+}
+
+.btn {
+  @include border-radius(0);
+}
+
+.input-group {
+  &.input-group-lg {
+    .form-control {
+      @include border-radius(0);
+    }
+    .btn {
+      @include border-radius(0);
+    }
+  }
+}
+
+.panel {
+  .panel-heading, .panel-body {
+    @include border-radius(0);
+  }
+}
+
+.table {
+  thead {
+    tr {
+      background-image: url(../images/bg.png);
+      border-left: 1px solid #ddd;
+      border-right: 1px solid #ddd;
+    }
+  }
+  &.table-hover {
+    tr {
+      &:hover {
+        background-image: url(../images/bg.png);
+        td {
+          background-color: transparent;
+        }
+      }
+    }
   }
 }
 
