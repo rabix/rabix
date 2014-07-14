@@ -45,7 +45,7 @@
                     <td class="field-committer">{{ build.head_commit.committer.name }}</td>
                     <td class="field-date">{{ build.head_commit.timestamp | date:'short' }}</td>
                 </tr>
-                <tr ng-if="view.builds.length === 0">
+                <tr class="empty" ng-if="view.builds.length === 0">
                     <td colspan="7"><p class="alert alert-info">There are no builds</p></td>
                 </tr>
             </tbody>

@@ -37,7 +37,7 @@
                     </td>
                     <td class="field-created-by">{{ repo.created_by }}</td>
                 </tr>
-                <tr ng-if="view.repos.length === 0">
+                <tr class="empty" ng-if="view.repos.length === 0">
                     <td colspan="2"><p class="alert alert-info">There are no repos</p></td>
                 </tr>
             </tbody>

@@ -37,7 +37,7 @@
                     <td><a ng-href="#/repo/{{ app.repo | encode }}">{{ app.repo }}</a></td>
                     <td><p tooltip="{{ app.description }}" tooltip-popup-delay="1000">{{ app.description }}</p></td>
                 </tr>
-                <tr ng-if="view.apps.length === 0">
+                <tr class="empty" ng-if="view.apps.length === 0">
                     <td colspan="3"><p class="alert alert-info">There are no apps found</p></td>
                 </tr>
             </tbody>

@@ -31,6 +31,7 @@ body {
       & > .container {
         height: 90%;
         overflow: auto;
+        margin-top: 2px;
         @include scrollBar($orange);
       }
     }
@@ -75,7 +76,7 @@ body {
         color: $orange;
         &:focus, &:hover {
           text-shadow: 1px 1px 1px #fff;
-          color: darken($orange, 25%);
+          color: darken($orange, 20%);
         }
       }
       &.active {
@@ -185,7 +186,7 @@ body {
 
   h1 {
     margin: 0;
-    padding: 15px 0 15px 90px;
+    padding: 13px 0 13px 90px;
     font-size: 26px;
 
     &.main-title {
@@ -194,8 +195,6 @@ body {
       font-size: 28px;
       width: 610px;
       margin: 0 auto;
-      border-left: 5px solid $orange;
-      border-right: 5px solid $orange;
       font-weight: normal;
     }
 
@@ -357,12 +356,13 @@ body {
     background-color: $gray;
     border-bottom: 1px solid #ddd;
     background-image: url(../images/bg.png);
+    @include box-shadow(0px 2px 0px 0px $orange);
   }
 
   .heading {
     margin: 0 0 20px 0;
     .go-back {
-      margin: 12px 0;
+      margin: 10px 0;
     }
   }
 
@@ -699,16 +699,36 @@ form {
       border-right: 1px solid #ddd;
     }
   }
-  &.table-hover {
+  tbody {
     tr {
-      &:hover {
-        background-image: url(../images/bg.png);
-        td {
-          background-color: transparent;
+      border-left: 1px solid transparent;
+      border-right: 1px solid transparent;
+    }
+  }
+  &.table-hover {
+    tbody {
+      tr {
+        &:hover {
+          background-image: url(../images/bg.png);
+          border-left: 1px solid #ddd;
+          border-right: 1px solid #ddd;
+          td {
+            background-color: transparent;
+          }
+          &.empty {
+            background-image: none;
+            border-left-color: transparent;
+            border-right-color: transparent;
+          }
         }
       }
     }
   }
+}
+
+pre {
+  background-color: #f2f2f2;
+  @include box-shadow(0 0 6px 3px #eee inset);
 }
 
 @mixin rotate-rule($prefix: '') {

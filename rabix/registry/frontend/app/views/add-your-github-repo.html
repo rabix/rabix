@@ -27,7 +27,7 @@
                         <span ng-if="repo.added" class="icon-added glyphicon glyphicon-ok"></span>
                     </td>
                 </tr>
-                <tr ng-if="view.repos.length === 0">
+                <tr class="empty" ng-if="view.repos.length === 0">
                     <td colspan="2"><p class="alert alert-info">There are no GitHub repos</p></td>
                 </tr>
             </tbody>

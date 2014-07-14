@@ -28,7 +28,7 @@
                         <td><a ng-href="#/app/{{ app.id }}">{{ app.name }}</a></td>
                         <td><p tooltip="{{ app.description }}" tooltip-popup-delay="1000">{{ app.description }}</p></td>
                     </tr>
-                    <tr ng-if="view.apps.length === 0">
+                    <tr class="empty" ng-if="view.apps.length === 0">
                         <td colspan="3"><p class="alert alert-info">There are no apps found in this repo</p></td>
                     </tr>
                 </tbody>
@@ -67,7 +67,7 @@
                         <td class="field-committer">{{ build.head_commit.committer.name }}</td>
                         <td class="field-date">{{ build.head_commit.timestamp | date:'short' }}</td>
                     </tr>
-                    <tr ng-if="view.builds.length === 0">
+                    <tr class="empty" ng-if="view.builds.length === 0">
                         <td colspan="7"><p class="alert alert-info">There are no builds found in this repo</p></td>
                     </tr>
                 </tbody>
