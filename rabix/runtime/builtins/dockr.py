@@ -209,10 +209,8 @@ class Container(object):
     def __init__(self, docker_client, image_id, container_config=None,
                  mount_point='/rabix'):
         self.docker = docker_client
-        try:
-            self.base_cmd = docker_client.inspect_image(image_id)['config']['Cmd']
-        except:
-            self.base_cmd = []
+        self.base_cmd = docker_client.inspect_image(image_id)['config']['Cmd']
+
         self.base_image_id = image_id
         self.mount_point = mount_point
         self.config = {
@@ -227,10 +225,7 @@ class Container(object):
             'WorkingDir': self.mount_point,
             'Dns': None
         }
-        entrypoint = docker_client.inspect_image(image_id) \
-            .get('config', {}).get('Entrypoint')
-        if not entrypoint:
-            self.config['Entrypoint'] = ['/bin/sh', '-c']
+
         self.config.update(container_config or {})
         self.binds = {os.path.abspath('.'): self.mount_point}
         self.container = None
@@ -298,10 +293,11 @@ class Container(object):
         )
         return self
 
-    def run(self, command):
+    def run(self, command, override_entrypoint=False):
         log.info("Running command %s", command)
-        if self.config.get('Entrypoint') == ['/bin/sh', '-c']:
-            command = [' && '.join(command)]
+        entrypoint = self.docker.inspect_image(self.base_image_id)['config']['Entrypoint']
+        if entrypoint and override_entrypoint:
+            self.config['Entrypoint'] = command.pop(0)
         self.container = self.docker.create_container_from_config(
             dict(self.config, Cmd=command)
         )

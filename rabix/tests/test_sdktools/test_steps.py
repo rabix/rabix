@@ -44,7 +44,7 @@ def test_build_ok(container_mock):
                 register={'repo': 'repo', 'tag': 'tag'})
 
     container_mock.assert_called_with('docker_client', 'image_id',
-                                      {'Entrypoint': ['/bin/sh', '-c']},
+                                      {},
                                       mount_point=steps.MOUNT_POINT)
     c.run.assert_called_with(['cmd'])
     c.is_success.assert_called_with()
@@ -79,10 +79,10 @@ def test_build_fail(container_mock):
 
 def assert_build(container):
     container.assert_called_with('docker_client', 'image_id',
-                                 {'Entrypoint': ['/bin/sh', '-c']},
+                                 {},
                                  mount_point=steps.MOUNT_POINT)
     instance = container()
-    instance.run.assert_called_with(['cmd'])
+    instance.run.assert_called_with(['cmd'], override_entrypoint=True)
     instance.is_success.assert_called_with()
 
 
