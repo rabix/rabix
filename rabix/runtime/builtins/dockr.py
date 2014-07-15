@@ -209,31 +209,32 @@ class Container(object):
     def __init__(self, docker_client, image_id, container_config=None,
                  mount_point='/rabix'):
         self.docker = docker_client
-        self.base_cmd = docker_client.inspect_image(image_id)['config']['Cmd']
 
-        self.base_image_id = image_id
-        self.mount_point = mount_point
         self.config = {
-            'Image': self.base_image_id,
+            'Image': image_id,
             'AttachStdin': False,
             'AttachStdout': False,
             'AttachStderr': False,
             'Tty': False,
             'Privileged': False,
             'Memory': 0,
-            'Volumes': {self.mount_point: {}},
-            'WorkingDir': self.mount_point,
+            'Volumes': {mount_point: {}},
+            'WorkingDir': mount_point,
             'Dns': None
         }
 
+        self.base_cmd = self.image_property('Cmd')
         self.config.update(container_config or {})
-        self.binds = {os.path.abspath('.'): self.mount_point}
+        self.binds = {os.path.abspath('.'): mount_point}
         self.container = None
         self.image = None
 
     def _check_container_ready(self):
         if not self.container:
             raise RuntimeError('Container not instantiated yet.')
+
+    def image_property(self, prop):
+        return self.docker.inspect_image(self.config['Image'])['config'][prop]
 
     def inspect(self):
         self._check_container_ready()
@@ -295,9 +296,11 @@ class Container(object):
 
     def run(self, command, override_entrypoint=False):
         log.info("Running command %s", command)
-        entrypoint = self.docker.inspect_image(self.base_image_id)['config']['Entrypoint']
+
+        entrypoint = self.image_property('Entrypoint')
         if entrypoint and override_entrypoint:
             self.config['Entrypoint'] = command.pop(0)
+
         self.container = self.docker.create_container_from_config(
             dict(self.config, Cmd=command)
         )
