@@ -1,0 +1,94 @@
+/* TWITTER OVERRIDES OVERRIDES
+================================================ */
+
+.nav-tabs {
+  li {
+    a {
+      @include border-radius(0);
+    }
+    &.active {
+      a,
+      a:focus,
+      a:hover {
+        color: #555;
+        background-color: $gray;
+        background-image: url(../images/bg.png);
+        border-bottom-color: $gray;
+        cursor: pointer;
+      }
+    }
+  }
+}
+
+form {
+  .form-control {
+    color: #555;
+    @include border-radius(0);
+  }
+}
+
+.alert {
+  @include border-radius(0);
+}
+
+.btn {
+  @include border-radius(0);
+}
+
+.input-group {
+  &.input-group-lg {
+    .form-control {
+      @include border-radius(0);
+    }
+    .btn {
+      @include border-radius(0);
+    }
+  }
+}
+
+.panel {
+  .panel-heading, .panel-body {
+    @include border-radius(0);
+  }
+}
+
+.table {
+  thead {
+    tr {
+      background-image: url(../images/bg.png);
+      border-left: 1px solid #ddd;
+      border-right: 1px solid #ddd;
+    }
+  }
+  tbody {
+    tr {
+      border-left: 1px solid transparent;
+      border-right: 1px solid transparent;
+    }
+  }
+  &.table-hover {
+    tbody {
+      tr {
+        &:hover {
+          background-image: url(../images/bg.png);
+          border-left: 1px solid #ddd;
+          border-right: 1px solid #ddd;
+          td {
+            background-color: transparent;
+          }
+          &.empty {
+            background-image: none;
+            border-left-color: transparent;
+            border-right-color: transparent;
+          }
+        }
+      }
+    }
+  }
+}
+
+pre {
+  background-color: #f2f2f2;
+  @include box-shadow(0 0 6px 3px #eee inset);
+}
+

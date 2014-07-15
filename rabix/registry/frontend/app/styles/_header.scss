@@ -1,0 +1,67 @@
+/* HEADER
+================================================ */
+
+$dark-blue: #1A3852;
+$header-blue: #29567D;
+
+.header {
+  $header: 52px;
+  border-bottom: 1px solid #ddd;
+  padding: 10px 0 0 0;
+  min-height: $header;
+  background-color: $header-blue;
+  color: #fff;
+
+  .logo {
+    font-size: 30px;
+    display: block;
+    color: #fff;
+    text-decoration: none;
+    margin-top: -5px;
+    text-shadow: 2px 2px 2px $dark-blue;
+  }
+
+  .welcome {
+    display: inline-block;
+    vertical-align: middle;
+    font-size: 14px;
+    line-height: 40px;
+    text-shadow: 1px 1px 1px $dark-blue;
+  }
+
+  .nav-tabs {
+    border-bottom: none;
+    margin-bottom: -1px;
+    li {
+      a {
+        font-size: 16px;
+        margin-right: 5px;
+        text-shadow: 1px 1px 1px $dark-blue;
+        color: $orange;
+        &:focus, &:hover {
+          text-shadow: 1px 1px 1px #fff;
+          color: darken($orange, 20%);
+        }
+      }
+      &.active {
+        a, a:hover, a:focus {
+          text-shadow: 1px 1px 1px #fff;
+        }
+      }
+    }
+  }
+
+  .log-out-btn {
+    text-decoration: none;
+    color: #fff;
+    font-size: 20px;
+    vertical-align: middle;
+    display: inline-block;
+    margin-left: 10px;
+    text-shadow: 1px 1px 1px $dark-blue;
+    &:hover {
+      color: #f3f3f3;
+    }
+  }
+
+}
