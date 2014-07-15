@@ -86,6 +86,18 @@ def assert_build(container):
     instance.is_success.assert_called_with()
 
 
+def test_make_cmd():
+    eq_(steps.make_cmd('cmd'), ['cmd'])
+    eq_(steps.make_cmd('cmd --param "file name"'),
+        ['cmd', '--param', 'file name'])
+    eq_(steps.make_cmd(['cmd']), ['cmd'])
+    eq_(steps.make_cmd(['cmd', '--param']), ['cmd', '--param'])
+    eq_(steps.make_cmd(['cmd'], join=True), ['cmd'])
+    eq_(steps.make_cmd(['cmd'], join=True), ['cmd'])
+    eq_(steps.make_cmd(['cmd1 --param1', 'cmd2 --param2'], join=True),
+        ['/bin/sh', '-c', 'cmd1 --param1 && cmd2 --param2'])
+
+
 def test_resolve():
     r = steps.Runner(None, context={"x": "5"})
     eq_(r.resolve("something"), "something")
