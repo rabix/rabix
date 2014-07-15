@@ -44,7 +44,7 @@ def test_build_ok(container_mock):
                 register={'repo': 'repo', 'tag': 'tag'})
 
     container_mock.assert_called_with('docker_client', 'image_id',
-                                      {'Entrypoint': ['/bin/sh', '-c']},
+                                      {},
                                       mount_point=steps.MOUNT_POINT)
     c.run.assert_called_with(['cmd'])
     c.is_success.assert_called_with()
@@ -79,11 +79,23 @@ def test_build_fail(container_mock):
 
 def assert_build(container):
     container.assert_called_with('docker_client', 'image_id',
-                                 {'Entrypoint': ['/bin/sh', '-c']},
+                                 {},
                                  mount_point=steps.MOUNT_POINT)
     instance = container()
-    instance.run.assert_called_with(['cmd'])
+    instance.run.assert_called_with(['cmd'], override_entrypoint=True)
     instance.is_success.assert_called_with()
+
+
+def test_make_cmd():
+    eq_(steps.make_cmd('cmd'), ['cmd'])
+    eq_(steps.make_cmd('cmd --param "file name"'),
+        ['cmd', '--param', 'file name'])
+    eq_(steps.make_cmd(['cmd']), ['cmd'])
+    eq_(steps.make_cmd(['cmd', '--param']), ['cmd', '--param'])
+    eq_(steps.make_cmd(['cmd'], join=True), ['cmd'])
+    eq_(steps.make_cmd(['cmd'], join=True), ['cmd'])
+    eq_(steps.make_cmd(['cmd1 --param1', 'cmd2 --param2'], join=True),
+        ['/bin/sh', '-c', 'cmd1 --param1 && cmd2 --param2'])
 
 
 def test_resolve():

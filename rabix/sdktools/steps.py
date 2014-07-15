@@ -2,6 +2,7 @@ from __future__ import print_function
 import docker
 import logging
 import re
+import shlex
 from os import getenv
 
 import rabix.common.six as six
@@ -17,14 +18,13 @@ def build(client, from_img, **kwargs):
     cmd = kwargs.pop('cmd', None)
     if not cmd:
         raise RabixError("Commands ('cmd') not specified!")
-    entrypoint = ['/bin/sh', '-c']
-    cfg = make_config(entrypoint=entrypoint)
+    cfg = make_config()
     mount_point = kwargs.pop('mount_point', MOUNT_POINT)
     container = Container(client, from_img, cfg, mount_point=mount_point)
 
-    run_cmd = make_cmd(cmd)
+    run_cmd = make_cmd(cmd, join=True)
 
-    container.run(run_cmd)
+    container.run(run_cmd, override_entrypoint=True)
     container.print_log()
 
     if container.is_success():
@@ -46,7 +46,7 @@ def run(client, from_img, **kwargs):
     if not cmd:
         raise RabixError("Commands ('cmd') not specified!")
     cfg = make_config(**kwargs)
-    run_cmd = make_cmd(cmd)
+    run_cmd = make_cmd(cmd, join=True)
     mount_point = kwargs.pop('mount_point', MOUNT_POINT)
     container = Container(client, from_img, cfg, mount_point=mount_point)
     container.run(run_cmd)
@@ -77,15 +77,16 @@ def make_config(**kwargs):
     cfg = {k: v for k, v in six.iteritems(cfg) if k in keys}
     entrypoint = cfg.get("Entrypoint")
     if isinstance(entrypoint, six.string_types):
-        cfg['Entrypoint'] = [entrypoint]
+        cfg['Entrypoint'] = shlex.split(entrypoint)
 
     return cfg
 
 
-def make_cmd(cmd):
+def make_cmd(cmd, join=False):
     if isinstance(cmd, six.string_types):
-        cmd = [cmd]
-
+        return shlex.split(cmd)
+    elif isinstance(cmd, list) and len(cmd) > 1 and join:
+        return ['/bin/sh', '-c', ' && '.join(cmd)]
     return cmd
 
 
