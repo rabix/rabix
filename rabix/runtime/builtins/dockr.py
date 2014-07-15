@@ -11,7 +11,7 @@ from docker.errors import APIError
 from docker.utils.utils import parse_repository_tag
 
 from rabix import CONFIG
-from rabix.common.errors import ResourceUnavailable
+from rabix.common.errors import ResourceUnavailable, RabixError
 from rabix.common.util import handle_signal
 from rabix.common.protocol import WrapperJob, Outputs, JobError
 from rabix.common.loadsave import from_url, to_json
@@ -231,7 +231,7 @@ class Container(object):
 
     def _check_container_ready(self):
         if not self.container:
-            raise RuntimeError('Container not instantiated yet.')
+            raise RabixError('Container not instantiated yet.')
 
     def image_property(self, prop):
         return self.docker.inspect_image(self.config['Image'])['config'][prop]
@@ -295,11 +295,13 @@ class Container(object):
         return self
 
     def run(self, command, override_entrypoint=False):
+        if self.container:
+            raise RabixError('Container already started.')
         log.info("Running command %s", command)
 
         entrypoint = self.image_property('Entrypoint')
         if entrypoint and override_entrypoint:
-            self.config['Entrypoint'] = command.pop(0)
+            self.config['Entrypoint'] = [command.pop(0)]
 
         self.container = self.docker.create_container_from_config(
             dict(self.config, Cmd=command)
