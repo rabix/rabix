@@ -86,6 +86,17 @@ def assert_build(container):
     instance.is_success.assert_called_with()
 
 
+@mock.patch('rabix.sdktools.steps.Container')
+def test_install_wrapper(container_mock):
+    container_mock().is_success = mock.Mock(return_value=True)
+    steps.install_wrapper('docker_client', 'image_id')
+    container_mock().run.assert_called_with(
+        ['/bin/sh', '-c',
+         'pip install -e "git+https://github.com/rabix/rabix.git'
+         '@devel#egg=rabix-core&subdirectory=rabix-core" && '
+         'cd ' + steps.MOUNT_POINT + ' && pip install .'])
+
+
 def test_make_cmd():
     eq_(steps.make_cmd('cmd'), ['cmd'])
     eq_(steps.make_cmd('cmd --param "file name"'),
