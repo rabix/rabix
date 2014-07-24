@@ -20,7 +20,7 @@
         <![endif]-->
 
         <!-- Add your site or application content here -->
-        <div class="main">
+        <div class="main" ng-controller="MasterCtrl">
             <header></header>
             <div class="content" ng-view=""></div>
         </div>
@@ -68,6 +68,7 @@
         <script src="scripts/app.js"></script>
         <script src="scripts/template.js"></script>
 
+        <script src="scripts/controllers/MasterCtrl.js"></script>
         <script src="scripts/controllers/HomeCtrl.js"></script>
         <script src="scripts/controllers/AppsCtrl.js"></script>
         <script src="scripts/controllers/AppCtrl.js"></script>

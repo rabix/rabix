@@ -1,9 +1,7 @@
 "use strict";
 
 angular.module('registryApp')
-    .factory('Build', ['Api', '$q', function (Api, $q) {
-
-        var self = {};
+    .service('Build', ['Api', '$q', function (Api, $q) {
 
         /**
          * Get list of builds
@@ -11,7 +9,7 @@ angular.module('registryApp')
          * @params {integer} skip
          * @returns {object} $promise
          */
-        self.getBuilds = function(skip, repo) {
+        this.getBuilds = function(skip, repo) {
 
             var params = {skip: skip};
 
@@ -31,7 +29,7 @@ angular.module('registryApp')
          * @param id
          * @returns {object} $promise
          */
-        self.getBuild = function(id) {
+        this.getBuild = function(id) {
 
             var promise = Api.builds.get({id: id}).$promise;
 
@@ -45,7 +43,7 @@ angular.module('registryApp')
          * @param range
          * @returns {*}
          */
-        self.getLog = function(id, range) {
+        this.getLog = function(id, range) {
 
             var deferred = $q.defer();
 
@@ -62,7 +60,5 @@ angular.module('registryApp')
             return deferred.promise;
 
         };
-
-        return self;
 
     }]);

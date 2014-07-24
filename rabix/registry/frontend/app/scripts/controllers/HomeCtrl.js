@@ -3,6 +3,8 @@
 angular.module('registryApp')
     .controller('HomeCtrl', ['$scope', '$timeout', 'Header', 'User', function ($scope, $timeout, Header, User) {
 
+        $scope.$parent.view.classes.push('home');
+
         var subscribeTimeoutId;
 
         Header.setActive('home');

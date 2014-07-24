@@ -3,6 +3,8 @@
 angular.module('registryApp')
     .controller('AddYourGitHubRepoCtrl', ['$scope', '$timeout', '$location', '$filter', 'Repo', 'Header', function ($scope, $timeout, $location, $filter, Repo, Header) {
 
+        $scope.$parent.view.classes.push('add-your-github-repo');
+
         Header.setActive('repos');
 
         $scope.view = {};

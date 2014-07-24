@@ -1,22 +1,19 @@
 "use strict";
 
 angular.module('registryApp')
-    .factory('Api', ['$resource', '$http', '$q', function ($resource, $http, $q) {
+    .service('Api', ['$resource', '$http', '$q', function ($resource, $http, $q) {
 
         var apiUrlRemote = 'http://5e9e1fd7.ngrok.com';
         var apiUrl = '';
 
-
-        var api = {};
-
-        api.apps = $resource(apiUrl + '/apps/:id', {id: '@id'}, {
+        this.apps = $resource(apiUrl + '/apps/:id', {id: '@id'}, {
             add: {method: 'POST'},
             update: {method: 'PUT'}
         });
 
-        api.builds = $resource(apiUrl + '/builds/:id', {id: '@id'});
+        this.builds = $resource(apiUrl + '/builds/:id', {id: '@id'});
 
-        api.log = function(range) {
+        this.log = function(range) {
             return $resource(apiUrl + '/builds/:id/:tab?json=1', {id: '@id', tab: '@tab'}, {
                 get: {
                     method: 'GET',
@@ -28,12 +25,12 @@ angular.module('registryApp')
             });
         };
 
-        api.repos = $resource(apiUrl + '/repos/:owner/:name', {owner: '@owner', name: '@name'}, {
+        this.repos = $resource(apiUrl + '/repos/:owner/:name', {owner: '@owner', name: '@name'}, {
             add: {method: 'PUT'}
         });
 
         // TODO remove later when /github-repos ready
-        api.reposMock = {
+        this.reposMock = {
             add: function() {
                 var deferred = $q.defer();
                 deferred.resolve({secred: 'blabla-bla-tra-la-bla'});
@@ -42,9 +39,9 @@ angular.module('registryApp')
         };
 
         // TODO uncomment later when api ready
-        //api.gitHubRepos = $resource(apiUrl + '/github-repos', {}, {});
+        //this.gitHubRepos = $resource(apiUrl + '/github-repos', {}, {});
 
-        api.gitHubRepos = {
+        this.gitHubRepos = {
             get: function() {
                 var deferred = $q.defer();
 
@@ -59,29 +56,27 @@ angular.module('registryApp')
             }
         };
 
-        api.user = $resource(apiUrl + '/user');
+        this.user = $resource(apiUrl + '/user');
 
-        api.token = $resource(apiUrl + '/token', {}, {
+        this.token = $resource(apiUrl + '/token', {}, {
             generate: {method: 'POST'},
             revoke: {method: 'DELETE'}
         });
 
-        api.logout = $resource(apiUrl + '/logout', {}, {
+        this.logout = $resource(apiUrl + '/logout', {}, {
             confirm: {method: 'POST'}
         });
 
         // TODO uncomment later when api ready
-        //api.subscribe = $resource(apiUrl + '/subscribe';
+        //this.subscribe = $resource(apiUrl + '/subscribe';
 
-        api.subscribe = {
+        this.subscribe = {
             post: function(email) {
                 var deferred = $q.defer();
                 deferred.resolve({message: 'ok', email: email});
                 return {$promise: deferred.promise};
             }
         };
-
-        return api;
 
 
     }]);

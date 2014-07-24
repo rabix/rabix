@@ -3,6 +3,8 @@
 angular.module('registryApp')
     .controller('BuildCtrl', ['$scope', '$routeParams', '$interval', '$document', '$timeout', 'Build', 'Header', function ($scope, $routeParams, $interval, $document, $timeout, Build, Header) {
 
+        $scope.$parent.view.classes.push('build');
+
         var logIntervalId;
         var scrollTimeoutId;
 

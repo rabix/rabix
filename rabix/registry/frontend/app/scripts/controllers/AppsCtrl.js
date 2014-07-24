@@ -3,6 +3,8 @@
 angular.module('registryApp')
     .controller('AppsCtrl', ['$scope', '$routeParams', 'App', 'Header', 'Api', function ($scope, $routeParams, App, Header, Api) {
 
+        $scope.$parent.view.classes.push('apps');
+
         Header.setActive('apps');
 
         /**

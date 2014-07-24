@@ -1,9 +1,7 @@
 "use strict";
 
 angular.module('registryApp')
-    .factory('Repo', ['Api', function (Api) {
-
-        var self = {};
+    .service('Repo', ['Api', function (Api) {
 
         /**
          * Get list of repos
@@ -12,7 +10,7 @@ angular.module('registryApp')
          * @params {string} searchTerm
          * @returns {object} $promise
          */
-        self.getRepos = function(skip, searchTerm) {
+        this.getRepos = function(skip, searchTerm) {
 
             var isSearch = !(_.isUndefined(searchTerm) || _.isEmpty(searchTerm));
             var params = {skip: skip};
@@ -33,7 +31,7 @@ angular.module('registryApp')
          * @param id
          * @returns {object} $promise
          */
-        self.getRepo = function(id) {
+        this.getRepo = function(id) {
 
             var params = id.split('/');
             var owner = params[0];
@@ -51,7 +49,7 @@ angular.module('registryApp')
          * @param id
          * @returns {object} $promise
          */
-        self.addRepo = function(id) {
+        this.addRepo = function(id) {
 
             var params = id.split('/');
             var owner = params[0];
@@ -69,7 +67,7 @@ angular.module('registryApp')
          *
          * @returns {object} $promise
          */
-        self.getHitHubRepos = function() {
+        this.getHitHubRepos = function() {
 
             var promise = Api.gitHubRepos.get().$promise;
 
@@ -83,7 +81,7 @@ angular.module('registryApp')
          * @param result
          * @returns {object}
          */
-        self.parseUser = function (result) {
+        this.parseUser = function (result) {
 
             var params = ['created_by', 'id', 'secret'];
             var repo = {};
@@ -96,7 +94,5 @@ angular.module('registryApp')
 
             return repo;
         };
-
-        return self;
 
     }]);

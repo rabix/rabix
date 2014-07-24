@@ -3,22 +3,29 @@
 angular.module('registryApp')
     .directive('loading', ['$timeout', function ($timeout) {
         return {
+            scope: {
+                ngClass: '=',
+                loading: '='
+            },
             link: function(scope) {
 
                 var timeoutId;
 
-                scope.view.loadingDelayed = true;
-                scope.view.loadingFaded = true;
+                var classes = scope.ngClass;
+                classes.push('loading');
+                classes.push('loading-fade');
 
-                scope.$watch('view.loading', function(newVal, oldVal) {
+                scope.$watch('loading', function(newVal, oldVal) {
                     if (newVal !== oldVal) {
 
                         scope.stopLoadingDelay();
 
-                        scope.view.loadingFaded = false;
+                        _.remove(classes, function(cls) { return cls === 'loading-fade'; });
+                        scope.$emit('classChange', classes);
 
                         timeoutId = $timeout(function() {
-                            scope.view.loadingDelayed = false;
+                            _.remove(classes, function(cls) { return cls === 'loading'; });
+                            scope.$emit('classChange', classes);
                         }, 300);
                     }
                 });

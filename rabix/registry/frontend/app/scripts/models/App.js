@@ -1,9 +1,7 @@
 "use strict";
 
 angular.module('registryApp')
-    .factory('App', ['Api', function (Api) {
-
-        var self = {};
+    .service('App', ['Api', function (Api) {
 
         /**
          * Get list of apps
@@ -12,7 +10,7 @@ angular.module('registryApp')
          * @params {string} searchTerm
          * @returns {object} $promise
          */
-        self.getApps = function(skip, searchTerm, repo) {
+        this.getApps = function(skip, searchTerm, repo) {
 
             var isSearch = !(_.isUndefined(searchTerm) || _.isEmpty(searchTerm));
             var params = {skip: skip};
@@ -37,14 +35,12 @@ angular.module('registryApp')
          * @param id
          * @returns {object} $promise
          */
-        self.getApp = function(id) {
+        this.getApp = function(id) {
 
             var promise = Api.apps.get({id: id}).$promise;
 
             return promise;
 
         };
-
-        return self;
 
     }]);

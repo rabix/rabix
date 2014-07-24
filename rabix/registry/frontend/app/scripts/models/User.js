@@ -1,16 +1,14 @@
 "use strict";
 
 angular.module('registryApp')
-    .factory('User', ['Api', function (Api) {
-
-        var self = {};
+    .service('User', ['Api', function (Api) {
 
         /**
          * Get user's details
          *
          * @returns {object} $promise
          */
-        self.getUser = function() {
+        this.getUser = function() {
 
             var promise = Api.user.get().$promise;
 
@@ -23,7 +21,7 @@ angular.module('registryApp')
          *
          * @returns {object} $promise
          */
-        self.logOut = function() {
+        this.logOut = function() {
 
             var promise = Api.logout.confirm().$promise;
 
@@ -36,7 +34,7 @@ angular.module('registryApp')
          *
          * @returns {object} $promise
          */
-        self.getToken = function() {
+        this.getToken = function() {
 
             var promise = Api.token.get().$promise;
 
@@ -48,7 +46,7 @@ angular.module('registryApp')
          *
          * @returns {object} $promise
          */
-        self.generateToken = function() {
+        this.generateToken = function() {
 
             var promise = Api.token.generate().$promise;
 
@@ -60,7 +58,7 @@ angular.module('registryApp')
          *
          * @returns {object} $promise
          */
-        self.revokeToken = function() {
+        this.revokeToken = function() {
 
             var promise = Api.token.revoke().$promise;
 
@@ -73,7 +71,7 @@ angular.module('registryApp')
          * @params {string} email
          * @returns {object} $promise
          */
-        self.subscribe = function(email) {
+        this.subscribe = function(email) {
 
             var promise = Api.subscribe.post({email: email}).$promise;
 
@@ -86,7 +84,7 @@ angular.module('registryApp')
          * @param result
          * @returns {object}
          */
-        self.parseUser = function (result) {
+        this.parseUser = function (result) {
 
             var params = ['avatar_url', 'gravatar_id', 'html_url', 'name'];
             var user = {};
@@ -99,7 +97,5 @@ angular.module('registryApp')
 
             return user;
         };
-
-        return self;
 
     }]);

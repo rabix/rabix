@@ -3,6 +3,8 @@
 angular.module('registryApp')
     .controller('BuildsCtrl', ['$scope', '$routeParams', '$window', 'Build', 'Header', function ($scope, $routeParams, $window, Build, Header) {
 
+        $scope.$parent.view.classes.push('builds');
+
         Header.setActive('builds');
 
         /**

@@ -3,6 +3,8 @@
 angular.module('registryApp')
     .controller('RepoCtrl', ['$scope', '$routeParams', '$q', 'Repo', 'App', 'Build', 'Header', function ($scope, $routeParams, $q, Repo, App, Build, Header) {
 
+        $scope.$parent.view.classes.push('repo');
+
         Header.setActive('repos');
 
         $scope.view = {};
