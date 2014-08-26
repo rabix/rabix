@@ -311,7 +311,7 @@ class Container(object):
             # 404 means image was not found
             if e.response.status_code == 404:
                 image_id = self.config['Image']
-                logging.info("Trying to fetch image %s" % image_id)
+                log.info("Trying to fetch image %s" % image_id)
                 repo, tag = parse_repository_tag(image_id)
                 self.docker.pull(repo, tag)
                 image = find_image(self.docker, repo, tag)
