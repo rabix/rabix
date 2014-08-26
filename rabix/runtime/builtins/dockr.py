@@ -303,9 +303,27 @@ class Container(object):
         if entrypoint and override_entrypoint:
             self.config['Entrypoint'] = [command.pop(0)]
 
-        self.container = self.docker.create_container_from_config(
-            dict(self.config, Cmd=command)
-        )
+        try:
+            self.container = self.docker.create_container_from_config(
+                dict(self.config, Cmd=command)
+            )
+        except APIError as e:
+            # 404 means image was not found
+            if e.response.status_code == 404:
+                image_id = self.config['Image']
+                logging.info("Trying to fetch image %s" % image_id)
+                repo, tag = parse_repository_tag(image_id)
+                self.docker.pull(repo, tag)
+                image = find_image(self.docker, repo, tag)
+                if image is None:
+                    raise
+                self.config['Image'] = image['Id']
+                self.container = self.docker.create_container_from_config(
+                    dict(self.config, Cmd=command)
+                )
+            else:
+                raise
+
         self.docker.start(container=self.container, binds=self.binds)
         return self
 
