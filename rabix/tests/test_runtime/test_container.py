@@ -2,7 +2,7 @@ import mock
 
 from nose.tools import raises, eq_
 
-import rabix.common.six as six
+from docker.errors import APIError
 
 from rabix.runtime.builtins.dockr import Container
 
@@ -95,3 +95,24 @@ def test_run_override_ep2():
     docker.start.assert_called_with(container='container_id', binds='binds')
 
     eq_(cont.container, 'container_id')
+
+
+def test_run_missing_image():
+    docker = dockmock(Cmd=['cmd'], Entrypoint=['ep'])
+    response = mock.Mock()
+    response.status_code = 404
+    docker.create_container_from_config = mock.Mock(
+        side_effect=[APIError("", response), None],
+        return_value='container_id'
+    )
+    docker.images = mock.Mock(return_value=[{'Id': 'image_id'}])
+
+    cont = Container(docker, 'image_id')
+    cont.binds = 'binds'
+    cont.config = {'Image': 'image_id'}
+
+    cont.run(['cmd'])
+
+    eq_(cont.container, None)
+    eq_(cont.config['Image'], 'image_id')
+    docker.start.assert_called_with(container=None, binds='binds')
