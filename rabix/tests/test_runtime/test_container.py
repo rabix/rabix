@@ -98,11 +98,15 @@ def test_run_override_ep2():
 
 
 def test_run_missing_image():
-    docker = dockmock(Cmd=['cmd'], Entrypoint=['ep'])
+    docker = mock.Mock()
     response = mock.Mock()
     response.status_code = 404
+    docker.inspect_image = mock.Mock(
+        side_effect=[APIError("", response),
+                     {'config': {'Cmd': ['cmd'],
+                                 'Entrypoint': ['ep']}}]
+    )
     docker.create_container_from_config = mock.Mock(
-        side_effect=[APIError("", response), None],
         return_value='container_id'
     )
     docker.images = mock.Mock(return_value=[{'Id': 'image_id'}])
@@ -113,6 +117,6 @@ def test_run_missing_image():
 
     cont.run(['cmd'])
 
-    eq_(cont.container, None)
+    eq_(cont.container, 'container_id')
     eq_(cont.config['Image'], 'image_id')
-    docker.start.assert_called_with(container=None, binds='binds')
+    docker.start.assert_called_with(container='container_id', binds='binds')

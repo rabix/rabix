@@ -38,7 +38,7 @@ def build(client, from_img, **kwargs):
         )
     else:
         raise RabixError("Build failed!")
-    return container.image['Id']
+    return container.produced_image['Id']
 
 
 def run(client, from_img, **kwargs):

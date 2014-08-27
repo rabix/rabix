@@ -211,7 +211,6 @@ class Container(object):
         self.docker = docker_client
 
         self.config = {
-            'Image': image_id,
             'AttachStdin': False,
             'AttachStdout': False,
             'AttachStderr': False,
@@ -223,18 +222,47 @@ class Container(object):
             'Dns': None
         }
 
-        self.base_cmd = self.image_property('Cmd')
+        self.image_properties = None
+        self.image_id = image_id
+
+        self.base_cmd = self.image_properties['Cmd']
         self.config.update(container_config or {})
         self.binds = {os.path.abspath('.'): mount_point}
         self.container = None
-        self.image = None
+        self.produced_image = None
+
+
+    @property
+    def image_id(self):
+        return self.config['Image']
+
+    @image_id.setter
+    def image_id(self, image_id):
+        self.config['Image'] = image_id
+        try:
+            self.image_properties = \
+                self.docker.inspect_image(image_id)['config']
+        except APIError as e:
+            # 404 means image was not found
+            if e.response.status_code == 404:
+                log.info("Trying to fetch image %s" % image_id)
+                repo, tag = parse_repository_tag(image_id)
+                self.docker.pull(repo, tag)
+                image = find_image(self.docker, repo, tag)
+                if image is None:
+                    raise
+                self.config['Image'] = image['Id']
+                self.image_properties = \
+                    self.docker.inspect_image(self.config['Image'])['config']
+            else:
+                raise
 
     def _check_container_ready(self):
         if not self.container:
             raise RabixError('Container not instantiated yet.')
 
-    def image_property(self, prop):
-        return self.docker.inspect_image(self.config['Image'])['config'][prop]
+    # def image_property(self, prop):
+    #     return self.docker.inspect_image(self.config['Image'])['config'][prop]
 
     def inspect(self):
         self._check_container_ready()
@@ -288,7 +316,7 @@ class Container(object):
 
     def commit(self, message=None, conf=None, repository=None, tag=None):
         self._check_container_ready()
-        self.image = self.docker.commit(
+        self.produced_image = self.docker.commit(
             self.container['Id'], message=message, conf=conf,
             repository=repository, tag=tag
         )
@@ -299,30 +327,13 @@ class Container(object):
             raise RabixError('Container already started.')
         log.info("Running command %s", command)
 
-        entrypoint = self.image_property('Entrypoint')
+        entrypoint = self.image_properties['Entrypoint']
         if entrypoint and override_entrypoint:
             self.config['Entrypoint'] = [command.pop(0)]
 
-        try:
-            self.container = self.docker.create_container_from_config(
-                dict(self.config, Cmd=command)
-            )
-        except APIError as e:
-            # 404 means image was not found
-            if e.response.status_code == 404:
-                image_id = self.config['Image']
-                log.info("Trying to fetch image %s" % image_id)
-                repo, tag = parse_repository_tag(image_id)
-                self.docker.pull(repo, tag)
-                image = find_image(self.docker, repo, tag)
-                if image is None:
-                    raise
-                self.config['Image'] = image['Id']
-                self.container = self.docker.create_container_from_config(
-                    dict(self.config, Cmd=command)
-                )
-            else:
-                raise
+        self.container = self.docker.create_container_from_config(
+            dict(self.config, Cmd=command)
+        )
 
         self.docker.start(container=self.container, binds=self.binds)
         return self
