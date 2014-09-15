@@ -231,7 +231,6 @@ class Container(object):
         self.container = None
         self.produced_image = None
 
-
     @property
     def image_id(self):
         return self.config['Image']
