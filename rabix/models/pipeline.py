@@ -2,8 +2,8 @@ import copy
 import logging
 
 import networkx as nx
+import six
 
-from rabix.common import six
 from rabix.common.errors import ValidationError
 from rabix.models.base import Model
 from rabix.models.apps import App

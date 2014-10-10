@@ -2,11 +2,11 @@ import docopt
 import logging
 import sys
 import yaml
+import six
 
 from os.path import isfile
 
 from rabix import __version__ as version
-from rabix.common import six
 from rabix.common.errors import RabixError
 from rabix.common.loadsave import JsonLoader, from_url
 from rabix.common.util import rnd_name, update_config

@@ -5,7 +5,8 @@ import logging
 import requests
 
 # noinspection PyUnresolvedReferences
-from rabix.common.six.moves.urllib import parse as urlparse
+from six.moves.urllib import parse as urlparse
+
 from rabix.common.loadsave import to_json
 from rabix.common.errors import ResourceUnavailable
 from rabix.runtime.tasks import Runner

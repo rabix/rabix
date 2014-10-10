@@ -2,11 +2,12 @@ import os
 import tempfile
 import unittest
 import logging
+import six
 
 from nose.tools import nottest, assert_equals, assert_raises
 
 from rabix import CONFIG
-from rabix.common import six
+
 from rabix.common.protocol import Outputs, WrapperJob
 from rabix.common.util import rnd_name
 from rabix.common.errors import ValidationError

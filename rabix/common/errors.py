@@ -1,4 +1,4 @@
-from rabix.common import six
+import six
 
 
 class ValidationError(RuntimeError):

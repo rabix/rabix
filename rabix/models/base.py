@@ -2,8 +2,8 @@ import os
 import logging
 
 import jsonschema
+import six
 
-from rabix.common import six
 from rabix.common.errors import ValidationError
 from rabix.common.loadsave import from_url
 

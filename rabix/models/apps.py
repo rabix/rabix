@@ -1,6 +1,6 @@
 import logging
+import six
 
-from rabix.common import six
 from rabix.models.base import Model
 
 log = logging.getLogger(__name__)

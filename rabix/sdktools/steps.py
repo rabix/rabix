@@ -4,8 +4,8 @@ import logging
 import re
 import shlex
 from os import getenv
+import six
 
-import rabix.common.six as six
 from rabix.runtime.builtins.dockr import Container
 from rabix.common.errors import RabixError
 

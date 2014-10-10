@@ -6,9 +6,9 @@ import itertools
 import json
 import collections
 import logging
+import six
 
 from rabix import CONFIG
-from rabix.common import six
 
 log = logging.getLogger(__name__)
 

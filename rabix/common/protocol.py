@@ -1,9 +1,8 @@
 import logging
 
-from rabix.common import six
+import six
 
 log = logging.getLogger(__name__)
-MAPPINGS = {}
 
 
 class JobError(RuntimeError):
@@ -100,10 +99,3 @@ class WrapperJob(object):
     def from_dict(cls, obj):
         return cls(**obj)
 
-
-MAPPINGS.update({
-    'job': WrapperJob,
-    'resources': Resources,
-    'outputs': Outputs,
-    'error': JobError,
-})

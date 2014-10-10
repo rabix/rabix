@@ -4,8 +4,8 @@ import copy
 import hashlib
 import logging
 import collections
+import six
 
-from rabix.common import six
 # noinspection PyUnresolvedReferences
 from rabix.common.six.moves.urllib import parse as urlparse
 from rabix.common.protocol import MAPPINGS

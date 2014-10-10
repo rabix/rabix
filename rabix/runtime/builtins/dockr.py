@@ -5,6 +5,7 @@ import signal
 import logging
 import subprocess
 import itertools
+import six
 
 import docker
 from docker.errors import APIError
@@ -17,7 +18,6 @@ from rabix.common.protocol import WrapperJob, Outputs, JobError
 from rabix.common.loadsave import from_url, to_json
 from rabix.models import App, AppSchema
 from rabix.runtime.tasks import Runner
-from rabix.common import six
 
 log = logging.getLogger(__name__)
 MOUNT_POINT = '/rabix'
