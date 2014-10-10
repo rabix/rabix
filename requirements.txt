@@ -7,10 +7,6 @@ supervisor==3.0
 jsonschema==2.3.0
 PyYaml==3.11
 
-Flask==0.10.1
-GitHub-Flask==1.1.1
-rethinkdb==1.13.0-0
-
 nose==1.3.0
 pep8==1.5.7
 mock==1.0.1

@@ -11,6 +11,15 @@ class App(Model):
     apps = property(lambda self: {'app': self})
 
 
+class AdaptedApp(Model):
+    softwareDescription = property(lambda self: self['softwareDescription'])
+    documentAuthor = property(lambda self: self['documentAuthor'])
+    requirements = property(lambda self: self['requirements'])
+    inputs = property(lambda self: self['inputs'])
+    outputs = property(lambda self: self['outputs'])
+    adapter = property(lambda self: self['adapter'])
+
+
 class AppSchema(Model):
     TYPE = 'schema/app/sbgsdk'
     SCHEMA = 'schema/iodef-sbgsdk.json'
