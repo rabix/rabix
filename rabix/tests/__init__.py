@@ -1,5 +1,4 @@
 
-
 mock_app_good_repo = {
     "tool": {
         "softwareDescription": {},
@@ -33,7 +32,7 @@ mock_app_bad_repo = {
             "environment": {
                 "container": {
                     "type": "docker",
-                    "uri": "docker://blablabla#latest",
+                    "uri": "docker://wrongrepository#latest",
                     "imageId": "aaaaaaaaaaaa"
                 }
             },

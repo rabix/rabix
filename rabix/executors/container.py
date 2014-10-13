@@ -35,7 +35,7 @@ def make_config(image, command, user, volumes, mem_limit, ports, environment,
               'Entrypoint': entrypoint,
               'CpuShares': cpu_shares,
               'WorkingDir': working_dir
-    }
+              }
     return config
 
 
@@ -51,14 +51,14 @@ class Container(object):
         self.user = user
         self.volumes = volumes
         self.mem_limit = mem_limit
-        self.ports = ports #
-        self.environment = environment # ["PASSWORD=xxx"] or {"PASSWORD": "xxx"}
-        self.entrypoint = entrypoint #
+        self.ports = ports
+        self.environment = environment  # ["PASSWORD=xxx"]{"PASSWORD": "xxx"}
+        self.entrypoint = entrypoint  #
         self.cpu_shares = cpu_shares
         self.working_dir = working_dir
-        #detach, stdin_open,
-        #dns,
-        #domainname, memswap_limit
+        # detach, stdin_open,
+        # dns,
+        # domainname, memswap_limit
         self.config = make_config(self.image_id, self.cmd, self.user,
                                   self.volumes, self.mem_limit, self.ports,
                                   self.environment, self.entrypoint,
@@ -78,7 +78,8 @@ class Container(object):
             self.docker_client.start(container=self.container, binds=binds)
         except APIError:
             logging.error('Failed to run container %s' % self.container)
-            raise RuntimeError('Unable to run container from image %s:' % self.image_id)
+            raise RuntimeError('Unable to run container from image %s:'
+                               % self.image_id)
 
     def inspect(self):
         return self.docker_client.inspect_container(self.container)
@@ -94,11 +95,11 @@ class Container(object):
     def is_success(self):
         return self.wait().inspect()['State']['ExitCode'] == 0
 
-
     def get_stdout(self):
         self.wait()
-        return self.docker_client.logs(self.container, stdout=True, stderr=False,
-                                       stream=False, timestamps=False)
+        return self.docker_client.logs(self.container, stdout=True,
+                                       stderr=False, stream=False,
+                                       timestamps=False)
 
     # TODO : test and finish
     def pipe_stdout(self, container, pipe):
@@ -114,7 +115,6 @@ class Container(object):
 
     def get_stderr(self):
         self.wait()
-        return self.docker_client.logs(self.container, stdout=False, stderr=True,
-                                       stream=False, timestamps=False)
-
-
+        return self.docker_client.logs(self.container, stdout=False,
+                                       stderr=True, stream=False,
+                                       timestamps=False)

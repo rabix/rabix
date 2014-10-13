@@ -14,4 +14,5 @@ def validate_inputs(tool, job):
                         raise Exception("File %s doesn't exist" % f['path'])
             else:
                 if not os.path.exists(inputs[req]['path']):
-                    raise Exception("File %s doesn't exist" % inputs[req]['path'])
+                    raise Exception(
+                        "File %s doesn't exist" % inputs[req]['path'])
