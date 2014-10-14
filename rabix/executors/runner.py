@@ -6,6 +6,7 @@ import stat
 import copy
 from rabix.executors.container import Container
 from rabix.cliche.adapter import Adapter
+from rabix.tests import infinite_loop
 
 
 class BindDict(dict):
@@ -75,12 +76,20 @@ class DockerRunner(Runner):
                         [docker_dir, file_name])
             return volumes, BindDict(binds), remaped_job
 
-    def _run(self, command, vol=None, bind=None, user=None, work_dir=None):
+    @property
+    def envvars(self):
+        envvars = self.tool.get('adapter', {}).get('environment')
+        envlst = []
+        for env, val in envvars.iteritems():
+            envlst.append('='.join([env, val]))
+        return envlst
+
+    def _run(self, command, vol=None, bind=None, user=None, env=None, work_dir=None):
         volumes = vol or {self.WORKING_DIR: {}}
         working_dir = work_dir or self.WORKING_DIR
         user = user or ':'.join([str(os.getuid()), str(os.getgid())])
         container = Container(self.docker_client, self.enviroment, command,
-                              user=user, volumes=volumes,
+                              user=user, volumes=volumes, environment=env,
                               working_dir=working_dir)
         binds = bind or {self.working_dir: self.WORKING_DIR}
         # TODO : Add mem_limit, ports, environment, entrypoint, cpu_shares
@@ -97,7 +106,8 @@ class DockerRunner(Runner):
         volumes['/' + job_dir] = {}
         binds['/' + job_dir] = os.path.abspath(job_dir)
         container = self._run(['bash', '-c', adapter.cmd_line(remaped_job)],
-                              vol=volumes, bind=binds, work_dir='/' + job_dir)
+                              vol=volumes, bind=binds, env=self.envvars,
+                              work_dir='/' + job_dir)
         if not container.is_success():
             raise RuntimeError("err %s" % container.get_stderr())
         return adapter.get_outputs(os.path.abspath(job_dir), job)
@@ -109,3 +119,11 @@ class NativeRunner(Runner):
 
     def run(self, command):
         pass
+
+
+if __name__=='__main__':
+    runner = DockerRunner(infinite_loop['tool'])
+    command = ['bash', '-c', '/home/infinite.sh']
+    container = runner._run(command)
+    container.get_stdout(file='out.txt')
+    pass

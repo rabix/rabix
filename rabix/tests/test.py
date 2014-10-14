@@ -8,11 +8,11 @@ from rabix.cliche.ref_resolver import from_url
 from rabix.executors.cli import get_tool
 
 
+@nottest
 def test_docker_runner():
     command = ['bash', '-c', 'grep -r chr > output.txt']
     runner = DockerRunner(tool=mock_app_good_repo)
     runner.run(command)
-    pass
 
 
 @nottest

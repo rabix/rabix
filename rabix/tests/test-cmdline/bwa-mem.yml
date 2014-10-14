@@ -86,6 +86,9 @@ tool:
           glob: output.sam
           streamable: Yes
   adapter:
+    environment:
+      BLA: /home/bla
+      SOMETHING: /opt/something
     baseCmd: [bwa, mem]
     stdout: output.sam
     args:

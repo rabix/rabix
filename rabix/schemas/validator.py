@@ -1,6 +1,6 @@
 import yaml
 from jsonschema.validators import Draft4Validator
-from cliche.ref_resolver import from_url
+from rabix.cliche.ref_resolver import from_url
 
 
 def load(path):

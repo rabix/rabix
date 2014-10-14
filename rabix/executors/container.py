@@ -81,6 +81,12 @@ class Container(object):
             raise RuntimeError('Unable to run container from image %s:'
                                % self.image_id)
 
+    def remove(self, success_only=False):
+        self.wait()
+        if not success_only or self.is_success():
+            self.docker_client.remove_container(self.container)
+        return self
+
     def inspect(self):
         return self.docker_client.inspect_container(self.container)
 
@@ -95,26 +101,33 @@ class Container(object):
     def is_success(self):
         return self.wait().inspect()['State']['ExitCode'] == 0
 
-    def get_stdout(self):
-        self.wait()
-        return self.docker_client.logs(self.container, stdout=True,
-                                       stderr=False, stream=False,
-                                       timestamps=False)
+    def get_stdout(self, file=None):
+        if file:
+            f = open(file, 'w')
+        if self.is_running():
+            for out in self.docker_client.attach(self.container, stdout=True,
+                                                 stderr=False, stream=True,
+                                                 logs=True):
+                if file:
+                    f.write(out.rstrip())
+                else:
+                    print(out.rstrip())
+            if file:
+                f.close()
+        else:
+            print(self.docker_client.logs(self.container))
+        return self
 
-    # TODO : test and finish
-    def pipe_stdout(self, container, pipe):
-        stream = self.docker_client.logs(container, stdout=True, stream=True)
-        while True:
-            try:
-                pipe.write(stream.next())
-            except StopIteration:
-                pipe.close()
-                return
-            else:
-                raise RuntimeError
-
-    def get_stderr(self):
-        self.wait()
-        return self.docker_client.logs(self.container, stdout=False,
-                                       stderr=True, stream=False,
-                                       timestamps=False)
+    def get_stderr(self, file=None):
+        if file:
+            f = open(file, 'w')
+        if self.is_running():
+            for out in self.docker_client.attach(self.container, stdout=False,
+                                                 stderr=True, stream=True):
+                if file:
+                    f.write(out.rstrip())
+                else:
+                    print(out.rstrip())
+        else:
+            print(self.docker_client.logs(self.container))
+        return self
