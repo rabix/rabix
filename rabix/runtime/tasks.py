@@ -4,7 +4,7 @@ import logging
 import networkx as nx
 import six
 
-from rabix.common.protocol import WrapperJob, Outputs, Resources
+from rabix.common.protocol import Outputs, Resources
 from rabix.common.util import rnd_name
 from rabix.models import Pipeline
 
@@ -28,34 +28,6 @@ class Task(object):
     __str__ = __unicode__ = __repr__ = lambda self: (
         '%s[%s]' % (self.__class__.__name__, self.task_id)
     )
-
-    def make_replacement(self, resources, arguments):
-        replacement = copy.deepcopy(self)
-        replacement.status = Task.QUEUED
-        replacement.resources = resources
-        replacement.arguments = self._replace_wrapper_job_with_task(arguments)
-        replacement.task_id = None
-        replacement.result = None
-        replacement.is_replacement = True
-        return replacement
-
-    def _replace_wrapper_job_with_task(self, obj):
-        """Traverses arguments, creates replaces wrapper jobs with tasks"""
-        if isinstance(obj, list):
-            for ndx, item in enumerate(obj):
-                if isinstance(item, WrapperJob):
-                    obj[ndx] = self.make_replacement(resources=item.resources,
-                                                     arguments=item.args)
-                elif isinstance(obj, (dict, list)):
-                    obj[ndx] = self._replace_wrapper_job_with_task(item)
-        if isinstance(obj, dict):
-            for key, val in six.iteritems(obj):
-                if isinstance(val, WrapperJob):
-                    obj[key] = self.make_replacement(resources=val.resources,
-                                                     arguments=val.args)
-                elif isinstance(val, (dict, list)):
-                    obj[key] = self._replace_wrapper_job_with_task(val)
-        return obj
 
     def iter_deps(self):
         """Yields (path, task) for all tasks in the arguments tree."""
@@ -157,8 +129,6 @@ class TaskDAG(object):
         """
         If successful, result is propagated downstream.
         Downstream tasks may get READY status.
-        If result is a task, it is used as a replacement
-        and dependency tasks are added to the graph.
         If failed, result should be an exception.
         If cancelled, result should be None.
         """
@@ -168,16 +138,6 @@ class TaskDAG(object):
             return
         if isinstance(task.result, Outputs):
             task.result = task.result.outputs
-        if isinstance(task.result, WrapperJob):
-            replacement = task.make_replacement(
-                resources=task.result.resources, arguments=task.result.args
-            )
-            self.add_task(replacement)
-            for n in self.dag.neighbors(task.task_id):
-                self.dag.add_edge(replacement.task_id, n,
-                                  **self.dag.get_edge_data(task.task_id, n))
-                self.dag.remove_edge(task.task_id, n)
-            return
         for dst_id in self.dag.neighbors(task.task_id):
             dst = self.get_task(dst_id)
             for src_path, dst_path in self.dag.get_edge_data(task.task_id,

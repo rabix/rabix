@@ -91,7 +91,7 @@ class DotAccessDict(dict):
 
 
 class NormDict(dict):
-    def __init__(self, normalize=unicode):
+    def __init__(self, normalize=six.text_type):
         super(NormDict, self).__init__()
         self.normalize = normalize
 

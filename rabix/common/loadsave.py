@@ -1,28 +1,24 @@
 import os
 import json
+import yaml
 import copy
 import hashlib
 import logging
 import collections
 import six
+import requests
+
+from six.moves.urllib import parse as urlparse
 
 # noinspection PyUnresolvedReferences
-from rabix.common.six.moves.urllib import parse as urlparse
-from rabix.common.protocol import MAPPINGS
 from rabix.common.util import NormDict
 from rabix.common.errors import ResourceUnavailable, ValidationError
-
-# requests is not used if installing as sdk-lib.
-try:
-    import requests
-except ImportError:
-    requests = None
 
 
 log = logging.getLogger(__name__)
 
 
-class JsonLoader(object):
+class DocumentLoader(object):
     def __init__(self):
         normalize = lambda url: urlparse.urlsplit(url).geturl()
         self.fetched = NormDict(normalize)
@@ -88,11 +84,11 @@ class JsonLoader(object):
                 resp.raise_for_status()
             except Exception as e:
                 raise ResourceUnavailable(url, cause=e)
-            result = resp.json()
+            result = yaml.loads(resp.text())
         elif scheme == 'file':
             try:
                 with open(path) as fp:
-                    result = json.load(fp)
+                    result = yaml.load(fp)
             except (OSError, IOError) as e:
                 raise ResourceUnavailable(url, cause=e)
         else:
@@ -116,7 +112,7 @@ class JsonLoader(object):
                 'Unsupported hash method: %s' % method
             )
         normalized = json.dumps(document, sort_keys=True, separators=(',', ':'))
-        return getattr(hashlib, method)(normalized).hexdigest()
+        return getattr(hashlib, method)(six.b(normalized)).hexdigest()
 
     def resolve_pointer(self, document, pointer):
         parts = urlparse.unquote(pointer.lstrip('/')).split('/') \
@@ -133,7 +129,7 @@ class JsonLoader(object):
                 raise ValueError('Unresolvable JSON pointer: %r' % pointer)
         return document
 
-loader = JsonLoader()
+loader = DocumentLoader()
 
 
 def to_json(obj, fp=None):

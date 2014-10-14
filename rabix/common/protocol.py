@@ -70,32 +70,3 @@ class Outputs(object):
     @classmethod
     def from_dict(cls, d):
         return cls(outputs_dict=d.get('outputs', {}))
-
-
-class WrapperJob(object):
-    def __init__(self, wrapper_id=None, job_id=None, args=None, resources=None,
-                 context=None):
-        self.wrapper_id = wrapper_id
-        self.job_id = job_id
-        self.args = args or {}
-        self.resources = resources or Resources()
-        self.context = context or {}
-
-    __str__ = __unicode__ = __repr__ = lambda self: (
-        'WrapperJob[%s, %s]' % (self.wrapper_id, self.job_id)
-    )
-
-    def __json__(self):
-        return {
-            '$$type': 'job',
-            'job_id': self.job_id,
-            'wrapper_id': self.wrapper_id,
-            'args': self.args,
-            'resources': self.resources,
-            'context': self.context,
-        }
-
-    @classmethod
-    def from_dict(cls, obj):
-        return cls(**obj)
-

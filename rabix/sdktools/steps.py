@@ -6,7 +6,7 @@ import shlex
 from os import getenv
 import six
 
-from rabix.runtime.builtins.dockr import Container
+from rabix.executors.container import Container
 from rabix.common.errors import RabixError
 
 log = logging.getLogger(__name__)

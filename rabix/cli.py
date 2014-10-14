@@ -8,7 +8,7 @@ from os.path import isfile
 
 from rabix import __version__ as version
 from rabix.common.errors import RabixError
-from rabix.common.loadsave import JsonLoader, from_url
+from rabix.common.loadsave import DocumentLoader, from_url
 from rabix.common.util import rnd_name, update_config
 from rabix.models import Pipeline
 from rabix.runtime.engine import get_engine
@@ -126,7 +126,7 @@ def install(pipeline):
 
 
 def checksum(jsonptr, method='sha1'):
-    loader = JsonLoader()
+    loader = DocumentLoader()
     obj = loader.load(jsonptr)
     print(method + '$' + loader.checksum(obj, method))
 
