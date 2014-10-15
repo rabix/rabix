@@ -1,12 +1,14 @@
 import os
 import docker
+import time
 import logging
+from multiprocessing import Process
 import uuid
 import stat
 import copy
 from rabix.executors.container import Container
 from rabix.cliche.adapter import Adapter
-from rabix.tests import infinite_loop
+from rabix.tests import infinite_loop, infinite_read
 
 
 class BindDict(dict):
@@ -124,8 +126,25 @@ class NativeRunner(Runner):
 
 
 if __name__=='__main__':
-    runner = DockerRunner(infinite_loop['tool'])
-    command = ['bash', '-c', '/home/infinite.sh']
-    container = runner._run(command)
-    container.get_stdout(file='out.txt')
-    pass
+
+    working_dir = str(uuid.uuid4())
+    os.mkdir(working_dir)
+    os.chmod(working_dir, os.stat(working_dir).st_mode | stat.S_IROTH |
+             stat.S_IWOTH | stat.S_IXOTH)
+    os.chdir(working_dir)
+
+    runner_inf = DockerRunner(infinite_loop['tool'])
+    runner_read = DockerRunner(infinite_read['tool'])
+
+    command_inf = ['bash', '-c', '/home/infinite.sh']
+    command_read = ['bash', '-c', '/home/infinite_read.sh < %s' %('/' + working_dir + '/pipe')]
+    volumes = {''.join(['/', working_dir]) : {}}
+    binds = {os.path.abspath('./'): ''.join(['/', working_dir])}
+    container_inf = runner_inf._run(command_inf, vol=volumes, bind=binds, work_dir='/' + working_dir)
+    p1 = Process(target=container_inf.get_stdout, kwargs={'file': 'pipe'})
+    p1.start()
+    time.sleep(5)
+    container_rd = runner_read._run(command_read, vol=volumes, bind=binds, work_dir='/' + working_dir)
+
+    p2 = Process(target=container_rd.get_stdout, kwargs={'file': 'result'})
+    p2.start()

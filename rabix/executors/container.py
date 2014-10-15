@@ -1,6 +1,5 @@
 import logging
 import six
-
 import shlex
 from docker.errors import APIError
 
@@ -123,13 +122,13 @@ class Container(object):
 
     def get_stdout(self, file=None):
         if file:
-            f = open(file, 'w')
+            f = open(file, 'w', buffering=1)
         if self.is_running():
             for out in self.docker_client.attach(self.container, stdout=True,
                                                  stderr=False, stream=True,
                                                  logs=True):
                 if file:
-                    f.write(out.rstrip())
+                    f.write(out.rstrip() + '\n')
                 else:
                     print(out.rstrip())
             if file:
@@ -143,9 +142,10 @@ class Container(object):
             f = open(file, 'w')
         if self.is_running():
             for out in self.docker_client.attach(self.container, stdout=False,
-                                                 stderr=True, stream=True):
+                                                 stderr=True, stream=True,
+                                                 logs=True):
                 if file:
-                    f.write(out.rstrip())
+                    f.write(out.rstrip() + '\n')
                 else:
                     print(out.rstrip())
         else:
