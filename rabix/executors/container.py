@@ -1,6 +1,10 @@
 import logging
+import six
+
+import shlex
 from docker.errors import APIError
 
+log = logging.getLogger(__name__)
 
 def provide_image(image_id, uri, docker_client):
     if filter(lambda x: (image_id in x['Id']), docker_client.images()):
@@ -9,44 +13,51 @@ def provide_image(image_id, uri, docker_client):
         if not uri:
             logging.error('Image cannot be pulled')
             raise Exception('Cannot pull image')
-        repo, tag = uri.split('#')
-        repo = repo.lstrip('docker://')
-        docker_client.pull(repo, tag)
+
+        docker_client.pull(*parse_docker_uri(uri))
         if filter(lambda x: (image_id in x['Id']),
                   docker_client.images()):
             return
         raise Exception('Image not found')
 
+def parse_docker_uri(uri):
+    repo, tag = uri.split('#')
+    repo = repo.lstrip('docker://')
+    return (repo, tag)
 
-def make_config(image, command, user, volumes, mem_limit, ports, environment,
-                entrypoint, cpu_shares, working_dir):
-    config = {'Image': image,
-              'Cmd': command,
-              'AttachStdin': False,
-              'AttachStdout': False,
-              'AttachStderr': False,
-              'Tty': False,
-              'Privileged': False,
-              'Memory': mem_limit,
-              'ExposedPorts': ports,
-              'User': user,
-              'Volumes': volumes,
-              'Env': environment,
-              'Entrypoint': entrypoint,
-              'CpuShares': cpu_shares,
-              'WorkingDir': working_dir
-              }
-    return config
+def make_config(**kwargs):
+    keys = ['Hostname', 'Domainname', 'User', 'Memory', 'MemorySwap',
+            'CpuShares', 'Cpuset', 'AttachStdin', 'AttachStdout',
+            'AttachStderr', 'PortSpecs', 'ExposedPorts', 'Tty', 'OpenStdin',
+            'StdinOnce', 'Env', 'Cmd', 'Image', 'Volumes', 'WorkingDir',
+            'Entrypoint', 'NetworkDisabled', 'OnBuild']
+    cfg = {
+        'AttachStdin': False,
+        'AttachStdout': False,
+        'AttachStderr': False,
+        'Tty': False,
+        'Privileged': False,
+    }
+    cfg.update({k[0].upper() + k[1:]: v for k, v in six.iteritems(kwargs)})
+    log.debug("after update, and titlecase:")
+    log.debug(cfg)
+    cfg = {k: v for k, v in six.iteritems(cfg) if k in keys}
+    log.debug("after filtration:")
+    log.debug(cfg)
+    entrypoint = cfg.get("Entrypoint")
+    if isinstance(entrypoint, six.string_types):
+        cfg['Entrypoint'] = shlex.split(entrypoint)
+    return cfg
 
 
 class Container(object):
 
-    def __init__(self, docker_client, env, cmd, user=None, volumes=None,
+    def __init__(self, docker_client, image_id, image_uri, cmd, user=None, volumes=None,
                  mem_limit=0, ports=None, environment=None, entrypoint=None,
-                 cpu_shares=None, working_dir=None):
+                 cpu_shares=None, working_dir=None, **kwargs):
         self.docker_client = docker_client
-        self.image_id = env['container']['imageId']
-        self.uri = env['container']['uri']
+        self.image_id = image_id
+        self.uri = image_uri
         self.cmd = cmd
         self.user = user
         self.volumes = volumes
@@ -56,14 +67,23 @@ class Container(object):
         self.entrypoint = entrypoint  #
         self.cpu_shares = cpu_shares
         self.working_dir = working_dir
+        kwargs.update({
+                "Image": image_id,
+                "Cmd": cmd,
+                "User": user,
+                "Volumes": volumes,
+                "Memory": mem_limit,
+                "ExposedPorts": ports,
+                "Environment": environment,
+                "CpuShares": cpu_shares,
+                "WorkingDir": working_dir
+            })
         # detach, stdin_open,
         # dns,
         # domainname, memswap_limit
-        self.config = make_config(self.image_id, self.cmd, self.user,
-                                  self.volumes, self.mem_limit, self.ports,
-                                  self.environment, self.entrypoint,
-                                  self.cpu_shares, self.working_dir)
-        provide_image(self.image_id, self.uri, self.docker_client)
+        log.debug(kwargs)
+        self.config = make_config(**kwargs)
+        log.debug(self.config)
         try:
             self.container = self.docker_client.create_container_from_config(
                 self.config)
@@ -131,3 +151,52 @@ class Container(object):
         else:
             print(self.docker_client.logs(self.container))
         return self
+
+    def commit(self, message=None, conf=None, repository=None, tag=None):
+        self.produced_image = self.docker_client.commit(
+            self.container['Id'], message=message, conf=conf,
+            repository=repository, tag=tag
+        )
+        return self
+
+    def print_log(self):
+        if self.is_running():
+            for out in self.docker_client.attach(self.container, stream=True):
+                print(out.rstrip())
+        else:
+            print(self.docker_client.logs(self.container))
+        return self
+
+
+def find_image(client, image_id, repo=None, tag=None):
+    """Returns image dict if it exists locally, or None"""
+    images = client.images()
+    tag = tag or 'latest'
+    img = ([i for i in images if i['Id'].startswith(image_id)]
+            if image_id else None)
+    if not img:
+        img = ([i for i in images if (repo + ':' + tag) in i['RepoTags']]
+                if repo and tag else None)
+    return (img or [None])[0]
+
+
+def get_image(client, repo=None, tag=None, image_id=None):
+    """Returns the image dict. Pulls from repo if not found locally."""
+
+    if not image_id and not repo:
+        raise ValueError('Need either repository or image ID.')
+
+    img = None
+
+    if image_id:
+        img = find_image(client, image_id)
+
+    if not img:
+        log.info('Pulling %s', repo)
+        client.pull(repo, tag)
+        img = find_image(client, image_id, repo, tag)
+
+    if not img:
+        raise ResourceUnavailable(repo, 'Image not found.')
+
+    return img

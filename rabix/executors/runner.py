@@ -88,9 +88,11 @@ class DockerRunner(Runner):
         volumes = vol or {self.WORKING_DIR: {}}
         working_dir = work_dir or self.WORKING_DIR
         user = user or ':'.join([str(os.getuid()), str(os.getgid())])
-        container = Container(self.docker_client, self.enviroment, command,
-                              user=user, volumes=volumes, environment=env,
-                              working_dir=working_dir)
+        container = Container(self.docker_client,
+                              self.enviroment['container']['imageId'],
+                              self.enviroment['container']['uri'],
+                              command, user=user, volumes=volumes,
+                              environment=env, working_dir=working_dir)
         binds = bind or {self.working_dir: self.WORKING_DIR}
         # TODO : Add mem_limit, ports, environment, entrypoint, cpu_shares
         container.start(binds)

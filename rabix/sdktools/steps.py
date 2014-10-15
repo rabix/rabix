@@ -2,11 +2,14 @@ from __future__ import print_function
 import docker
 import logging
 import re
-import shlex
-from os import getenv
 import six
+import shlex
 
-from rabix.executors.container import Container
+from os import getenv
+from os.path import abspath
+from docker.utils.utils import parse_repository_tag
+
+from rabix.executors.container import Container, find_image, get_image
 from rabix.common.errors import RabixError
 
 log = logging.getLogger(__name__)
@@ -15,23 +18,16 @@ MOUNT_POINT = '/build'
 
 
 def build(client, from_img, **kwargs):
-    cmd = kwargs.pop('cmd', None)
-    if not cmd:
-        raise RabixError("Commands ('cmd') not specified!")
-    cfg = make_config()
-    mount_point = kwargs.pop('mount_point', MOUNT_POINT)
-    container = Container(client, from_img, cfg, mount_point=mount_point)
+    container = run_container(client, from_img, kwargs, {})
 
-    run_cmd = make_cmd(cmd, join=True)
-
-    container.run(run_cmd, override_entrypoint=True)
+    container.start({abspath('.'): mount_point})
     container.print_log()
 
     if container.is_success():
         message = kwargs.pop('message', None)
         register = kwargs.pop('register', {})
         cfg = {"Cmd": []}
-        cfg.update(make_config(**kwargs))
+        cfg.update(**kwargs)
         container.commit(
             message, cfg, repository=register.get('repo'),
             tag=register.get('tag')
@@ -42,44 +38,32 @@ def build(client, from_img, **kwargs):
 
 
 def run(client, from_img, **kwargs):
+    container = run_container(client, from_img, kwargs, kwargs)
+    if not container.is_success():
+        raise RabixError(container.docker_client.logs(container.container))
+
+
+def run_container(client, from_img, kwargs, container_kwargs):
+
     cmd = kwargs.pop('cmd', None)
     if not cmd:
         raise RabixError("Commands ('cmd') not specified!")
-    cfg = make_config(**kwargs)
-    run_cmd = make_cmd(cmd, join=True)
+
+    repo, tag = parse_repository_tag(from_img)
+    img = find_image(client, from_img)
+    if not img:
+        img = get_image(client, repo=repo, tag=tag)
+
     mount_point = kwargs.pop('mount_point', MOUNT_POINT)
-    container = Container(client, from_img, cfg, mount_point=mount_point)
-    container.run(run_cmd)
+    run_cmd = make_cmd(cmd, join=True)
+
+    container = Container(client, img['Id'], "docker://{}:{}".format(repo, tag),
+                          run_cmd, volumes={mount_point: {}},
+                          working_dir=mount_point, **container_kwargs)
+
+    container.start({abspath('.'): mount_point})
     container.print_log()
-    if not container.is_success():
-        raise RabixError(container.docker.logs(container.container))
-
-
-def install_wrapper(client, from_img, **kwargs):
-    cmd = [
-        'pip install -e "git+https://github.com/rabix/rabix.git'
-        '@devel#egg=rabix-core&subdirectory=rabix-core"',
-        'cd ' + MOUNT_POINT,
-        'pip install .'
-    ]
-    run(client, from_img, cmd=cmd)
-    pass
-
-
-def make_config(**kwargs):
-    keys = ['Hostname', 'Domainname', 'User', 'Memory', 'MemorySwap',
-            'CpuShares', 'Cpuset', 'AttachStdin', 'AttachStdout',
-            'AttachStderr', 'PortSpecs', 'ExposedPorts', 'Tty', 'OpenStdin',
-            'StdinOnce', 'Env', 'Cmd', 'Image', 'Volumes', 'WorkingDir',
-            'Entrypoint', 'NetworkDisabled', 'OnBuild']
-
-    cfg = {k.title(): v for k, v in six.iteritems(kwargs)}
-    cfg = {k: v for k, v in six.iteritems(cfg) if k in keys}
-    entrypoint = cfg.get("Entrypoint")
-    if isinstance(entrypoint, six.string_types):
-        cfg['Entrypoint'] = shlex.split(entrypoint)
-
-    return cfg
+    return container
 
 
 def make_cmd(cmd, join=False):
@@ -144,5 +128,5 @@ class Runner(object):
 
 def run_steps(config, docker_host=None, steps=None, context=None):
     docker_host = docker_host or getenv("DOCKER_HOST", None)
-    r = Runner(docker.Client(docker_host, version="1.8"), steps, context)
+    r = Runner(docker.Client(docker_host, version="1.12"), steps, context)
     r.run(config)

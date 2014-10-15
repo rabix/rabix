@@ -21,10 +21,10 @@ log = logging.getLogger(__name__)
 
 USAGE = """
 Usage:
-  rabix build [--config=<cfg_path>]
+  rabix build [-v...] [--config=<cfg_path>]
   rabix checksum [--method=(md5|sha1)] <jsonptr>
   rabix install [-v...] <file>
-  rabix run [-v...] <file>
+  rabix run [-v...] (--job=<job> [--tool=<tool> {inputs}] | --tool=<tool> {inputs})
   rabix -h | --help
   rabix --version
 
@@ -69,6 +69,19 @@ def make_pipeline_usage_string(pipeline, path):
         )
     return RUN_TPL.format(pipeline=path, arguments=' '.join(usage_str),
                           options='\n  '.join(options))
+
+
+def make_tool_usage_string(tool):
+    inputs = tool.get('inputs', {}).get('properties')
+    usage_str = []
+    for k, v in inputs.items():
+        if v.get('type') == 'file':
+            arg = '--%s=<%s_file>' % (k, k)
+            usage_str.append(arg if v.get('required') else '[%s]' %arg)
+        elif v.get('type') == 'array' and (v.get('items').get('type') == 'file' or v.get('items').get('type') == 'directory'):
+            arg = '--%s=<%s_file>...' % (k, k)
+            usage_str.append(arg if v.get('required') else '[%s]' %arg)
+    return USAGE.format(inputs=' '.join(usage_str))
 
 
 def before_task(task):
