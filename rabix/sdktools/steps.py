@@ -57,7 +57,8 @@ def run_container(client, from_img, kwargs, container_kwargs):
     mount_point = kwargs.pop('mount_point', MOUNT_POINT)
     run_cmd = make_cmd(cmd, join=True)
 
-    container = Container(client, img['Id'], "docker://{}:{}".format(repo, tag),
+    container = Container(client, img['Id'],
+                          "docker://{}:{}".format(repo, tag),
                           run_cmd, volumes={mount_point: {}},
                           working_dir=mount_point, **container_kwargs)
 
@@ -100,7 +101,8 @@ class Runner(object):
             if not step_type:
                 raise RabixError("Unknown step type: %" % type_name)
 
-            resolved = {k: self.resolve(v) for k, v in six.iteritems(step_conf)}
+            resolved = {k: self.resolve(v) for k, v
+                        in six.iteritems(step_conf)}
 
             img = resolved.pop('from', None)
             if not img:

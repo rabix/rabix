@@ -13,7 +13,7 @@ requires = [
 ]
 
 if sys.version_info[0] == 2:
-    requires+=[
+    requires += [
         x.strip() for x in
         io.open('requirements2.txt')
     ]
@@ -28,9 +28,7 @@ setup(
                             'rabix-sdk = rabix.sdktools.cli:main'],
     },
     install_requires=requires,
-    package_data={'rabix': [
-            'models/schema/*.json',
-        ]},
+    package_data={'rabix': ['models/schema/*.json']},
     long_description=io.open('README.md').read(),
     zip_safe=False,
     test_suite='tests',

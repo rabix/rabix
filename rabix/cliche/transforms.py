@@ -1,31 +1,31 @@
-
-def sbg_schema2json_schema(sbg):
-
-    def wrap_in_array(schema):
-        return {"type": "array", "items": schema}
-
-    MAPPINGS = {"name": "title",
-                "description": "description",
-                "default": "default"
-               }
-
-    TYPES = {"integer": "integer",
-             "float": "number",
-             "string": "string",
-             "boolean": "boolean",
-             "struct": "object",
-             "file": {"$ref": "http://rabix.org/file.json"}
+MAPPINGS = {"name": "title",
+            "description": "description",
+            "default": "default"
             }
 
-    TYPE_MAPPINGS = {"integer": {
-                        "min": "minimum",
-                        "max": "maximum"
-                     },
-                     "float": {"min": "minimum",
-                                "max": "maximum"
-                               },
-                     "string": {"pattern": "pattern"}
-                   }
+TYPES = {"integer": "integer",
+         "float": "number",
+         "string": "string",
+         "boolean": "boolean",
+         "struct": "object",
+         "file": {"$ref": "http://rabix.org/file.json"}
+         }
+
+TYPE_MAPPINGS = {
+    "integer": {
+        "min": "minimum",
+        "max": "maximum"
+    },
+    "float": {"min": "minimum",
+              "max": "maximum"
+              },
+    "string": {"pattern": "pattern"}
+}
+
+
+def sbg_schema2json_schema(sbg):
+    def wrap_in_array(schema):
+        return {"type": "array", "items": schema}
 
     def convert_elem(elem):
         js_param = {}
@@ -51,7 +51,6 @@ def sbg_schema2json_schema(sbg):
 
         return js_param
 
-
     json = {"$schema": "http://json-schema.org/schema#",
             "inputs": {
                 "type": "object",
@@ -60,7 +59,7 @@ def sbg_schema2json_schema(sbg):
             },
             "outputs": {},
             "adapter": {"baseCmd": ["python", "-m", "sbgsdk.cli", "run-full"]}
-           }
+            }
 
     sbg_schema = sbg["schema"]
     sbg_docker = sbg["docker_image_ref"]
@@ -76,8 +75,6 @@ def sbg_schema2json_schema(sbg):
 
         js_inputs[inp["id"]] = convert_elem(inp2)
 
-
-
     for param in sbg_schema["params"]:
         if inp["required"]:
             json["inputs"]["required"].append(param["id"])
@@ -88,7 +85,8 @@ def sbg_schema2json_schema(sbg):
         "environment": {
             "container": {
                 "type": "docker",
-                "uri": "docker://" + sbg_docker["image_repo"] + "#" + sbg_docker["image_tag"],
+                "uri": "docker://" + sbg_docker["image_repo"] + "#" +
+                       sbg_docker["image_tag"],
                 "imageId": sbg_docker["image_id"]
             }
         }
@@ -101,15 +99,14 @@ def sbg_job2cliche_job(doc):
     pass
 
 
-
 def cliche_job2sbg_job(doc, schema):
     sbg_job = {"$$type": "job",
                "wrapper_id": doc["app"],
                "args": {
-                "$inputs": {},
-                "$params": {}
+                   "$inputs": {},
+                   "$params": {}
                }
-              }
+               }
     sbg_resources = {"$$type": "resources"}
     allocated_resources = doc["allocatedResources"]
 
@@ -120,8 +117,6 @@ def cliche_job2sbg_job(doc, schema):
     sbg_job["resources"] = sbg_resources
 
     inputs = schema["inputs"]["properties"]
-
-
 
     for inp, schema in inputs.items():
         val = doc["inputs"][inp]
@@ -145,6 +140,7 @@ if __name__ == "__main__":
     import json
     import yaml
     import jsonschema
+
     bwa_path = join(dirname(__file__), "../tests/test-data/BwaMem.json")
     bwa = json.load(open(bwa_path))
     bwa_schm = sbg_schema2json_schema(bwa)
@@ -154,4 +150,3 @@ if __name__ == "__main__":
     job_path = join(dirname(__file__), "../examples/bwa-mem.yml")
     job = yaml.load(open(job_path))
     print(json.dumps(cliche_job2sbg_job(job["job"], job["tool"]), indent=2))
-

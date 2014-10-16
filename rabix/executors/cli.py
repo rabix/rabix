@@ -1,21 +1,20 @@
-import os
 import docopt
-import six
 import sys
+
 from rabix.executors import __version__ as version
 from rabix.executors.validations import validate_inputs
 from rabix.executors.runner import DockerRunner
 from rabix.cliche.adapter import from_url
 
 
-TEMPLATE_JOB={
+TEMPLATE_JOB = {
     'app': 'http://example.com/app.json',
     'inputs': {},
     'platform': 'http://example.org/my_platform/v1',
     'allocatedResources': {}
 }
 
-USAGE='''
+USAGE = '''
 Usage:
     rabix run [-v] (--job=<job> [--tool=<tool> {inputs}] | --tool=<tool> {inputs})
     rabix -h
@@ -25,16 +24,19 @@ Options:
   -v --verbose                            Verbosity. More Vs more output.
 '''
 
+
 def make_tool_usage_string(tool):
     inputs = tool.get('inputs', {}).get('properties')
     usage_str = []
     for k, v in inputs.items():
         if v.get('type') == 'file':
             arg = '--%s=<%s_file>' % (k, k)
-            usage_str.append(arg if v.get('required') else '[%s]' %arg)
-        elif v.get('type') == 'array' and (v.get('items').get('type') == 'file' or v.get('items').get('type') == 'directory'):
+            usage_str.append(arg if v.get('required') else '[%s]' % arg)
+        elif v.get('type') == 'array' and \
+                (v.get('items').get('type') == 'file' or
+                    v.get('items').get('type') == 'directory'):
             arg = '--%s=<%s_file>...' % (k, k)
-            usage_str.append(arg if v.get('required') else '[%s]' %arg)
+            usage_str.append(arg if v.get('required') else '[%s]' % arg)
     return USAGE.format(inputs=' '.join(usage_str))
 
 
@@ -53,7 +55,7 @@ def get_inputs(tool, args):
     return {'inputs': inp}
 
 
-def update_paths(job, inputs): # tested
+def update_paths(job, inputs):  # tested
     for inp in inputs['inputs'].keys():
         job['inputs'][inp] = inputs['inputs'][inp]
     return job
@@ -99,7 +101,6 @@ def main():
             validate_inputs(tool, job)
             runner = DockerRunner(tool)
             runner.run_job(job)
-
     except docopt.DocoptExit:
         print(DOCOPT)
         return

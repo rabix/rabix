@@ -30,7 +30,6 @@ def parse_docker_uri(uri):
     return repo, tag
 
 
-
 def make_config(**kwargs):
     keys = ['Hostname', 'Domainname', 'User', 'Memory', 'MemorySwap',
             'CpuShares', 'Cpuset', 'AttachStdin', 'AttachStdout',
@@ -54,9 +53,9 @@ def make_config(**kwargs):
 
 class Container(object):
 
-    def __init__(self, docker_client, image_id, image_uri, cmd, user=None, volumes=None,
-                 mem_limit=0, ports=None, environment=None, entrypoint=None,
-                 cpu_shares=None, working_dir=None, **kwargs):
+    def __init__(self, docker_client, image_id, image_uri, cmd, user=None,
+                 volumes=None, mem_limit=0, ports=None, environment=None,
+                 entrypoint=None, cpu_shares=None, working_dir=None, **kwargs):
         self.docker_client = docker_client
         self.image_id = image_id
         self.uri = image_uri
@@ -165,10 +164,10 @@ def find_image(client, image_id, repo=None, tag=None):
     images = client.images()
     tag = tag or 'latest'
     img = ([i for i in images if i['Id'].startswith(image_id)]
-            if image_id else None)
+           if image_id else None)
     if not img:
         img = ([i for i in images if (repo + ':' + tag) in i['RepoTags']]
-                if repo and tag else None)
+               if repo and tag else None)
     return (img or [None])[0]
 
 

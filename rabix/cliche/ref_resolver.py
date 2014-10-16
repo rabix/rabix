@@ -40,7 +40,9 @@ class Loader(object):
         return self.resolve_ref({'$ref': url}, base_url)
 
     def resolve_ref(self, obj, base_url):
-        ref, mixin, checksum = obj.pop('$ref', None), obj.pop('$mixin', None), obj.pop('$checksum', None)
+        ref, mixin, checksum = (obj.pop('$ref', None),
+                                obj.pop('$mixin', None),
+                                obj.pop('$checksum', None))
         ref = ref or mixin
         url = urlparse.urljoin(base_url, ref)
         if url in self.resolved:
@@ -107,7 +109,9 @@ class Loader(object):
     def checksum(self, document, method='sha1'):
         if method not in ('md5', 'sha1'):
             raise NotImplementedError('Unsupported hash method: %s' % method)
-        normalized = json.dumps(document, sort_keys=True, separators=(',', ':'))
+        normalized = json.dumps(document,
+                                sort_keys=True,
+                                separators=(',', ':'))
         return getattr(hashlib, method)(six.b(normalized)).hexdigest()
 
 
@@ -149,7 +153,8 @@ def from_url(url, base_url=None):
 
 def test_tmap():
     path = os.path.join(os.path.dirname(__file__), '../examples/tmap.yml')
-    expected_path = os.path.join(os.path.dirname(__file__), '../examples/tmap_resolved.json')
+    expected_path = os.path.join(os.path.dirname(__file__),
+                                 '../examples/tmap_resolved.json')
     doc = loader.load(path)
     with open(expected_path) as fp:
         expected = json.load(fp)

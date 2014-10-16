@@ -151,7 +151,8 @@ class Adapter(object):
         self.args = []
 
         if tool['adapter'].get('args'):
-            self.args += [make_argument(arg) for arg in tool['adapter']['args']]
+            self.args += [make_argument(arg) for arg
+                          in tool['adapter']['args']]
 
         self.args += [make_argument(input_spec, input_name)
                       for input_name, input_spec
@@ -160,7 +161,7 @@ class Adapter(object):
 
     def cli(self, job):
         for req in self.tool['inputs']['required']:
-            if not req in job['inputs']:
+            if req not in job['inputs']:
                 raise RuntimeError("Required input not provided: " + req)
 
         cli = list(self.tool['adapter']['baseCmd'])
@@ -253,14 +254,14 @@ def test_bwa_mem():
     path = os.path.join(os.path.dirname(__file__), '../examples/bwa-mem.yml')
     doc = from_url(path)
     tool, job = doc['tool'], doc['job']
-    print gen_cli(tool, job)
+    print(gen_cli(tool, job))
 
 
 def test_tmap_mapall():
     path = os.path.join(os.path.dirname(__file__), '../examples/tmap.yml')
     doc = from_url(path)
     tool, job = doc['mapall'], doc['exampleJob']
-    print gen_cli(tool, job)
+    print(gen_cli(tool, job))
 
 
 test_bwa_mem()

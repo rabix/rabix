@@ -1,13 +1,14 @@
 import os
 import docker
 import six
-import time
 import json
 import logging
-from multiprocessing import Process
 import uuid
 import stat
 import copy
+
+from multiprocessing import Process
+
 from rabix.executors.container import Container
 from rabix.cliche.adapter import Adapter
 from rabix.tests import infinite_loop, infinite_read
@@ -91,7 +92,8 @@ class DockerRunner(Runner):
             envlst.append('='.join([env, val]))
         return envlst
 
-    def _run(self, command, vol=None, bind=None, user=None, env=None, work_dir=None):
+    def _run(self, command, vol=None, bind=None,
+             user=None, env=None, work_dir=None):
         volumes = vol or {self.WORKING_DIR: {}}
         working_dir = work_dir or self.WORKING_DIR
         user = user or ':'.join([str(os.getuid()), str(os.getgid())])
@@ -132,7 +134,7 @@ class NativeRunner(Runner):
         pass
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
 
     working_dir = str(uuid.uuid4())
     os.mkdir(working_dir)
@@ -143,11 +145,16 @@ if __name__=='__main__':
     runner_inf = DockerRunner(infinite_loop['tool'])
     runner_read = DockerRunner(infinite_read['tool'])
 
-    command_inf = ['bash', '-c', '/home/infinite.sh > %s' %('/' + working_dir + '/pipe')]
-    command_read = ['bash', '-c', '/home/infinite_read.sh < %s > %s' %('/' + working_dir + '/pipe', '/' + working_dir + '/result') ]
+    command_inf = ['bash', '-c', '/home/infinite.sh > %s' %
+                   ('/' + working_dir + '/pipe')]
+    command_read = ['bash', '-c', '/home/infinite_read.sh < %s > %s' %
+                    ('/' + working_dir + '/pipe',
+                     '/' + working_dir + '/result')]
     volumes = {''.join(['/', working_dir]) : {}}
     binds = {os.path.abspath('./'): ''.join(['/', working_dir])}
-    container_inf = runner_inf._run(command_inf, vol=volumes, bind=binds, work_dir='/' + working_dir)
-    container_rd = runner_read._run(command_read, vol=volumes, bind=binds, work_dir='/' + working_dir)
+    container_inf = runner_inf._run(command_inf, vol=volumes, bind=binds,
+                                    work_dir='/' + working_dir)
+    container_rd = runner_read._run(command_read, vol=volumes, bind=binds,
+                                    work_dir='/' + working_dir)
     p2 = Process(target=container_rd.get_stdout, kwargs={'file': 'result'})
     p2.start()

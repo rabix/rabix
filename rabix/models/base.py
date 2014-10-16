@@ -5,7 +5,7 @@ import jsonschema
 import six
 
 from rabix.common.errors import ValidationError
-from rabix.common.loadsave import from_url
+from rabix.cliche.ref_resolver import from_url
 
 log = logging.getLogger(__name__)
 

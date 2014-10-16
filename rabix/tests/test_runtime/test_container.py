@@ -4,7 +4,7 @@ from nose.tools import raises, eq_
 
 from docker.errors import APIError
 
-from rabix.runtime.builtins.dockr import Container
+from rabix.executors.container import Container
 
 
 def dockmock(**kwargs):

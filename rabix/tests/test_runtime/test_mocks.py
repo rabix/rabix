@@ -11,7 +11,7 @@ from rabix import CONFIG
 from rabix.common.protocol import Outputs, WrapperJob
 from rabix.common.util import rnd_name
 from rabix.common.errors import ValidationError
-from rabix.common.loadsave import from_url
+from rabix.cliche.ref_resolver import from_url
 from rabix.runtime.engine import get_engine
 from rabix.runtime.engine.base import SequentialEngine
 from rabix.runtime.engine.base import MultiprocessingEngine
