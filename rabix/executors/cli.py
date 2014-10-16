@@ -98,7 +98,7 @@ def main():
             job = update_paths(job, inp)
             validate_inputs(tool, job)
             runner = DockerRunner(tool)
-            print runner.run_job(job)
+            runner.run_job(job)
 
     except docopt.DocoptExit:
         print(DOCOPT)

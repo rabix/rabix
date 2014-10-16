@@ -1,9 +1,9 @@
 import os
 import json
+import six
 import copy
 import operator
 import glob
-
 import execjs
 from jsonschema import Draft4Validator
 from rabix.cliche.ref_resolver import from_url

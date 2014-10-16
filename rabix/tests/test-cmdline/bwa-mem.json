@@ -7,14 +7,25 @@
             "reference": {
                 "path": "./rabix/tests/test-files/chr20.fa",
                 "size": 123,
-                "checksum": "sha1$hash"
+                "checksum": "sha1$hash",
+                "meta": {
+                    "file_type": "fastq"
+                }
             },
             "reads": [
                 {
-                    "path": "./rabix/tests/test-files/example_human_Illumina.pe_1.fastq"
+                    "path": "./rabix/tests/test-files/example_human_Illumina.pe_1.fastq",
+                    "meta": {
+                        "file_type": "fastq",
+                        "sample": "SAMPLE1"
+                    }
                 },
                 {
-                    "path": "./rabix/tests/test-files/example_human_Illumina.pe_2.fastq"
+                    "path": "./rabix/tests/test-files/example_human_Illumina.pe_2.fastq",
+                    "meta": {
+                        "file_type": "fastq",
+                        "sample": "SAMPLE1"
+                    }
                 }
             ],
             "min_std_max_min": [
@@ -116,7 +127,10 @@
                         "glob": "output.sam",
                         "streamable": "Yes",
                         "meta": {
-                            "file_type": "sam"
+                            "file_type": {
+                                "$expr": "if($job.inputs.minimum_seed_length < 2) {\"sam\"} else {\"bam\"}"
+                            },
+                            "$inherit": "reads"
                         }
                     }
                 }

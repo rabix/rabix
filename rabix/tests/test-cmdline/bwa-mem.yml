@@ -7,9 +7,15 @@ job:
       path: ./rabix/tests/test-files/chr20.fa
       size: 123
       checksum: sha1$hash
+      meta:
+        nesto: nestonesto
     reads:
       - path: ./rabix/tests/test-files/example_human_Illumina.pe_1.fastq
+        meta:
+          sample: SAMPLE1
       - path: ./rabix/tests/test-files/example_human_Illumina.pe_2.fastq
+        meta:
+          sample: SAMPLE1
     min_std_max_min: [1, 2, 3, 4]
     minimum_seed_length: 3
   platform: "http://example.org/my_platform/v1"
@@ -81,14 +87,13 @@ tool:
         type: file
         adapter:
           meta:
-            file_type: sam
+            $inherit: reads
+            file_type:
+              $expr: sam
           stdout: Yes
           glob: output.sam
           streamable: Yes
   adapter:
-    environment:
-      BLA: /home/bla
-      SOMETHING: /opt/something
     baseCmd: [bwa, mem]
     stdout: output.sam
     args:

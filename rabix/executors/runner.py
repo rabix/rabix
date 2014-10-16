@@ -1,6 +1,8 @@
 import os
 import docker
+import six
 import time
+import json
 import logging
 from multiprocessing import Process
 import uuid
@@ -11,10 +13,13 @@ from rabix.cliche.adapter import Adapter
 from rabix.tests import infinite_loop, infinite_read
 
 
+log = logging.getLogger(__name__)
+
+
 class BindDict(dict):
     def items(self):
         ret = []
-        for k, v in self.iteritems():
+        for k, v in six.iteritems(self):
             ret.append((v, k))
         return ret
 
@@ -22,7 +27,7 @@ class BindDict(dict):
 class Runner(object):
     WORKING_DIR = '/work'
 
-    def __init__(self, tool, working_dir='./', stdout=None, stderr=None):
+    def __init__(self, tool, working_dir='./', stdout=None, stderr='out.err'):
         if not os.path.isabs(working_dir):
             working_dir = os.path.abspath(working_dir)
         self.tool = tool
@@ -39,9 +44,9 @@ class Runner(object):
 
 
 class DockerRunner(Runner):
-    def __init__(self, tool, working_dir='./', dockr=None, stdout=None,
-                 stderr=None):
-        super(DockerRunner, self).__init__(tool, working_dir, stdout, stderr)
+    def __init__(self, tool, working_dir='./', dockr=None, stderr=None):
+        stdout = tool.get('adapter', {}).get('stdout', None)
+        super(DockerRunner, self).__init__(tool, working_dir, stdout)
         self.docker_client = dockr or docker.Client(version='1.12')
 
     def volumes(self, job):
@@ -80,9 +85,9 @@ class DockerRunner(Runner):
 
     @property
     def envvars(self):
-        envvars = self.tool.get('adapter', {}).get('environment')
+        envvars = self.tool.get('adapter', {}).get('environment', {})
         envlst = []
-        for env, val in envvars.iteritems():
+        for env, val in six.iteritems(envvars):
             envlst.append('='.join([env, val]))
         return envlst
 
@@ -96,7 +101,7 @@ class DockerRunner(Runner):
                               command, user=user, volumes=volumes,
                               environment=env, working_dir=working_dir)
         binds = bind or {self.working_dir: self.WORKING_DIR}
-        # TODO : Add mem_limit, ports, environment, entrypoint, cpu_shares
+        # TODO : Add mem_limit, ports, entrypoint, cpu_shares
         container.start(binds)
         return container
 
@@ -104,7 +109,7 @@ class DockerRunner(Runner):
         job_dir = job_id or self.rnd_name()
         os.mkdir(job_dir)
         os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
-                 stat.S_IWOTH | stat.S_IXOTH)
+                 stat.S_IWOTH)
         adapter = Adapter(self.tool)
         volumes, binds, remaped_job = self.volumes(job)
         volumes['/' + job_dir] = {}
@@ -112,9 +117,11 @@ class DockerRunner(Runner):
         container = self._run(['bash', '-c', adapter.cmd_line(remaped_job)],
                               vol=volumes, bind=binds, env=self.envvars,
                               work_dir='/' + job_dir)
+        container.get_stderr(file='/'.join([os.path.abspath(job_dir), self.stderr]))
         if not container.is_success():
             raise RuntimeError("err %s" % container.get_stderr())
-        return adapter.get_outputs(os.path.abspath(job_dir), job)
+        with open(os.path.abspath(job_dir) + '/result.json', 'w') as f:
+            json.dump(adapter.get_outputs(os.path.abspath(job_dir), job), f)
 
 
 class NativeRunner(Runner):
@@ -130,21 +137,17 @@ if __name__=='__main__':
     working_dir = str(uuid.uuid4())
     os.mkdir(working_dir)
     os.chmod(working_dir, os.stat(working_dir).st_mode | stat.S_IROTH |
-             stat.S_IWOTH | stat.S_IXOTH)
+             stat.S_IWOTH)
     os.chdir(working_dir)
 
     runner_inf = DockerRunner(infinite_loop['tool'])
     runner_read = DockerRunner(infinite_read['tool'])
 
-    command_inf = ['bash', '-c', '/home/infinite.sh']
-    command_read = ['bash', '-c', '/home/infinite_read.sh < %s' %('/' + working_dir + '/pipe')]
+    command_inf = ['bash', '-c', '/home/infinite.sh > %s' %('/' + working_dir + '/pipe')]
+    command_read = ['bash', '-c', '/home/infinite_read.sh < %s > %s' %('/' + working_dir + '/pipe', '/' + working_dir + '/result') ]
     volumes = {''.join(['/', working_dir]) : {}}
     binds = {os.path.abspath('./'): ''.join(['/', working_dir])}
     container_inf = runner_inf._run(command_inf, vol=volumes, bind=binds, work_dir='/' + working_dir)
-    p1 = Process(target=container_inf.get_stdout, kwargs={'file': 'pipe'})
-    p1.start()
-    time.sleep(5)
     container_rd = runner_read._run(command_read, vol=volumes, bind=binds, work_dir='/' + working_dir)
-
     p2 = Process(target=container_rd.get_stdout, kwargs={'file': 'result'})
     p2.start()

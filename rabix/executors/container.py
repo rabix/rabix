@@ -5,6 +5,7 @@ from docker.errors import APIError
 
 log = logging.getLogger(__name__)
 
+
 def provide_image(image_id, uri, docker_client):
     if filter(lambda x: (image_id in x['Id']), docker_client.images()):
         return
@@ -19,10 +20,12 @@ def provide_image(image_id, uri, docker_client):
             return
         raise Exception('Image not found')
 
+
 def parse_docker_uri(uri):
     repo, tag = uri.split('#')
     repo = repo.lstrip('docker://')
-    return (repo, tag)
+    return repo, tag
+
 
 def make_config(**kwargs):
     keys = ['Hostname', 'Domainname', 'User', 'Memory', 'MemorySwap',
@@ -38,11 +41,7 @@ def make_config(**kwargs):
         'Privileged': False,
     }
     cfg.update({k[0].upper() + k[1:]: v for k, v in six.iteritems(kwargs)})
-    log.debug("after update, and titlecase:")
-    log.debug(cfg)
     cfg = {k: v for k, v in six.iteritems(cfg) if k in keys}
-    log.debug("after filtration:")
-    log.debug(cfg)
     entrypoint = cfg.get("Entrypoint")
     if isinstance(entrypoint, six.string_types):
         cfg['Entrypoint'] = shlex.split(entrypoint)
@@ -77,12 +76,7 @@ class Container(object):
                 "CpuShares": cpu_shares,
                 "WorkingDir": working_dir
             })
-        # detach, stdin_open,
-        # dns,
-        # domainname, memswap_limit
-        log.debug(kwargs)
         self.config = make_config(**kwargs)
-        log.debug(self.config)
         try:
             self.container = self.docker_client.create_container_from_config(
                 self.config)
@@ -92,9 +86,9 @@ class Container(object):
                 raise RuntimeError('Image %s not found:' % self.image_id)
             raise RuntimeError('Failed to create Container')
 
-    def start(self, binds):
+    def start(self, binds=None, port_bindings=None):
         try:
-            self.docker_client.start(container=self.container, binds=binds)
+            self.docker_client.start(container=self.container, binds=binds, port_bindings=port_bindings)
         except APIError:
             logging.error('Failed to run container %s' % self.container)
             raise RuntimeError('Unable to run container from image %s:'
@@ -157,14 +151,6 @@ class Container(object):
             self.container['Id'], message=message, conf=conf,
             repository=repository, tag=tag
         )
-        return self
-
-    def print_log(self):
-        if self.is_running():
-            for out in self.docker_client.attach(self.container, stream=True):
-                print(out.rstrip())
-        else:
-            print(self.docker_client.logs(self.container))
         return self
 
 
