@@ -93,7 +93,8 @@ class Container(object):
 
     def start(self, binds=None, port_bindings=None):
         try:
-            self.docker_client.start(container=self.container, binds=binds, port_bindings=port_bindings)
+            self.docker_client.start(container=self.container, binds=binds,
+                                     port_bindings=port_bindings)
         except APIError:
             logging.error('Failed to run container %s' % self.container)
             raise RuntimeError('Unable to run container from image %s:'
@@ -152,8 +153,9 @@ class Container(object):
         return self
 
     def commit(self, message=None, conf=None, repository=None, tag=None):
+        log.debug("repository: {}, ")
         self.produced_image = self.docker_client.commit(
-            self.container['Id'], message=message, conf=conf,
+            self.container['Id'], message=message, conf=make_config(**conf),
             repository=repository, tag=tag
         )
         return self

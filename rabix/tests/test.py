@@ -1,12 +1,8 @@
-import os
-import sys
-import six
 import docker
 from rabix.executors.runner import DockerRunner, NativeRunner
 from rabix.executors.container import provide_image
 from nose.tools import nottest, raises
 from rabix.tests import mock_app_bad_repo, mock_app_good_repo
-from rabix.cliche.ref_resolver import from_url
 from rabix.executors.cli import get_tool, main
 
 
@@ -22,6 +18,7 @@ def test_native_runner():
     command = ['grep', '-r', 'chr']
     pass
 
+
 @nottest
 @raises(Exception)
 def test_provide_image_bad_repo():
@@ -32,6 +29,7 @@ def test_provide_image_bad_repo():
     docker_client = docker.Client(version='1.12')
     provide_image(imageId, uri, docker_client)
 
+
 @nottest
 def test_provide_image_good_repo():
     uri = mock_app_good_repo["tool"]["requirements"]["environment"][
@@ -40,6 +38,7 @@ def test_provide_image_good_repo():
         "container"]["imageId"]
     docker_client = docker.Client(version='1.12')
     provide_image(imageId, uri, docker_client)
+
 
 @nottest
 def test_cmd_line():

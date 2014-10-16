@@ -19,15 +19,12 @@ MOUNT_POINT = '/build'
 
 def build(client, from_img, **kwargs):
     container = run_container(client, from_img, kwargs, {})
-
-    container.start({abspath('.'): mount_point})
-    container.print_log()
-
     if container.is_success():
         message = kwargs.pop('message', None)
         register = kwargs.pop('register', {})
         cfg = {"Cmd": []}
         cfg.update(**kwargs)
+
         container.commit(
             message, cfg, repository=register.get('repo'),
             tag=register.get('tag')
@@ -63,7 +60,7 @@ def run_container(client, from_img, kwargs, container_kwargs):
                           working_dir=mount_point, **container_kwargs)
 
     container.start({abspath('.'): mount_point})
-    container.print_log()
+    container.get_stdout()
     return container
 
 

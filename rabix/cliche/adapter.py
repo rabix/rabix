@@ -1,13 +1,9 @@
 import os
 import json
-import six
 import copy
 import operator
 import glob
-<<<<<<< HEAD
-=======
 import six
->>>>>>> Fixing pep8 issues, and Python 2/3 compatibility
 import execjs
 
 from six.moves import reduce

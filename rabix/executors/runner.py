@@ -119,7 +119,8 @@ class DockerRunner(Runner):
         container = self._run(['bash', '-c', adapter.cmd_line(remaped_job)],
                               vol=volumes, bind=binds, env=self.envvars,
                               work_dir='/' + job_dir)
-        container.get_stderr(file='/'.join([os.path.abspath(job_dir), self.stderr]))
+        container.get_stderr(file='/'.join([os.path.abspath(job_dir),
+                                            self.stderr]))
         if not container.is_success():
             raise RuntimeError("err %s" % container.get_stderr())
         with open(os.path.abspath(job_dir) + '/result.json', 'w') as f:
@@ -150,7 +151,7 @@ if __name__ == '__main__':
     command_read = ['bash', '-c', '/home/infinite_read.sh < %s > %s' %
                     ('/' + working_dir + '/pipe',
                      '/' + working_dir + '/result')]
-    volumes = {''.join(['/', working_dir]) : {}}
+    volumes = {''.join(['/', working_dir]): {}}
     binds = {os.path.abspath('./'): ''.join(['/', working_dir])}
     container_inf = runner_inf._run(command_inf, vol=volumes, bind=binds,
                                     work_dir='/' + working_dir)

@@ -8,7 +8,7 @@ from nose.tools import nottest, assert_equals, assert_raises
 
 from rabix import CONFIG
 
-from rabix.common.protocol import Outputs, WrapperJob
+from rabix.common.protocol import Outputs
 from rabix.common.util import rnd_name
 from rabix.common.errors import ValidationError
 from rabix.cliche.ref_resolver import from_url
