@@ -6,13 +6,15 @@ import hashlib
 import logging
 import collections
 import requests
-import urlparse
+import six
+
+from six.moves.urllib import parse as urlparse
 
 log = logging.getLogger(__name__)
 
 
 class NormDict(dict):
-    def __init__(self, normalize=unicode):
+    def __init__(self, normalize=six.text_type):
         super(NormDict, self).__init__()
         self.normalize = normalize
 
@@ -64,7 +66,7 @@ class Loader(object):
         elif isinstance(document, dict):
             if '$ref' in document or '$mixin' in document:
                 return self.resolve_ref(document, base_url)
-            iterator = document.iteritems()
+            iterator = six.iteritems(document)
         else:
             return document
         for key, val in iterator:
@@ -106,7 +108,7 @@ class Loader(object):
         if method not in ('md5', 'sha1'):
             raise NotImplementedError('Unsupported hash method: %s' % method)
         normalized = json.dumps(document, sort_keys=True, separators=(',', ':'))
-        return getattr(hashlib, method)(normalized).hexdigest
+        return getattr(hashlib, method)(six.b(normalized)).hexdigest()
 
 
 POINTER_DEFAULT = object()

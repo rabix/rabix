@@ -8,7 +8,7 @@ from os.path import isfile
 
 from rabix import __version__ as version
 from rabix.common.errors import RabixError
-from rabix.common.loadsave import DocumentLoader, from_url
+from rabix.cliche.ref_resolver import Loader, from_url
 from rabix.common.util import rnd_name, update_config
 from rabix.models import Pipeline
 from rabix.runtime.engine import get_engine
@@ -24,7 +24,7 @@ Usage:
   rabix build [-v...] [--config=<cfg_path>]
   rabix checksum [--method=(md5|sha1)] <jsonptr>
   rabix install [-v...] <file>
-  rabix run [-v...] (--job=<job> [--tool=<tool> {inputs}] | --tool=<tool> {inputs})
+  rabix run [-v...]
   rabix -h | --help
   rabix --version
 
@@ -47,7 +47,7 @@ Options:
 """
 
 RUN_TPL = """
-Usage: rabix run [-v...] {pipeline} {arguments}
+Usage: (--job=<job> [--tool=<tool> {inputs}] | --tool=<tool> {inputs})
 
 Options:
   -v --verbose                            Verbosity. More Vs more output.
@@ -77,10 +77,12 @@ def make_tool_usage_string(tool):
     for k, v in inputs.items():
         if v.get('type') == 'file':
             arg = '--%s=<%s_file>' % (k, k)
-            usage_str.append(arg if v.get('required') else '[%s]' %arg)
-        elif v.get('type') == 'array' and (v.get('items').get('type') == 'file' or v.get('items').get('type') == 'directory'):
+            usage_str.append(arg if v.get('required') else '[%s]' % arg)
+        elif v.get('type') == 'array' and \
+                (v.get('items').get('type') == 'file' or
+                 v.get('items').get('type') == 'directory'):
             arg = '--%s=<%s_file>...' % (k, k)
-            usage_str.append(arg if v.get('required') else '[%s]' %arg)
+            usage_str.append(arg if v.get('required') else '[%s]' % arg)
     return USAGE.format(inputs=' '.join(usage_str))
 
 
@@ -139,7 +141,7 @@ def install(pipeline):
 
 
 def checksum(jsonptr, method='sha1'):
-    loader = DocumentLoader()
+    loader = Loader()
     obj = loader.load(jsonptr)
     print(method + '$' + loader.checksum(obj, method))
 
