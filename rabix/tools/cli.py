@@ -9,10 +9,7 @@ from os.path import isfile
 from rabix import __version__ as version
 from rabix.common.errors import RabixError
 from rabix.cliche.ref_resolver import Loader, from_url
-from rabix.common.util import rnd_name, update_config
-from rabix.models import Pipeline
-from rabix.runtime.engine import get_engine
-from rabix.runtime.jobs import RunJob, InstallJob
+from rabix.common.util import rnd_name
 from rabix.tools.steps import run_steps
 
 
@@ -137,8 +134,6 @@ def build(path='.rabix.yml'):
 
 def main():
     logging.basicConfig(level=logging.WARN)
-    if isfile('rabix.conf'):
-        update_config()
 
     args = docopt.docopt(USAGE, version=version)
 
