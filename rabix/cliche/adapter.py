@@ -30,7 +30,7 @@ def evaluate(expression, job, context):
 
 
 def intersect_dicts(d1, d2):
-    return {k: v for k, v in d1.iteritems() if v == d2.get(k)}
+    return {k: v for k, v in six.iteritems(d1) if v == d2.get(k)}
 
 
 class Argument(object):
@@ -66,7 +66,7 @@ class Argument(object):
 
     def get_args_and_stdin(self, adapter_mixins=None):
         args = [Argument(self.job, v, self._schema_for(k)) for k, v in
-                self.value.iteritems()]
+                six.iteritems(self.value)]
         args += adapter_mixins or []
         args.sort(key=lambda x: x.position)
         stdin = [a.value for a in args if a.is_stdin()]
@@ -164,7 +164,7 @@ class Adapter(object):
     def _resolve_job_resources(self, job):
         resolved = copy.deepcopy(job)
         res = self.tool.get('requirements', {}).get('resources', {})
-        for k, v in res.iteritems():
+        for k, v in six.iteritems(res):
             if isinstance(v, dict):
                 resolved['allocatedResources'][k] =\
                     evaluate(v['$expr'], resolved, None)
@@ -205,14 +205,14 @@ class Adapter(object):
             elif src:
                 result = src.get('meta', {})
         result.update(**meta)
-        for k, v in result.iteritems():
+        for k, v in six.iteritems(result):
             if isinstance(v, dict) and '$expr' in v:
                 result[k] = evaluate(v['$expr'], job, file)
         return result
 
     def get_outputs(self, job_dir, job):
         result, outs = {}, self.output_schema.get('properties', {})
-        for k, v in outs.iteritems():
+        for k, v in six.iteritems(outs):
             adapter = v['adapter']
             if adapter.get('stdout'):
                 files = [os.path.join(job_dir, self._get_stdout_name(job))]
