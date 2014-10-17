@@ -1,14 +1,10 @@
-import os
 import copy
 import signal
 import random
 import itertools
-import json
 import collections
 import logging
 import six
-
-from rabix import CONFIG
 
 log = logging.getLogger(__name__)
 
@@ -61,19 +57,6 @@ def update_dict(cfg, new_cfg):
                 update_dict(t, new_cfg[key])
             else:
                 t[key] = val
-
-
-def update_config(cfg=CONFIG, path='rabix.conf'):
-    if not os.path.isfile(path):
-        log.error('Config not found: %s', path)
-        return
-    with open(path) as f:
-        try:
-            f_cfg = json.load(f)
-        except Exception as e:
-            log.info('Invalid json %s: %s', path, e)
-            return
-    update_dict(cfg, f_cfg)
 
 
 class DotAccessDict(dict):
