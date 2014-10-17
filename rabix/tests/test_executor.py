@@ -9,6 +9,7 @@ from rabix.tests import mock_app_bad_repo, mock_app_good_repo
 from rabix.executors.cli import get_tool, main
 
 
+@nottest
 @raises(Exception)
 def test_provide_image_bad_repo():
     uri = mock_app_bad_repo["tool"]["requirements"]["environment"][
@@ -19,6 +20,7 @@ def test_provide_image_bad_repo():
     provide_image(imageId, uri, docker_client)
 
 
+@nottest
 def test_provide_image_good_repo():
     uri = mock_app_good_repo["tool"]["requirements"]["environment"][
         "container"]["uri"]
@@ -64,6 +66,7 @@ def test_cmd_line():
     assert tool8
 
 
+@nottest
 def test_expr_and_meta():
     sys.argv = ['rabix', 'run', '--job', '/home/sinisa/devel/CWL/rabix/rabix/tests/test-expr/bwa-mem1.json', '--dir',
                 'test1']
