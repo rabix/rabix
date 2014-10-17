@@ -1,7 +1,7 @@
 import docopt
 import sys
 
-from rabix.executors import __version__ as version
+from rabix import __version__ as version
 from rabix.executors.validations import validate_inputs
 from rabix.executors.runner import DockerRunner
 from rabix.cliche.adapter import from_url

@@ -21,6 +21,8 @@ from rabix.runtime.jobs import RunJob
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
+__test__ = False
+
 
 def load(path):
     with open(path) as fp:

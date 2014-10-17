@@ -6,6 +6,8 @@ from docker.errors import APIError
 
 from rabix.executors.container import Container
 
+__test__ = False
+
 
 def dockmock(**kwargs):
     docker = mock.Mock()
