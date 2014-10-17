@@ -31,11 +31,10 @@ def test_provide_image_good_repo():
 
 
 def test_cmd_line():
-    cmd1 = ['run', '--job', '/home/sinisa/devel/CWL/rabix/rabix/tests/'
-                            'test-cmdline/bwa-mem.yml']
+    cmd1 = ['run', '--job', './rabix/tests/test-cmdline/bwa-mem.yml']
     tool1 = get_tool(cmd1)
     assert tool1
-    cmd2 = ['run', '-v', '--job=/home/sinisa/devel/CWL/rabix/rabix/tests/'
+    cmd2 = ['run', '-v', '--job=./rabix/tests/'
                          'test-cmdline/bwa-mem.yml']
     tool2 = get_tool(cmd2)
     assert tool2
@@ -60,8 +59,7 @@ def test_cmd_line():
     tool7 = get_tool(cmd7)
     assert tool7
     cmd8 = ['run', '--job',
-            '/home/sinisa/devel/CWL/rabix/rabix/tests/test-cmdline/'
-            'bwa-mem-toolurl.yml']
+            './rabix/tests/test-cmdline/bwa-mem-toolurl.yml']
     tool8 = get_tool(cmd8)
     assert tool8
 
