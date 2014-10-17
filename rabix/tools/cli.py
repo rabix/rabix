@@ -13,7 +13,7 @@ from rabix.common.util import rnd_name, update_config
 from rabix.models import Pipeline
 from rabix.runtime.engine import get_engine
 from rabix.runtime.jobs import RunJob, InstallJob
-from rabix.sdktools.steps import run_steps
+from rabix.tools.steps import run_steps
 
 
 log = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ Usage:
   rabix build [-v...] [--config=<cfg_path>]
   rabix checksum [--method=(md5|sha1)] <jsonptr>
   rabix install [-v...] <file>
-  rabix run [-v...]
+  rabix test [-v...] <tool>
   rabix -h | --help
   rabix --version
 
@@ -33,10 +33,10 @@ Commands:
                             deployment.
   checksum                  Calculate and print the checksum of json document
                             (or fragment) pointed by <jsonptr>
-  install                   Install all the apps needed for running pipeline
-                            described in <file>.
-  run                       Run pipeline described in <file>. Depending on the
-                            pipeline, additional parameters must be provided.
+  install                   Install all the apps needed for running pipeline,
+                            job or tool described in <file>.
+  test                      Test if tool description file produces expected
+                            command lines.
 
 Options:
   -c --config=<cfg_path>    Specify path to config file [default: .rabix.yml]
@@ -112,25 +112,6 @@ def set_log_level(v_count):
     logging.root.setLevel(level)
 
 
-def run(path):
-    pipeline = Pipeline.from_app(from_url(path))
-    pipeline.validate()
-    usage_str = make_pipeline_usage_string(pipeline, path)
-    args = docopt.docopt(usage_str, version=version)
-    set_log_level(args['--verbose'])
-    inputs = {
-        i[len('--'):]: args[i]
-        for i in args if i.startswith('--') and i != '--verbose'
-    }
-    job_id = rnd_name()
-    job = RunJob(job_id, pipeline, inputs=inputs)
-    get_engine(before_task=before_task).run(job)
-    present_outputs(job.get_outputs())
-    if job.status == RunJob.FAILED:
-        print(job.error_message or 'Job failed')
-        sys.exit(1)
-
-
 def install(pipeline):
     pipeline = Pipeline.from_app(pipeline)
     job = InstallJob(rnd_name(), pipeline)
@@ -159,27 +140,17 @@ def main():
     if isfile('rabix.conf'):
         update_config()
 
-    try:
-        args = docopt.docopt(USAGE, version=version)
-    except docopt.DocoptExit:
-        if len(sys.argv) > 3:
-            for a in sys.argv[2:]:
-                if not a.startswith('-'):
-                    return run(a)
-        print(USAGE)
-        return
+    args = docopt.docopt(USAGE, version=version)
+
     set_log_level(args['--verbose'])
-    if args["run"]:
-        pipeline_path = args['<file>']
-        pipeline = Pipeline.from_app(from_url(pipeline_path))
-        pipeline.validate()
-        print(make_pipeline_usage_string(pipeline, pipeline_path))
-    elif args["install"]:
+    if args["install"]:
         install(from_url(args['<file>']))
     elif args["checksum"]:
         checksum(args['<jsonptr>'], args['--method'])
     elif args["build"]:
         build(args.get("--config"))
+    elif args["test"]:
+        pass
 
 
 if __name__ == '__main__':
