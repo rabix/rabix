@@ -1,9 +1,9 @@
 #Rabix
 
-## Rabix SDK
+## Rabix Tools
 
-Rabix SDK is tool for easy packaging of bioinformatics tools on [docker](http://docker.com) 
-images.
+Rabix project packs with it a command line tool that eases creation and testing
+of Common Workflow Bioinformatics tools and packages.
 
 ### rabix build
 
@@ -65,16 +65,7 @@ steps:
     register:
       repo: username/tool
       tag: version
-      wrappers: Yes
 ```
-
-If wrappers is set to Yes, build command will install wrappers on docker image. Prerequisit 
-to install wrappers is to have pip installed on docker image. 
-
-###Types of wrappers:
-
-_TODO
-
 
 ##Continuous Integration 
 

@@ -20,24 +20,3 @@ steps:
       type: run
       from: ${package_tool}
       cmd: --input ./test-data/simple.vcf
-
-  - install_wrappers:
-      type: build
-      from: ${package_tool}
-      cmd:
-        - pip install ./wrappers
-        - rabix package rabix_mytool
-      entrypoint: rabix
-      register:
-        repo: boysha/tool
-        # tag: ${version}
-        wrappers: Yes
-
-  - test_wrappers:
-      type: run
-      from: ${install_wrappers}
-      # set this as an entry point prior to running
-      entrypoint: /bin/bash
-      cmd:
-        - nosetests mytool_rabix.tests
-        - rabix run-full --input ./test-data/simple.vcf

@@ -81,7 +81,6 @@ class Container(object):
                 "CpuShares": cpu_shares,
                 "WorkingDir": working_dir
             })
-        print kwargs
         self.config = make_config(**kwargs)
         try:
             self.container = self.docker_client.create_container_from_config(

@@ -16,7 +16,7 @@ TEMPLATE_JOB = {
 
 USAGE = '''
 Usage:
-    rabix run [-v] (--job=<job> [--tool=<tool> {inputs} --dir=<dir>] | --tool=<tool> {inputs} [--dir=<dir>])
+    rabix [-v] (--job=<job> [--tool=<tool> {inputs} --dir=<dir>] | --tool=<tool> {inputs} [--dir=<dir>])
     rabix -h
 
 Options:
@@ -83,24 +83,23 @@ def main():
     if len(sys.argv) == 1:
         print(DOCOPT)
         return
-    if sys.argv[1] == 'run' and len(sys.argv) > 2:
+    if len(sys.argv) > 2:
         tool = get_tool(sys.argv)
         if not tool:
             raise Exception('Need to specify tool')
         DOCOPT = make_tool_usage_string(tool)
     try:
         args = docopt.docopt(DOCOPT, version=version)
-        if args['run']:
-            job = TEMPLATE_JOB
-            if args['--job']:
-                job_from_arg = from_url(args.get('--job', {})).get('job')
-                job_from_arg.pop('tool')
-                job = job_from_arg
-            inp = get_inputs(tool, args)
-            job = update_paths(job, inp)
-            validate_inputs(tool, job)
-            runner = DockerRunner(tool)
-            runner.run_job(job, job_id=args.get('--dir'))
+        job = TEMPLATE_JOB
+        if args['--job']:
+            job_from_arg = from_url(args.get('--job', {})).get('job')
+            job_from_arg.pop('tool')
+            job = job_from_arg
+        inp = get_inputs(tool, args)
+        job = update_paths(job, inp)
+        validate_inputs(tool, job)
+        runner = DockerRunner(tool)
+        runner.run_job(job, job_id=args.get('--dir'))
     except docopt.DocoptExit:
         print(DOCOPT)
         return
