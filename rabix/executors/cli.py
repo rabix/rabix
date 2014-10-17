@@ -16,7 +16,7 @@ TEMPLATE_JOB = {
 
 USAGE = '''
 Usage:
-    rabix run [-v] (--job=<job> [--tool=<tool> {inputs}] | --tool=<tool> {inputs})
+    rabix run [-v] (--job=<job> [--tool=<tool> {inputs} --dir=<dir>] | --tool=<tool> {inputs} [--dir=<dir>])
     rabix -h
 
 Options:
@@ -55,7 +55,7 @@ def get_inputs(tool, args):
     return {'inputs': inp}
 
 
-def update_paths(job, inputs):  # tested
+def update_paths(job, inputs):
     for inp in inputs['inputs'].keys():
         job['inputs'][inp] = inputs['inputs'][inp]
     return job
@@ -100,7 +100,7 @@ def main():
             job = update_paths(job, inp)
             validate_inputs(tool, job)
             runner = DockerRunner(tool)
-            runner.run_job(job)
+            runner.run_job(job, job_id=args.get('--dir'))
     except docopt.DocoptExit:
         print(DOCOPT)
         return

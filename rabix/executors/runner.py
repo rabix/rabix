@@ -124,7 +124,13 @@ class DockerRunner(Runner):
         if not container.is_success():
             raise RuntimeError("err %s" % container.get_stderr())
         with open(os.path.abspath(job_dir) + '/result.json', 'w') as f:
-            json.dump(adapter.get_outputs(os.path.abspath(job_dir), job), f)
+            outputs = adapter.get_outputs(os.path.abspath(job_dir), job)
+            for k, v in six.iteritems(outputs):
+                if v:
+                    meta = v.pop('meta', {})
+                    with open(v['path'] + '.meta', 'w') as m:
+                        json.dump(meta, m)
+            json.dump(outputs, f)
 
 
 class NativeRunner(Runner):
@@ -137,6 +143,9 @@ class NativeRunner(Runner):
 
 if __name__ == '__main__':
 
+    '''
+    Streaming between two containers test.
+    '''
     working_dir = str(uuid.uuid4())
     os.mkdir(working_dir)
     os.chmod(working_dir, os.stat(working_dir).st_mode | stat.S_IROTH |

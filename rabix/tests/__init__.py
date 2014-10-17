@@ -93,7 +93,7 @@ mock_app_bad_repo = {
                 "container": {
                     "type": "docker",
                     "uri": "docker://wrongrepository#latest",
-                    "imageId": "aaaaaaaaaaaa"
+                    "imageId": "wrongid"
                 }
             },
             "resources": {},

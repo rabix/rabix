@@ -88,14 +88,15 @@ tool:
         adapter:
           meta:
             $inherit: reads
-            file_type:
-              $expr: sam
+            file_type: sam
           stdout: Yes
           glob: output.sam
           streamable: Yes
   adapter:
     baseCmd: [bwa, mem]
     stdout: output.sam
+    environment:
+      ENVVAR1: /home/envvar1
     args:
       - order: 1
         prefix: "-t"

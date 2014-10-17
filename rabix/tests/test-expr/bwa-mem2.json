@@ -117,7 +117,7 @@
         "outputs": {
             "type": "object",
             "required": [
-                "sam", "tab"
+                "sam"
             ],
             "properties": {
                 "sam": {
@@ -128,16 +128,10 @@
                         "streamable": "Yes",
                         "meta": {
                             "file_type": "sam",
+                            "expr_test": {
+                                "$expr": "{return (job.inputs.minimum_seed_length > 2) ? 'successful' : 'unsuccessful'}"
+                            },
                             "$inherit": "reads"
-                        }
-                    }
-                },
-                "tab": {
-                    "type": "file",
-                    "adapter": {
-                        "glob": "output.tab",
-                        "meta": {
-                            "file_type": "tab"
                         }
                     }
                 }
@@ -150,7 +144,8 @@
             ],
             "stdout": "output.sam",
             "environment": {
-                "ENVVAR1": "/home/envvar1"
+                "BLA": "/home/bla",
+                "SOMETHING": "/home/something"
             },
             "args": [
                 {

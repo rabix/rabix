@@ -69,18 +69,19 @@ class Container(object):
         self.cpu_shares = cpu_shares
         self.working_dir = working_dir
         self.produced_image = None
-        kwargs.update({
-            "Image": image_id,
-            "Cmd": cmd,
-            "User": user,
-            "Volumes": volumes,
-            "Memory": mem_limit,
-            "ExposedPorts": ports,
-            "Environment": environment,
-            "CpuShares": cpu_shares,
-            "WorkingDir": working_dir
-        })
-
+        kwargs.update(
+            {
+                "Image": image_id,
+                "Cmd": cmd,
+                "User": user,
+                "Volumes": volumes,
+                "Memory": mem_limit,
+                "ExposedPorts": ports,
+                "Env": environment,
+                "CpuShares": cpu_shares,
+                "WorkingDir": working_dir
+            })
+        print kwargs
         self.config = make_config(**kwargs)
         try:
             self.container = self.docker_client.create_container_from_config(
