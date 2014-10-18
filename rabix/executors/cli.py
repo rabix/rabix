@@ -83,11 +83,12 @@ def main():
     if len(sys.argv) == 1:
         print(DOCOPT)
         return
-    if len(sys.argv) > 2:
-        tool = get_tool(sys.argv)
-        if not tool:
-            raise Exception('Need to specify tool')
-        DOCOPT = make_tool_usage_string(tool)
+
+    tool = get_tool(sys.argv)
+    if not tool:
+        raise Exception('Need to specify tool')
+
+    DOCOPT = make_tool_usage_string(tool)
     try:
         args = docopt.docopt(DOCOPT, version=version)
         job = TEMPLATE_JOB
