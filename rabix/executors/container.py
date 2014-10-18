@@ -9,15 +9,17 @@ from rabix.common.errors import ResourceUnavailable
 log = logging.getLogger(__name__)
 
 
-def provide_image(image_id, uri, docker_client):
-    if filter(lambda x: (image_id in x['Id']), docker_client.images()):
+def ensure_image(docker_client, image_id, uri):
+    if image_id and [x for x in docker_client.images() if x['Id'].startswith(image_id)]:
+        log.debug("Provide image: found %s" % image_id)
         return
     else:
         if not uri:
-            logging.error('Image cannot be pulled')
+            log.error('Image cannot be pulled: no URI given')
             raise Exception('Cannot pull image')
-
-        docker_client.pull(*parse_docker_uri(uri))
+        repo, tag = parse_docker_uri(uri)
+        log.info("Pulling image %s:%s" % (repo, tag))
+        docker_client.pull(repo, tag)
         if filter(lambda x: (image_id in x['Id']),
                   docker_client.images()):
             return
@@ -82,12 +84,14 @@ class Container(object):
                 "WorkingDir": working_dir
             })
         self.config = make_config(**kwargs)
+
         try:
+            ensure_image(docker_client, self.image_id, self.uri)
             self.container = self.docker_client.create_container_from_config(
                 self.config)
         except APIError as e:
             if e.response.status_code == 404:
-                logging.info('Image %s not found:' % self.image_id)
+                log.info('Image %s not found:' % self.image_id)
                 raise RuntimeError('Image %s not found:' % self.image_id)
             raise RuntimeError('Failed to create Container')
 
@@ -145,7 +149,7 @@ class Container(object):
                                                  stderr=True, stream=True,
                                                  logs=True):
                 if file:
-                    f.write(out.rstrip() + '\n')
+                    f.write(str(out).rstrip() + '\n')
                 else:
                     print(out.rstrip())
         else:

@@ -3,7 +3,7 @@ import sys
 import json
 import docker
 import shutil
-from rabix.executors.container import provide_image
+from rabix.executors.container import ensure_image
 from nose.tools import nottest, raises
 from rabix.tests import mock_app_bad_repo, mock_app_good_repo
 from rabix.executors.cli import get_tool, main
@@ -17,7 +17,7 @@ def test_provide_image_bad_repo():
     imageId = mock_app_bad_repo["tool"]["requirements"]["environment"][
         "container"]["imageId"]
     docker_client = docker.Client(version='1.12')
-    provide_image(imageId, uri, docker_client)
+    ensure_image(docker_client, imageId, uri)
 
 
 @nottest
@@ -27,7 +27,7 @@ def test_provide_image_good_repo():
     imageId = mock_app_good_repo["tool"]["requirements"]["environment"][
         "container"]["imageId"]
     docker_client = docker.Client(version='1.12')
-    provide_image(imageId, uri, docker_client)
+    ensure_image(docker_client, imageId, uri)
 
 
 def test_cmd_line():

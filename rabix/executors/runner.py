@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 class BindDict(dict):
     def items(self):
         ret = []
-        for k, v in six.iteritems(self):
+        for k, v in six.iteritems(super(BindDict, self)):
             ret.append((v, k))
         return ret
 
@@ -48,7 +48,7 @@ class DockerRunner(Runner):
     def __init__(self, tool, working_dir='./', dockr=None, stderr=None):
         stdout = tool.get('adapter', {}).get('stdout', None)
         super(DockerRunner, self).__init__(tool, working_dir, stdout)
-        self.docker_client = dockr or docker.Client(version='1.12')
+        self.docker_client = dockr or docker.Client(os.getenv("DOCKER_HOST", None), version='1.12')
 
     def volumes(self, job):
         remaped_job = copy.deepcopy(job)
