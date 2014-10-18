@@ -9,7 +9,7 @@ from os.path import isfile
 from rabix import __version__ as version
 from rabix.common.errors import RabixError
 from rabix.cliche.ref_resolver import Loader, from_url
-from rabix.common.util import rnd_name
+from rabix.common.util import set_log_level
 from rabix.tools.steps import run_steps
 
 
@@ -99,23 +99,8 @@ def present_outputs(outputs):
             print(row_fmt.format(out_id, path))
 
 
-def set_log_level(v_count):
-    if v_count == 0:
-        level = logging.WARN
-    elif v_count == 1:
-        level = logging.INFO
-    else:
-        level = logging.DEBUG
-    logging.root.setLevel(level)
-
-
 def install(pipeline):
-    pipeline = Pipeline.from_app(pipeline)
-    job = InstallJob(rnd_name(), pipeline)
-    get_engine(before_task=before_task).run(job)
-    if job.status == InstallJob.FAILED:
-        print(job.error_message)
-        sys.exit(1)
+    pass
 
 
 def checksum(jsonptr, method='sha1'):

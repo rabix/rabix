@@ -1,10 +1,12 @@
 import docopt
 import sys
+import logging
 
 from rabix import __version__ as version
 from rabix.executors.validations import validate_inputs
 from rabix.executors.runner import DockerRunner
 from rabix.cliche.adapter import from_url
+from rabix.common.util import set_log_level
 
 
 TEMPLATE_JOB = {
@@ -16,7 +18,7 @@ TEMPLATE_JOB = {
 
 USAGE = '''
 Usage:
-    rabix [-v] (--job=<job> [--tool=<tool> {inputs} --dir=<dir>] | --tool=<tool> {inputs} [--dir=<dir>])
+    rabix [-v...] (--job=<job> [--tool=<tool> {inputs} --dir=<dir>] | --tool=<tool> {inputs} [--dir=<dir>])
     rabix -h
 
 Options:
@@ -79,6 +81,7 @@ def get_tool(args):
 
 
 def main():
+    logging.basicConfig(level=logging.WARN)
     DOCOPT = USAGE
     if len(sys.argv) == 1:
         print(DOCOPT)
@@ -92,6 +95,7 @@ def main():
     try:
         args = docopt.docopt(DOCOPT, version=version)
         job = TEMPLATE_JOB
+        set_log_level(args['--verbose'])
         if args['--job']:
             job_from_arg = from_url(args.get('--job', {})).get('job')
             job_from_arg.pop('tool')

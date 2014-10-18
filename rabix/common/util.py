@@ -124,3 +124,13 @@ def rnd_name(syllables=5):
     return ''.join(itertools.chain(*zip(
         (random.choice('bcdfghjklmnpqrstvwxz') for _ in range(syllables)),
         (random.choice('aeiouy') for _ in range(syllables)))))
+
+
+def set_log_level(v_count):
+    if v_count == 0:
+        level = logging.WARN
+    elif v_count == 1:
+        level = logging.INFO
+    else:
+        level = logging.DEBUG
+    logging.root.setLevel(level)
