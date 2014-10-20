@@ -1,0 +1,104 @@
+# JobOrder
+job:
+  tool:
+    $ref: "#tool"
+  inputs: # dict that matches the schema defined in tool
+    reference:
+      path: ./rabix/tests/test-files/chr20.fa
+      size: 123
+      checksum: sha1$hash
+      meta:
+        nesto: nestonesto
+    reads:
+      - path: ./rabix/tests/test-files/example_human_Illumina.pe_1.fastq
+        meta:
+          sample: SAMPLE1
+      - path: ./rabix/tests/test-files/example_human_Illumina.pe_2.fastq
+        meta:
+          sample: SAMPLE1
+    min_std_max_min: [1, 2, 3, 4]
+    minimum_seed_length: 3
+  platform: "http://example.org/my_platform/v1"
+  allocatedResources:
+    cpu: 4
+    mem: 5000
+    ports: []
+    diskSpace: 20000
+    network: No
+
+
+
+# Tool
+tool:
+  softwareDescription: {}
+  documentAuthor: boysha
+  requirements:
+    environment:
+      container:
+        type: docker
+        uri: "docker://images.sbgenomics.com/rabix/bwa#9d3b9b0359cf"  # or docker:user/repo#tag for main index
+        imageId: "9d3b9b0359cf"
+    resources:
+      cpu: 0
+      mem: 5000
+      network: No
+    platformFeatures:
+      - "http://example.org/transforms#strip_ext"
+  inputs:
+    type: object
+    required: [reference, reads]
+    properties:
+      reference:
+        type: file
+        required: Yes
+        adapter:
+          order: 2
+  #        transform: self.path.split('.').reverse().splice(1).reverse().join('.')
+      reads:
+        type: array
+        required: Yes
+        minItems: 1
+        maxItems: 2
+        items:
+          type: file
+          adapter:
+            streamable: Yes
+      minimum_seed_length:
+        type: integer
+        adapter:
+          order: 1
+          prefix: "-m"
+          separator: " " # default, separate args
+      min_std_max_min:
+        type: array
+        minItems: 1
+        maxItems: 4
+        items:
+          type: number
+        adapter:
+          order: 1
+          prefix: "-I"
+          itemSeparator: ","
+  outputs:
+    type: object
+    required: [sam]
+    properties:
+      sam:
+        type: file
+        adapter:
+          meta:
+            $inherit: reads
+            file_type: sam
+          stdout: Yes
+          glob: output.sam
+          streamable: Yes
+  adapter:
+    baseCmd: [bwa, mem]
+    stdout: output.sam
+    environment:
+      ENVVAR1: /home/envvar1
+    args:
+      - order: 1
+        prefix: "-t"
+        value:
+          $expr: job['allocatedResources']['cpu']
