@@ -5,12 +5,19 @@ import logging
 import uuid
 import copy
 import json
+import six
 import requests
 
-from rabix.runtime import to_json
 from rabix.common.errors import ResourceUnavailable
 
 log = logging.getLogger(__name__)
+
+
+def to_json(obj, fp=None):
+    default = lambda o: (o.__json__() if callable(getattr(o, '__json__', None))
+                         else six.text_type(o))
+    kwargs = dict(default=default, indent=2, sort_keys=True)
+    return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
 
 
 class InputRunner(object):
