@@ -6,7 +6,7 @@ import shutil
 from rabix.executors.container import ensure_image
 from nose.tools import nottest, raises
 from rabix.tests import mock_app_bad_repo, mock_app_good_repo
-from rabix.executors.cli import get_tool, main
+from rabix.executors.cli import get_tool, main, dry_run_parse
 
 
 @nottest
@@ -31,43 +31,50 @@ def test_provide_image_good_repo():
 
 
 def test_cmd_line():
-    cmd1 = ['run', '--job', './rabix/tests/test-cmdline/bwa-mem.yml']
+    cmd1 = dry_run_parse(['--job', './rabix/tests/test-cmdline/bwa-mem.yml#job'])
     tool1 = get_tool(cmd1)
     assert tool1
-    cmd2 = ['run', '-v', '--job=./rabix/tests/'
-                         'test-cmdline/bwa-mem.yml']
+    cmd2 = dry_run_parse(['-v', '--job=./rabix/tests/'
+                         'test-cmdline/bwa-mem.yml#job'])
     tool2 = get_tool(cmd2)
     assert tool2
-    cmd3 = ['run', '-v', '--job', './rabix/tests/test-cmdline/bwa-mem.yml']
+    cmd3 = dry_run_parse(['-v', '--job',
+                          './rabix/tests/test-cmdline/bwa-mem.yml#job'])
     tool3 = get_tool(cmd3)
     assert tool3
-    cmd4 = ['run', '--job=./rabix/tests/test-cmdline/bwa-mem.yml']
+    cmd4 = dry_run_parse(['--job=./rabix/tests/test-cmdline/bwa-mem.yml#job'])
     tool4 = get_tool(cmd4)
     assert tool4
-    cmd5 = ['run', '--job', './rabix/tests/test-cmdline/bwa-mem-job.yml',
-            '--tool', './rabix/tests/test-cmdline/bwa-mem-tool.yml']
+    cmd5 = dry_run_parse(['--job',
+                          './rabix/tests/test-cmdline/bwa-mem-job.yml#job',
+                          '--tool',
+                          './rabix/tests/test-cmdline/bwa-mem-tool.yml#tool'])
     tool5 = get_tool(cmd5)
     assert tool5
-    cmd6 = ['run', '--job',
-            'https://s3.amazonaws.com/rabix/rabix-test/bwa-mem-job.json',
-            '--tool',
-            'https://s3.amazonaws.com/rabix/rabix-test/bwa-mem-tool.json']
+    cmd6 = dry_run_parse(
+        ['--job',
+         'https://s3.amazonaws.com/rabix/rabix-test/bwa-mem-job.json#job',
+         '--tool',
+         'https://s3.amazonaws.com/rabix/rabix-test/bwa-mem-tool.json#tool'])
     tool6 = get_tool(cmd6)
     assert tool6
-    cmd7 = ['run', '--job',
-            'https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json']
+    cmd7 = dry_run_parse(
+        ['--job',
+         'https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#job'])
     tool7 = get_tool(cmd7)
     assert tool7
-    cmd8 = ['run', '--job',
-            './rabix/tests/test-cmdline/bwa-mem-toolurl.yml']
+    cmd8 = dry_run_parse(
+        ['--job',
+         './rabix/tests/test-cmdline/bwa-mem-toolurl.yml#job'])
     tool8 = get_tool(cmd8)
     assert tool8
 
 
 @nottest
 def test_expr_and_meta():
-    sys.argv = ['rabix', 'run', '--job', '/home/sinisa/devel/CWL/rabix/rabix/tests/test-expr/bwa-mem1.json', '--dir',
-                'test1']
+    sys.argv = ['rabix', 'run', '--job',
+                '/home/sinisa/devel/CWL/rabix/rabix/tests/test-expr/bwa-mem1.json',
+                '--dir', 'test1']
     main()
     with open(os.path.abspath('./test1') + '/output.sam.meta') as m:
         meta = json.load(m)
