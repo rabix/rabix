@@ -4,8 +4,8 @@ import logging
 
 from rabix import __version__ as version
 from rabix.executors.validations import validate_inputs
-from rabix.executors.runner import DockerRunner
-from rabix.cliche.adapter import from_url
+from rabix.executors.runner import DockerRunner, NativeRunner
+from rabix.cliche.adapter import Adapter, from_url
 from rabix.common.util import set_log_level
 
 
@@ -18,12 +18,21 @@ TEMPLATE_JOB = {
 
 USAGE = '''
 Usage:
-    rabix [-v...] (--job=<job> [--tool=<tool> {inputs} --dir=<dir>] | --tool=<tool> {inputs} [--dir=<dir>])
-    rabix -h
+    rabix [-v...] [-hci] -j <job> [-t <tool>] [{inputs}] [-d <dir>]
+    rabix [-v...] [-hci] -t <tool> {inputs} [-d <dir>]
+    rabix --version
 
 Options:
-  -h --help                               Show help
-  -v --verbose                            Verbosity. More Vs more output.
+  -d --dir=<dir>       Working directory for the task. If not provided one will
+                       be auto generated in the current dir.
+  -h --help            Show this help message. In conjunction with job or tool,
+                       it will print inputs you can provide for the job.
+  -i --install         Only install referenced tools. Do not run anything.
+  -j --job=<job>       URI to job order document to run.
+  -c --print-cli       Only print calculated command line. Do not run anything.
+  -t --tool=<tool>     URI to tool description document to run.
+  -v --verbose         Verbosity. More Vs more output.
+     --version         Print version and exit.
 '''
 
 
@@ -64,20 +73,10 @@ def update_paths(job, inputs):
 
 
 def get_tool(args):
-    for inx, arg in enumerate(args):
-        if '--tool' in arg:
-            tool_url = arg.split('=')
-            if len(tool_url) == 2:
-                return from_url(tool_url[1]).get('tool')
-            else:
-                return from_url(args[inx+1]).get('tool')
-    for inx, arg in enumerate(args):
-        if '--job' in arg:
-            job_url = arg.split('=')
-            if len(job_url) == 2:
-                return from_url(job_url[1]).get('job', {}).get('tool')
-            else:
-                return from_url(args[inx+1]).get('job', {}).get('tool')
+    if args['--tool']:
+        return from_url(args['--tool'])
+    if args['--job']:
+        return from_url(args['--job']).get('tool')
 
 
 def main():
@@ -87,9 +86,22 @@ def main():
         print(DOCOPT)
         return
 
-    tool = get_tool(sys.argv)
+    # A bit of a hack: inputs in the original USAGE string doubles as both
+    # something user should see and as python pattern that will be expanded
+    # once we figure out what tool are we talking about. In order to parse CLI
+    # even without provided tool-dependent required inputs, we are adding
+    # literal '{inputs}' here to help us analyze args before 'real' CLI parsing
+    args = sys.argv[1:] + ['{inputs}']
+    dry_run_args = docopt.docopt(DOCOPT, args, version=version)
+
+    if not (dry_run_args['--tool'] or dry_run_args['--job']):
+        print('You have to specify a tool, either directly with '
+              '--tool option or using a job that references a tool')
+
+    tool = get_tool(dry_run_args)
     if not tool:
-        raise Exception('Need to specify tool')
+        print("Couldn't find tool.")
+        return
 
     DOCOPT = make_tool_usage_string(tool)
     try:
@@ -97,14 +109,30 @@ def main():
         job = TEMPLATE_JOB
         set_log_level(args['--verbose'])
         if args['--job']:
-            job_from_arg = from_url(args.get('--job', {})).get('job')
+            job_from_arg = from_url(args.get('--job'))
             job_from_arg.pop('tool')
             job = job_from_arg
+
+        if args['--help']:
+            print(DOCOPT)
+            return
+
         inp = get_inputs(tool, args)
         job = update_paths(job, inp)
+
+        if args['--print-cli']:
+            adapter = Adapter(tool)
+            print(adapter.cmd_line(job))
+            return
+
+        if args['--install']:
+            return
+
         validate_inputs(tool, job)
+
         runner = DockerRunner(tool)
         runner.run_job(job, job_id=args.get('--dir'))
+
     except docopt.DocoptExit:
         print(DOCOPT)
         return
