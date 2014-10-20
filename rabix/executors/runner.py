@@ -115,7 +115,7 @@ class DockerRunner(Runner):
         os.mkdir(job_dir)
         os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
                  stat.S_IWOTH)
-        job = self.provide_files(job, os.path.abspath(job_dir))
+        job = self.provide_files(job['job'], os.path.abspath(job_dir))
         adapter = Adapter(self.tool)
         volumes, binds, remaped_job = self._volumes(job)
         volumes['/' + job_dir] = {}
