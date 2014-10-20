@@ -79,6 +79,16 @@ def get_tool(args):
         return from_url(args['--job']).get('tool')
 
 
+# A bit of a hack: inputs in the original USAGE string doubles as both
+# something user should see and as python pattern that will be expanded
+# once we figure out what tool are we talking about. In order to parse CLI
+# even without provided tool-dependent required inputs, we are adding
+# literal '{inputs}' here to help us analyze args before 'real' CLI parsing
+def dry_run_parse(args=None):
+    args = args or sys.argv[1:]
+    return docopt.docopt(USAGE, args + ['{inputs}'], version=version)
+
+
 def main():
     logging.basicConfig(level=logging.WARN)
     DOCOPT = USAGE
@@ -86,13 +96,7 @@ def main():
         print(DOCOPT)
         return
 
-    # A bit of a hack: inputs in the original USAGE string doubles as both
-    # something user should see and as python pattern that will be expanded
-    # once we figure out what tool are we talking about. In order to parse CLI
-    # even without provided tool-dependent required inputs, we are adding
-    # literal '{inputs}' here to help us analyze args before 'real' CLI parsing
-    args = sys.argv[1:] + ['{inputs}']
-    dry_run_args = docopt.docopt(DOCOPT, args, version=version)
+    dry_run_args = dry_run_parse()
 
     if not (dry_run_args['--tool'] or dry_run_args['--job']):
         print('You have to specify a tool, either directly with '
