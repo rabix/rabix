@@ -60,6 +60,7 @@ tool:
           glob: output.sam
           streamable: Yes
           meta:
+            $inherit: reads
             file_type: sam
   adapter:
     baseCmd: [bwa, mem]

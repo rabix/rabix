@@ -18,7 +18,7 @@ TEMPLATE_JOB = {
 
 USAGE = '''
 Usage:
-    rabix [-v...] (--job=<job> [--tool=<tool> {inputs} --dir=<dir>] | --tool=<tool> {inputs} [--dir=<dir>])
+    rabix [-v...] (--job=<job> [--tool=<tool> {inputs} --dir=<dir>] | --tool=<tool> {inputs} [--dir=<dir>]) [-]
     rabix -h
 
 Options:
@@ -102,7 +102,6 @@ def main():
             job = job_from_arg
         inp = get_inputs(tool, args)
         job = update_paths(job, inp)
-        validate_inputs(tool, job)
         runner = DockerRunner(tool)
         runner.run_job(job, job_id=args.get('--dir'))
     except docopt.DocoptExit:
