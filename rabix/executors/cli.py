@@ -17,8 +17,8 @@ TEMPLATE_JOB = {
 
 USAGE = '''
 Usage:
-    rabix [-v...] [-hci] -j <job> [-t <tool>] [{inputs}] [-d <dir>]
-    rabix [-v...] [-hci] -t <tool> {inputs} [-d <dir>]
+    rabix [-v...] [-hci] [-d <dir>] -j <job> [-t <tool>] [-- {inputs}]
+    rabix [-v...] [-hci] [-d <dir>] -t <tool> -- {inputs}
     rabix --version
 
 Options:
@@ -78,14 +78,11 @@ def get_tool(args):
         return from_url(args['--job']).get('tool')
 
 
-# A bit of a hack: inputs in the original USAGE string doubles as both
-# something user should see and as python pattern that will be expanded
-# once we figure out what tool are we talking about. In order to parse CLI
-# even without provided tool-dependent required inputs, we are adding
-# literal '{inputs}' here to help us analyze args before 'real' CLI parsing
 def dry_run_parse(args=None):
     args = args or sys.argv[1:]
-    return docopt.docopt(USAGE, args + ['{inputs}'], version=version)
+    args = args + ['an_input']
+    usage = USAGE.format(inputs="<inputs>...")
+    return docopt.docopt(usage, args, version=version)
 
 
 def main():

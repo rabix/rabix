@@ -1,6 +1,5 @@
 import os
 import tempfile
-import urlparse
 import logging
 import uuid
 import copy
@@ -8,6 +7,7 @@ import json
 import six
 import requests
 
+from six.moves.urllib import parse as urlparse
 from rabix.common.errors import ResourceUnavailable
 
 log = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class InputRunner(object):
         r = requests.get(url)
         try:
             r.raise_for_status()
-        except Exception, e:
+        except Exception as e:
             raise ResourceUnavailable(str(e))
         dest = self._get_dest_for_url(url)
         with open(dest, 'wb') as fp:

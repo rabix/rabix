@@ -90,12 +90,12 @@ def test_expr_and_meta():
     shutil.rmtree(os.path.abspath('./test2'))
 
 
-@nottest
 def test_fetch_remote_files():
-    sys.argv = ['rabix', '-t', '/home/sinisa/devel/CWL/rabix/rabix/tests/test-cmdline/bwa-mem-tool.yml', '--reads',
+    sys.argv = ['rabix', '--dir', 'testdir', '-t',
+                '/home/sinisa/devel/CWL/rabix/rabix/tests/test-cmdline/bwa-mem-tool.yml', '--', '--reads',
                 'https://s3.amazonaws.com/rabix/rabix-test/example_human_Illumina.pe_1.fastq', '--reads',
                 'https://s3.amazonaws.com/rabix/rabix-test/example_human_Illumina.pe_2.fastq', '--reference',
-                './rabix/tests/test-files/chr20.fa', '--dir', 'testdir']
+                './rabix/tests/test-files/chr20.fa']
     main()
     assert os.path.exists(os.path.abspath('./testdir') + '/output.sam')
     shutil.rmtree(os.path.abspath('./testdir'))
