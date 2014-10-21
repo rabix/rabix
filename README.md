@@ -5,9 +5,9 @@
 The goal of this project is to provide an easy way to package, distribute and
 run tools and pipelines using [docker](http://docker.com) images.
 
-There are three main components:
+Eventually, we plan to have the following:
 
-* Format and protocol specification.
+* Schema and protocol specification.
 * Tools to run apps and pipelines.
 * An SDK to easily package tools and pipelines into reusable components.
 
