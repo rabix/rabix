@@ -23,7 +23,6 @@ tool:
         required: Yes
         adapter:
           order: 2
-  #        transform: self.path.split('.').reverse().splice(1).reverse().join('.')
       reads:
         type: array
         required: Yes
@@ -56,12 +55,12 @@ tool:
       sam:
         type: file
         adapter:
-          stdout: Yes
-          glob: output.sam
-          streamable: Yes
           meta:
             $inherit: reads
             file_type: sam
+          stdout: Yes
+          glob: output.sam
+          streamable: Yes
   adapter:
     baseCmd: [bwa, mem]
     stdout: output.sam

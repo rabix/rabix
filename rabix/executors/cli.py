@@ -3,7 +3,6 @@ import sys
 import logging
 
 from rabix import __version__ as version
-from rabix.executors.validations import validate_inputs
 from rabix.executors.runner import DockerRunner, NativeRunner
 from rabix.cliche.adapter import Adapter, from_url
 from rabix.common.util import set_log_level
@@ -18,8 +17,8 @@ TEMPLATE_JOB = {
 
 USAGE = '''
 Usage:
-    rabix [-v...] [-hci] -j <job> [-t <tool>] [{inputs}] [-d <dir>]
-    rabix [-v...] [-hci] -t <tool> {inputs} [-d <dir>]
+    rabix [-v...] [-hci] [-d <dir>] -j <job> [-t <tool>] [-- {inputs}...]
+    rabix [-v...] [-hci] [-d <dir>] -t <tool> [--] {inputs}...
     rabix --version
 
 Options:
@@ -35,8 +34,13 @@ Options:
      --version         Print version and exit.
 '''
 
+TOOL_TEMPLATE = '''
+Usage:
+  tool {inputs}
+'''
 
-def make_tool_usage_string(tool):
+
+def make_tool_usage_string(tool, template=TOOL_TEMPLATE):
     inputs = tool.get('inputs', {}).get('properties')
     usage_str = []
     for k, v in inputs.items():
@@ -48,7 +52,7 @@ def make_tool_usage_string(tool):
                     v.get('items').get('type') == 'directory'):
             arg = '--%s=<%s_file>...' % (k, k)
             usage_str.append(arg if v.get('required') else '[%s]' % arg)
-    return USAGE.format(inputs=' '.join(usage_str))
+    return template.format(inputs=' '.join(usage_str))
 
 
 def get_inputs(tool, args):
@@ -79,21 +83,25 @@ def get_tool(args):
         return from_url(args['--job']).get('tool')
 
 
-# A bit of a hack: inputs in the original USAGE string doubles as both
-# something user should see and as python pattern that will be expanded
-# once we figure out what tool are we talking about. In order to parse CLI
-# even without provided tool-dependent required inputs, we are adding
-# literal '{inputs}' here to help us analyze args before 'real' CLI parsing
 def dry_run_parse(args=None):
     args = args or sys.argv[1:]
-    return docopt.docopt(USAGE, args + ['{inputs}'], version=version)
+    args = args + ['an_input']
+    usage = USAGE.format(inputs='<inputs>')
+    return docopt.docopt(usage, args, version=version, help=False)
 
 
 def main():
     logging.basicConfig(level=logging.WARN)
-    DOCOPT = USAGE
     if len(sys.argv) == 1:
-        print(DOCOPT)
+        print(USAGE)
+        return
+
+    usage = USAGE.format(inputs='<inputs>')
+
+    if len(sys.argv) == 2 and \
+            (sys.argv[1] == '--help' or
+             sys.argv[1] == '-h'):
+        print(USAGE)
         return
 
     dry_run_args = dry_run_parse()
@@ -101,15 +109,17 @@ def main():
     if not (dry_run_args['--tool'] or dry_run_args['--job']):
         print('You have to specify a tool, either directly with '
               '--tool option or using a job that references a tool')
+        print(usage)
+        return
 
     tool = get_tool(dry_run_args)
     if not tool:
         print("Couldn't find tool.")
         return
 
-    DOCOPT = make_tool_usage_string(tool)
+    tool_usage = make_tool_usage_string(tool, USAGE)
     try:
-        args = docopt.docopt(DOCOPT, version=version)
+        args = docopt.docopt(usage, version=version, help=False)
         job = TEMPLATE_JOB
         set_log_level(args['--verbose'])
         if args['--job']:
@@ -118,10 +128,15 @@ def main():
             job = job_from_arg
 
         if args['--help']:
-            print(DOCOPT)
+            print(tool_usage)
             return
 
-        inp = get_inputs(tool, args)
+        tool_inputs = {}
+        tool_inputs_usage = make_tool_usage_string(tool)
+        if args['<inputs>']:
+            tool_inputs = docopt.docopt(tool_inputs_usage, args['<inputs>'])
+
+        inp = get_inputs(tool, tool_inputs)
         job = update_paths(job, inp)
 
         if args['--print-cli']:
@@ -132,13 +147,11 @@ def main():
         if args['--install']:
             return
 
-        validate_inputs(tool, job)
-
         runner = DockerRunner(tool)
         runner.run_job(job, job_id=args.get('--dir'))
 
     except docopt.DocoptExit:
-        print(DOCOPT)
+        print(tool_usage)
         return
 
 

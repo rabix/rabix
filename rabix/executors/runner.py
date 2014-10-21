@@ -8,7 +8,7 @@ import stat
 import copy
 
 from multiprocessing import Process
-
+from rabix.executors.io import InputRunner
 from rabix.executors.container import Container
 from rabix.cliche.adapter import Adapter
 from rabix.tests import infinite_loop, infinite_read
@@ -43,6 +43,9 @@ class Runner(object):
     def rnd_name(self):
         return str(uuid.uuid4())
 
+    def provide_files(self, job, dir=None):
+        return InputRunner(job, self.tool.get('inputs', {}).get('properties'), dir)()
+
 
 class DockerRunner(Runner):
     def __init__(self, tool, working_dir='./', dockr=None, stderr=None):
@@ -50,7 +53,7 @@ class DockerRunner(Runner):
         super(DockerRunner, self).__init__(tool, working_dir, stdout)
         self.docker_client = dockr or docker.Client(os.getenv("DOCKER_HOST", None), version='1.12')
 
-    def volumes(self, job):
+    def _volumes(self, job):
         remaped_job = copy.deepcopy(job)
         volumes = {}
         binds = {}
@@ -85,7 +88,7 @@ class DockerRunner(Runner):
             return volumes, BindDict(binds), remaped_job
 
     @property
-    def envvars(self):
+    def _envvars(self):
         envvars = self.tool.get('adapter', {}).get('environment', {})
         envlst = []
         for env, val in six.iteritems(envvars):
@@ -112,12 +115,13 @@ class DockerRunner(Runner):
         os.mkdir(job_dir)
         os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
                  stat.S_IWOTH)
+        job = self.provide_files(job, os.path.abspath(job_dir))
         adapter = Adapter(self.tool)
-        volumes, binds, remaped_job = self.volumes(job)
+        volumes, binds, remaped_job = self._volumes(job)
         volumes['/' + job_dir] = {}
         binds['/' + job_dir] = os.path.abspath(job_dir)
         container = self._run(['bash', '-c', adapter.cmd_line(remaped_job)],
-                              vol=volumes, bind=binds, env=self.envvars,
+                              vol=volumes, bind=binds, env=self._envvars,
                               work_dir='/' + job_dir)
         container.get_stderr(file='/'.join([os.path.abspath(job_dir),
                                             self.stderr]))
@@ -131,6 +135,7 @@ class DockerRunner(Runner):
                     with open(v['path'] + '.meta', 'w') as m:
                         json.dump(meta, m)
             json.dump(outputs, f)
+            print(outputs)
 
 
 class NativeRunner(Runner):

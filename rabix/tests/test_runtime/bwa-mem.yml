@@ -1,3 +1,31 @@
+# JobOrder
+job:
+  tool:
+    $ref: "#tool"
+  inputs: # dict that matches the schema defined in tool
+    reference:
+      path: ./rabix/tests/test-files/chr20.fa
+      size: 123
+      checksum: sha1$hash
+      meta:
+        nesto: nestonesto
+    reads:
+      - path: ./rabix/tests/test-files/example_human_Illumina.pe_1.fastq
+        meta:
+          sample: NewSample
+      - path: ./rabix/tests/test-files/example_human_Illumina.pe_2.fastq
+        meta:
+          sample: NewSample
+  platform: "http://example.org/my_platform/v1"
+  allocatedResources:
+    cpu: 4
+    mem: 5000
+    ports: []
+    diskSpace: 20000
+    network: No
+
+
+
 # Tool
 tool:
   softwareDescription: {}
@@ -56,12 +84,12 @@ tool:
       sam:
         type: file
         adapter:
-          stdout: Yes
-          glob: output.sam
-          streamable: Yes
           meta:
             $inherit: reads
             file_type: sam
+          stdout: Yes
+          glob: output.sam
+          streamable: Yes
   adapter:
     baseCmd: [bwa, mem]
     stdout: output.sam

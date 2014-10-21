@@ -72,18 +72,31 @@ def test_cmd_line():
 
 @nottest
 def test_expr_and_meta():
-    sys.argv = ['rabix', 'run', '--job',
-                '/home/sinisa/devel/CWL/rabix/rabix/tests/test-expr/bwa-mem1.json',
+    sys.argv = ['rabix', '--job',
+                './rabix/tests/test-expr/bwa-mem1.json#job',
                 '--dir', 'test1']
     main()
     with open(os.path.abspath('./test1') + '/output.sam.meta') as m:
         meta = json.load(m)
         assert meta['expr_test'] == 'successful'
     shutil.rmtree(os.path.abspath('./test1'))
-    sys.argv = ['rabix', 'run', '--job', '/home/sinisa/devel/CWL/rabix/rabix/tests/test-expr/bwa-mem2.json', '--dir',
-                'test2']
+    sys.argv = ['rabix', '--job',
+                './rabix/tests/test-expr/bwa-mem2.json#job',
+                '--dir', 'test2']
     main()
     with open(os.path.abspath('./test2') + '/output.sam.meta') as m:
         meta = json.load(m)
         assert meta['expr_test'] == 'successful'
     shutil.rmtree(os.path.abspath('./test2'))
+
+
+@nottest
+def test_fetch_remote_files():
+    sys.argv = ['rabix', '--dir', 'testdir', '-t',
+                './rabix/tests/test-cmdline/bwa-mem-tool.yml#tool', '--', '--reads',
+                'https://s3.amazonaws.com/rabix/rabix-test/example_human_Illumina.pe_1.fastq', '--reads',
+                'https://s3.amazonaws.com/rabix/rabix-test/example_human_Illumina.pe_2.fastq', '--reference',
+                './rabix/tests/test-files/chr20.fa']
+    main()
+    assert os.path.exists(os.path.abspath('./testdir') + '/output.sam')
+    shutil.rmtree(os.path.abspath('./testdir'))

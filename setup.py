@@ -12,12 +12,6 @@ requires = [
     io.open('requirements.txt')
 ]
 
-if sys.version_info[0] == 2:
-    requires += [
-        x.strip() for x in
-        io.open('requirements2.txt')
-    ]
-
 setup(
     name="rabix",
     version=__version__,
