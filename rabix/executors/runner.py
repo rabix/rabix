@@ -9,7 +9,7 @@ import copy
 
 from multiprocessing import Process
 from rabix.executors.io import InputRunner
-from rabix.executors.container import Container
+from rabix.executors.container import Container, ensure_image
 from rabix.cliche.adapter import Adapter
 from rabix.tests import infinite_loop, infinite_read
 
@@ -42,6 +42,9 @@ class Runner(object):
 
     def rnd_name(self):
         return str(uuid.uuid4())
+
+    def install(self):
+        pass
 
     def provide_files(self, job, dir=None):
         return InputRunner(job, self.tool.get('inputs', {}).get('properties'), dir)()
@@ -136,6 +139,11 @@ class DockerRunner(Runner):
                         json.dump(meta, m)
             json.dump(outputs, f)
             print(outputs)
+
+    def install(self):
+        ensure_image(self.docker_client,
+                     self.enviroment['container']['imageId'],
+                     self.enviroment['container']['uri'])
 
 
 class NativeRunner(Runner):

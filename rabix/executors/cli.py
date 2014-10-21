@@ -117,6 +117,13 @@ def main():
         print("Couldn't find tool.")
         return
 
+    runner = DockerRunner(tool)
+
+    if dry_run_args['--install']:
+        runner.install()
+        print("Install successful.")
+        return
+
     tool_usage = make_tool_usage_string(tool, USAGE)
     try:
         args = docopt.docopt(usage, version=version, help=False)
@@ -144,10 +151,6 @@ def main():
             print(adapter.cmd_line(job))
             return
 
-        if args['--install']:
-            return
-
-        runner = DockerRunner(tool)
         runner.run_job(job, job_id=args.get('--dir'))
 
     except docopt.DocoptExit:
