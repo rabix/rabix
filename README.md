@@ -2,8 +2,8 @@
 
 ## Reproducible Analyses for Bioinformatics 
 
-The goal of the rabix toolkit is easily capture and disseminate computational analyses. Our approach is to use [docker](http://docker.com) images to package the tools and describe tools, pipelines and analyses using easily shareable JSON files.
-
+The goal of this project is to provide an easy way to package, distribute and
+run tools and pipelines using [docker](http://docker.com) images.
 
 Eventually, we plan to have the following:
 
@@ -11,11 +11,13 @@ Eventually, we plan to have the following:
 * Tools to run apps and pipelines.
 * An SDK to easily package tools and pipelines into reusable components.
 
-Note that this project is still in early development. You can run some pipelines, but can't (easily) make them yet and the document schemas keep changing as we explore different options.
+Note that this project is still under development. You can run pipelines, but
+can't (easily) make them yet.
 
 ### Install
 
-First, [install docker](https://docs.docker.com/installation/#installation) on a linux machine.
+First, [install docker](https://docs.docker.com/installation/#installation) on
+a linux machine.
  
 Second, install rabix via pip:
 
@@ -23,24 +25,33 @@ Second, install rabix via pip:
 $ pip install git+https://github.com/rabix/rabix
 ```
 
-Use the run command to fetch an example pipeline and see input options:
+Check if everything works by installing an example tool:
 
 ```
-$ rabix run https://s3.amazonaws.com/boysha/pipeline_test_bwa_freebayes.json 
+$ rabix --install --tool https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool
 ```
 
+The "install" command simply pre-fetches referenced docker image.
+If you don't want to download hundreds of megabytes, you can just attempt to
+run the tool, which should fetch only the JSON files and present you with
+input options:
+ 
+```
+$ rabix --tool https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool 
+```
 
-Optionally "install" the pipeline (pre-fetch the docker images):
+Optionally, run the tool with some example data. It won't take long:
 
 ```
-$ rabix install https://s3.amazonaws.com/boysha/pipeline_test_bwa_freebayes.json
+$ rabix --tool https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool \
+  --reference path/to/reference \
+  --reads path/to/read1 \
+  --reads path/to/read2
 ```
 
-Run the pipeline with some example data. It won't take long:
+You can also provide job JSON file with specified paths to files in it.
+For this example you need to be in rabix directory.
 
 ```
-$ rabix run https://s3.amazonaws.com/boysha/pipeline_test_bwa_freebayes.json \
-  --reference https://s3.amazonaws.com/boysha/testfiles/example_human_reference.fasta \
-  --read https://s3.amazonaws.com/boysha/testfiles/example_human_Illumina.pe_1.fastq \
-  --read https://s3.amazonaws.com/boysha/testfiles/example_human_Illumina.pe_2.fastq
+$ rabix --job https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#job \ 
 ```

@@ -1,10 +1,15 @@
-from copy import deepcopy
+import copy
 import signal
 import random
 import itertools
+import collections
+import logging
+import six
+
+log = logging.getLogger(__name__)
 
 
-def wrap_in_list(val, *args):
+def wrap_in_list(val, *append_these):
     """
     >>> wrap_in_list(1, 2)
     [1, 2]
@@ -14,7 +19,7 @@ def wrap_in_list(val, *args):
     [1, 2, [3, 4]]
     """
     wrapped = val if isinstance(val, list) else [val]
-    return wrapped + list(args)
+    return wrapped + list(append_these)
 
 
 def import_name(name):
@@ -31,6 +36,29 @@ def import_name(name):
     return getattr(module, var_name)
 
 
+def update_dict(cfg, new_cfg):
+    for key, val in six.iteritems(new_cfg):
+        t = cfg
+        if '.' in key:
+            for k in key.split('.'):
+                if k == key.split('.')[-1]:
+                    if isinstance(val, collections.Mapping):
+                        t = t.setdefault(k, {})
+                        update_dict(t, new_cfg[key])
+                    else:
+                        t[k] = val
+                else:
+                    if not isinstance(t.get(k), collections.Mapping):
+                        t[k] = {}
+                    t = t.setdefault(k, {})
+        else:
+            if isinstance(val, collections.Mapping):
+                t = t.setdefault(key, {})
+                update_dict(t, new_cfg[key])
+            else:
+                t[key] = val
+
+
 class DotAccessDict(dict):
     def __getattr__(self, item):
         return self.get(item, None)
@@ -42,7 +70,22 @@ class DotAccessDict(dict):
         return self.__class__(self)
 
     def __deepcopy__(self, memo):
-        return self.__class__(deepcopy(dict(self), memo))
+        return self.__class__(copy.deepcopy(dict(self), memo))
+
+
+class NormDict(dict):
+    def __init__(self, normalize=six.text_type):
+        super(NormDict, self).__init__()
+        self.normalize = normalize
+
+    def __getitem__(self, key):
+        return super(NormDict, self).__getitem__(self.normalize(key))
+
+    def __setitem__(self, key, value):
+        return super(NormDict, self).__setitem__(self.normalize(key), value)
+
+    def __delitem__(self, key):
+        return super(NormDict, self).__delitem__(self.normalize(key))
 
 
 def intersect_dicts(d1, d2):
@@ -52,7 +95,7 @@ def intersect_dicts(d1, d2):
     >>> intersect_dicts({'a': 1, 'b': 2}, {'a': 0})
     {}
     """
-    return {k: v for k, v in d1.iteritems() if v == d2.get(k)}
+    return {k: v for k, v in six.iteritems(d1) if v == d2.get(k)}
 
 
 class SignalContextProcessor(object):
@@ -62,7 +105,9 @@ class SignalContextProcessor(object):
         self.old_handlers = {}
 
     def __enter__(self):
-        self.old_handlers = {sig: signal.signal(sig, self.handler) for sig in self.signals}
+        self.old_handlers = {
+            sig: signal.signal(sig, self.handler) for sig in self.signals
+        }
 
     def __exit__(self, *_):
         for sig in self.signals:
@@ -71,6 +116,21 @@ class SignalContextProcessor(object):
 handle_signal = SignalContextProcessor
 
 
-rnd_str = lambda length: ''.join(random.choice(map(chr, range(ord('a'), ord('z')+1))) for _ in range(length))
-rnd_name = lambda n=5: ''.join(itertools.chain(*zip(
-    (random.choice('bcdfghjklmnpqrstvwxz') for _ in range(n)), (random.choice('aeiou') for _ in range(n)))))
+def get_import_name(cls):
+    return '.'.join([cls.__module__, cls.__name__])
+
+
+def rnd_name(syllables=5):
+    return ''.join(itertools.chain(*zip(
+        (random.choice('bcdfghjklmnpqrstvwxz') for _ in range(syllables)),
+        (random.choice('aeiouy') for _ in range(syllables)))))
+
+
+def set_log_level(v_count):
+    if v_count == 0:
+        level = logging.WARN
+    elif v_count == 1:
+        level = logging.INFO
+    else:
+        level = logging.DEBUG
+    logging.root.setLevel(level)

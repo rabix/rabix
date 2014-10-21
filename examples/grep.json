@@ -1,0 +1,19 @@
+{
+    "$$type": "app/pipeline",
+    "steps": [
+        {
+            "inputs": {
+                "inp": "input"
+            },
+            "app": {"$ref": "../rabix/tests/apps/grep.json"},
+            "id": "grep",
+            "parameters": {
+                "expr": "one",
+                "context": 3
+            },
+            "outputs": {
+                "out": "filtered"
+            }
+        }
+    ]
+}
