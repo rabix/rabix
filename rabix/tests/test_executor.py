@@ -8,6 +8,7 @@ from nose.tools import nottest, raises
 from rabix.tests import mock_app_bad_repo, mock_app_good_repo
 from rabix.executors.cli import get_tool, main, dry_run_parse
 
+
 @nottest
 @raises(Exception)
 def test_provide_image_bad_repo():
@@ -18,6 +19,7 @@ def test_provide_image_bad_repo():
     docker_client = docker.Client(version='1.12')
     ensure_image(docker_client, imageId, uri)
 
+
 @nottest
 def test_provide_image_good_repo():
     uri = mock_app_good_repo["tool"]["requirements"]["environment"][
@@ -27,7 +29,7 @@ def test_provide_image_good_repo():
     docker_client = docker.Client(version='1.12')
     ensure_image(docker_client, imageId, uri)
 
-@nottest
+
 def test_cmd_line():
     cmd1 = dry_run_parse(['--job', './rabix/tests/test-cmdline/bwa-mem.yml#job'])
     tool1 = get_tool(cmd1)
@@ -67,6 +69,7 @@ def test_cmd_line():
     tool8 = get_tool(cmd8)
     assert tool8
 
+
 @nottest
 def test_expr_and_meta():
     sys.argv = ['rabix', '--job',
@@ -87,6 +90,7 @@ def test_expr_and_meta():
     shutil.rmtree(os.path.abspath('./test2'))
 
 
+@nottest
 def test_fetch_remote_files():
     sys.argv = ['rabix', '--dir', 'testdir', '-t',
                 './rabix/tests/test-cmdline/bwa-mem-tool.yml#tool', '--', '--reads',

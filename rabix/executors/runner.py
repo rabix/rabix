@@ -135,7 +135,7 @@ class DockerRunner(Runner):
                     with open(v['path'] + '.meta', 'w') as m:
                         json.dump(meta, m)
             json.dump(outputs, f)
-            print outputs
+            print(outputs)
 
 
 class NativeRunner(Runner):
