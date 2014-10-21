@@ -25,26 +25,33 @@ Second, install rabix via pip:
 $ pip install git+https://github.com/rabix/rabix
 ```
 
-Check if everything works by installing an example pipeline:
+Check if everything works by installing an example tool:
 
 ```
-$ rabix-tool install https://s3.amazonaws.com/boysha/pipeline_test_bwa_freebayes.json
+$ rabix --install --tool https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool
 ```
 
-The "install" command simply pre-fetches referenced docker images.
+The "install" command simply pre-fetches referenced docker image.
 If you don't want to download hundreds of megabytes, you can just attempt to
-run the pipeline, which should fetch only the JSON files and present you with
+run the tool, which should fetch only the JSON files and present you with
 input options:
  
 ```
-$ rabix --tool https://s3.amazonaws.com/boysha/pipeline_test_bwa_freebayes.json 
+$ rabix --tool https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool 
 ```
 
-Optionally, run the pipeline with some example data. It won't take long:
+Optionally, run the tool with some example data. It won't take long:
 
 ```
-$ rabix --tool https://s3.amazonaws.com/boysha/pipeline_test_bwa_freebayes.json \
-  --reference https://s3.amazonaws.com/boysha/testfiles/example_human_reference.fasta \
-  --read https://s3.amazonaws.com/boysha/testfiles/example_human_Illumina.pe_1.fastq \
-  --read https://s3.amazonaws.com/boysha/testfiles/example_human_Illumina.pe_2.fastq
+$ rabix --tool https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool \
+  --reference path/to/reference \
+  --reads path/to/read1 \
+  --reads path/to/read2
+```
+
+You can also provide job JSON file with specified paths to files in it.
+For this example you need to be in rabix directory.
+
+```
+$ rabix --job https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#job \ 
 ```
