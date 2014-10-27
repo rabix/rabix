@@ -2,7 +2,7 @@
 job:
   inputs: # dict that matches the schema defined in tool
     reference:
-      path: ./tests/test-files/chr20.fa
+      path: ./rabix/tests/test-files/chr20.fa
       size: 123
       checksum: sha1$hash
     reads:
@@ -12,7 +12,7 @@ job:
     minimum_seed_length: 3
   platform: "http://example.org/my_platform/v1"
   allocatedResources:
-    cpu: 4clae
+    cpu: 4
     mem: 5000
     ports: []
     diskSpace: 20000

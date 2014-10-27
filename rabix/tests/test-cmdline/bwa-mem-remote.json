@@ -5,7 +5,7 @@
         },
         "inputs": {
             "reference": {
-                "path": "./rabix/tests/test-files/chr20.fa",
+                "path": "https://s3.amazonaws.com/rabix/rabix-test/chr20.fa",
                 "size": 123,
                 "checksum": "sha1$hash",
                 "meta": {
@@ -14,14 +14,14 @@
             },
             "reads": [
                 {
-                    "path": "./rabix/tests/test-files/example_human_Illumina.pe_1.fastq",
+                    "path": "https://s3.amazonaws.com/rabix/rabix-test/example_human_Illumina.pe_1.fastq",
                     "meta": {
                         "file_type": "fastq",
                         "sample": "SAMPLE1"
                     }
                 },
                 {
-                    "path": "./rabix/tests/test-files/example_human_Illumina.pe_2.fastq",
+                    "path": "https://s3.amazonaws.com/rabix/rabix-test/example_human_Illumina.pe_2.fastq",
                     "meta": {
                         "file_type": "fastq",
                         "sample": "SAMPLE1"
@@ -42,7 +42,7 @@
             "mem": 5000,
             "ports": [],
             "diskSpace": 20000,
-            "network": false
+            "network": "No"
         }
     },
     "tool": {
@@ -59,7 +59,7 @@
             "resources": {
                 "cpu": 0,
                 "mem": 5000,
-                "network": false
+                "network": "No"
             },
             "platformFeatures": [
                 "http://example.org/transforms#strip_ext"
@@ -124,7 +124,7 @@
         "outputs": {
             "type": "object",
             "required": [
-                "sam"
+                "sam", "tab"
             ],
             "properties": {
                 "sam": {
@@ -135,9 +135,6 @@
                         "streamable": "Yes",
                         "meta": {
                             "file_type": "sam",
-                            "expr_test": {
-                                "$expr": "{if(job.inputs.minimum_seed_length > 2) { return 'successful'} else {return 'unsuccessful'}}"
-                            },
                             "$inherit": "reads"
                         }
                     }
@@ -151,8 +148,7 @@
             ],
             "stdout": "output.sam",
             "environment": {
-                "BLA": "/home/bla",
-                "SOMETHING": "/home/something"
+                "ENVVAR1": "/home/envvar1"
             },
             "args": [
                 {

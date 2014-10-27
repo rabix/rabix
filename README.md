@@ -50,8 +50,7 @@ $ rabix --tool https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool \
 ```
 
 You can also provide job JSON file with specified paths to files in it.
-For this example you need to be in rabix directory.
 
 ```
-$ rabix --job https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#job \ 
+$ rabix --job https://s3.amazonaws.com/rabix/rabix-test/bwa-mem-remote.json#job \ 
 ```

@@ -39,6 +39,11 @@ Usage:
   tool {inputs}
 '''
 
+TOOL_TEMPLATE_JOB = '''
+Usage:
+  tool [{inputs}]
+'''
+
 
 def make_tool_usage_string(tool, template=TOOL_TEMPLATE):
     inputs = tool.get('inputs', {}).get('properties')
@@ -129,19 +134,22 @@ def main():
         args = docopt.docopt(usage, version=version, help=False)
         job = TEMPLATE_JOB
         set_log_level(args['--verbose'])
+        tool_inputs = {}
         if args['--job']:
             job_from_arg = from_url(args.get('--job'))
             job_from_arg.pop('tool')
             job = job_from_arg
+            tool_inputs_usage = make_tool_usage_string(tool, template=TOOL_TEMPLATE_JOB)
+            if args['<inputs>']:
+                tool_inputs = docopt.docopt(tool_inputs_usage, args['<inputs>'])
+        else:
+            tool_inputs_usage = make_tool_usage_string(tool, template=TOOL_TEMPLATE)
+            if args['<inputs>']:
+                tool_inputs = docopt.docopt(tool_inputs_usage, args['<inputs>'])
 
         if args['--help']:
             print(tool_usage)
             return
-
-        tool_inputs = {}
-        tool_inputs_usage = make_tool_usage_string(tool)
-        if args['<inputs>']:
-            tool_inputs = docopt.docopt(tool_inputs_usage, args['<inputs>'])
 
         inp = get_inputs(tool, tool_inputs)
         job = update_paths(job, inp)

@@ -27,24 +27,28 @@ class InputRunner(object):
         self.job = job
         self.dir = dir
 
-    def __call__(self, *args, **kwargs):  # TODO: Enable download of dependent files
+    def __call__(self, *args, **kwargs):
         remaped_job = copy.deepcopy(self.job)
         is_single = lambda i: any([self.inputs[i]['type'] == 'directory',
                                    self.inputs[i]['type'] == 'file'])
         is_array = lambda i: self.inputs[i]['type'] == 'array' and any([
             self.inputs[i]['items']['type'] == 'directory',
             self.inputs[i]['items']['type'] == 'file'])
-        input_values = remaped_job.get('inputs')
+        input_values = self.job.get('inputs')
         if self.inputs:
             single = filter(is_single, [i for i in self.inputs])
             lists = filter(is_array, [i for i in self.inputs])
             for inp in single:
+                secondaryFiles = self.inputs[inp].get('adapter', {}).get('secondaryFiles')
                 remaped_job['inputs'][inp]['path'] = self._download(input_values[inp]['path'])
                 remaped_job['inputs'][inp]['meta'] = self._meta(input_values[inp])
+                self._get_secondary_files(secondaryFiles, input_values[inp]['path'])
             for inp in lists:
+                secondaryFiles = self.inputs[inp].get('adapter', {}).get('secondaryFiles')
                 for num, inv in enumerate(input_values[inp]):
                     remaped_job['inputs'][inp][num]['path'] = self._download(input_values[inp][num]['path'])
                     remaped_job['inputs'][inp][num]['meta'] = self._meta(inv)
+                    self._get_secondary_files(secondaryFiles, input_values[inp][num]['path'])
             return remaped_job
 
     @property
@@ -126,3 +130,15 @@ class InputRunner(object):
         job_meta = input.get('meta', {})
         file_meta.update(job_meta)
         return file_meta
+
+    def _get_secondary_files(self, secondaryFiles, input):
+        if secondaryFiles:
+            for sf in secondaryFiles:
+                log.info('Downloading: %s', self._secondary_file(input, sf))
+                self._download(self._secondary_file(input, sf))
+
+    def _secondary_file(self, path, ext):
+        if ext.startswith('*'):
+            return ''.join([path, ext[1:]])
+        else:
+            return ''.join(['.'.join(path.split('.')[:-1]), ext])
