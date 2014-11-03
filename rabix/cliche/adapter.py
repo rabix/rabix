@@ -10,23 +10,30 @@ from six.moves import reduce
 from jsonschema import Draft4Validator
 
 from rabix.cliche.ref_resolver import from_url
+from rabix.cliche.expressions.evaluator import Evaluator
 
 
-def evaluate(expression, job, context):
-    if expression.startswith('{'):
-        exp_tpl = '''function () {
-        job = %s;
-        self = %s;
-        return function()%s();}()
-        '''
-    else:
-        exp_tpl = '''function () {
-        job = %s;
-        self = %s;
-        return %s;}()
-        '''
-    exp = exp_tpl % (json.dumps(job), json.dumps(context), expression)
-    return execjs.eval(exp)
+ev = Evaluator()
+
+
+def evaluate(lang, expression, job, context, *args, **kwargs):
+    return ev.evaluate(lang, expression, job, context, *args, **kwargs)
+
+# def evaluate(expression, job, context):
+#     if expression.startswith('{'):
+#         exp_tpl = '''function () {
+#         job = %s;
+#         self = %s;
+#         return function()%s();}()
+#         '''
+#     else:
+#         exp_tpl = '''function () {
+#         job = %s;
+#         self = %s;
+#         return %s;}()
+#         '''
+#     exp = exp_tpl % (json.dumps(job), json.dumps(context), expression)
+#     return execjs.eval(exp)
 
 
 def intersect_dicts(d1, d2):

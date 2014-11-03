@@ -74,7 +74,7 @@
             "properties": {
                 "reference": {
                     "type": "file",
-                    "required": "Yes",
+                    "required": true,
                     "adapter": {
                         "order": 2,
                         "secondaryFiles": [
@@ -88,13 +88,13 @@
                 },
                 "reads": {
                     "type": "array",
-                    "required": "Yes",
+                    "required": true,
                     "minItems": 1,
                     "maxItems": 2,
                     "items": {
                         "type": "file",
                         "adapter": {
-                            "streamable": "Yes"
+                            "streamable": true
                         }
                     }
                 },
@@ -130,15 +130,18 @@
                 "sam": {
                     "type": "file",
                     "adapter": {
-                        "stdout": "Yes",
+                        "stdout": true,
                         "glob": "output.sam",
                         "streamable": "Yes",
                         "meta": {
                             "file_type": "sam",
                             "expr_test": {
-                                "$expr": "{if(job.inputs.minimum_seed_length > 2) { return 'successful'} else {return 'unsuccessful'}}"
+                                "expr": {
+                                    "lang": "JS",
+                                    "value": "{if(job.inputs.minimum_seed_length > 2) { return 'successful'} else {return 'unsuccessful'}}"
+                                }
                             },
-                            "$inherit": "reads"
+                            "__inherit__": "reads"
                         }
                     }
                 }
@@ -159,7 +162,10 @@
                     "order": 1,
                     "prefix": "-t",
                     "value": {
-                        "$expr": "job['allocatedResources']['cpu']"
+                        "expr": {
+                            "lang": "JS",
+                            "value": "job['allocatedResources']['cpu']"
+                        }
                     }
                 }
             ]
