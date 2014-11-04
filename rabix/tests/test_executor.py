@@ -29,27 +29,11 @@ def test_provide_image_good_repo():
     docker_client = docker.Client(version='1.12')
     ensure_image(docker_client, imageId, uri)
 
-
+@nottest
 def test_cmd_line():
-    cmd1 = dry_run_parse(['--job', './rabix/tests/test-cmdline/bwa-mem.yml#job'])
-    tool1 = get_tool(cmd1)
-    assert tool1
-    cmd2 = dry_run_parse(['-v', '--job=./rabix/tests/'
-                         'test-cmdline/bwa-mem.yml#job'])
-    tool2 = get_tool(cmd2)
-    assert tool2
-    cmd3 = dry_run_parse(['-v', '--job',
-                          './rabix/tests/test-cmdline/bwa-mem.yml#job'])
-    tool3 = get_tool(cmd3)
-    assert tool3
-    cmd4 = dry_run_parse(['--job=./rabix/tests/test-cmdline/bwa-mem.yml#job'])
-    tool4 = get_tool(cmd4)
-    assert tool4
-    cmd5 = dry_run_parse(['--job',
-                          './rabix/tests/test-cmdline/bwa-mem-job.yml#job',
-                          '--tool',
+    cmd1 = dry_run_parse(['-i', '', '--tool',
                           './rabix/tests/test-cmdline/bwa-mem-tool.yml#tool'])
-    tool5 = get_tool(cmd5)
+    tool5 = get_tool(cmd1)
     assert tool5
     cmd6 = dry_run_parse(
         ['--job',
@@ -70,18 +54,18 @@ def test_cmd_line():
     assert tool8
 
 
-@nottest
+#@nottest
 def test_expr_and_meta():
-    sys.argv = ['rabix', '--job',
-                './rabix/tests/test-expr/bwa-mem1.json#job',
+    sys.argv = ['rabix', '-i', './rabix/tests/test-cmdline/inputs.json', '--tool',
+                './rabix/tests/test-expr/bwa-mem1.json#tool',
                 '--dir', 'test1']
     main()
     with open(os.path.abspath('./test1') + '/output.sam.meta') as m:
         meta = json.load(m)
         assert meta['expr_test'] == 'successful'
     shutil.rmtree(os.path.abspath('./test1'))
-    sys.argv = ['rabix', '--job',
-                './rabix/tests/test-expr/bwa-mem2.json#job',
+    sys.argv = ['rabix', '-i', './rabix/tests/test-cmdline/inputs.json', '--tool',
+                './rabix/tests/test-expr/bwa-mem2.json#tool',
                 '--dir', 'test2']
     main()
     with open(os.path.abspath('./test2') + '/output.sam.meta') as m:
@@ -100,3 +84,8 @@ def test_fetch_remote_files():
     main()
     assert os.path.exists(os.path.abspath('./testdir') + '/output.sam')
     shutil.rmtree(os.path.abspath('./testdir'))
+
+
+if __name__=='__main__':
+    sys.argv = ['rabix', '-i', 'rabix/tests/test-cmdline/inputs.json', '-t' 'rabix/tests/test-expr/bwa-mem1.json#tool']
+    main()
