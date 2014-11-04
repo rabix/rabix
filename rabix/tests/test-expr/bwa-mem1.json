@@ -137,7 +137,7 @@
                             "file_type": "sam",
                             "expr_test": {
                                 "expr": {
-                                    "lang": "JS",
+                                    "lang": "JSEval",
                                     "value": "{if(job.inputs.minimum_seed_length > 2) { return 'successful'} else {return 'unsuccessful'}}"
                                 }
                             },
@@ -163,7 +163,7 @@
                     "prefix": "-t",
                     "value": {
                         "expr": {
-                            "lang": "JS",
+                            "lang": "JSEval",
                             "value": "job['allocatedResources']['cpu']"
                         }
                     }

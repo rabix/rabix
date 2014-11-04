@@ -51,25 +51,16 @@ class Evaluator(object):
         return self.manager.getAllPlugins()
 
     def _get_evaluator(self, name):
-        return self.manager.getPluginByName(name).plugin_object
+        pl = self.manager.getPluginByName(name)
+        if not pl:
+            raise Exception('No expression evaluator %s' % name)
+        return pl.plugin_object
 
     def write_config(self):
-        """
-        Write the chances in the ConfigParser to a file.
-        """
         f = open(self.config_file, "w")
         self.config.write(f)
         f.close()
 
     def evaluate(self, lang, expression, *args, **kwargs):
         pl = self._get_evaluator(lang)
-        pl.evaluate(expression, *args, **kwargs)
-
-
-if __name__ == '__main__':
-    e = Evaluator()
-    plugins = e._get_all_evaluators()
-    for plugin in plugins:
-        pl = e._get_evaluator(plugin.name)
-        plugin.plugin_object.evaluate()
-    pass
+        return pl.evaluate(expression, *args, **kwargs)

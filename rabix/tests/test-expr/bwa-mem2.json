@@ -129,9 +129,12 @@
                         "meta": {
                             "file_type": "sam",
                             "expr_test": {
-                                "$expr": "{return (job.inputs.minimum_seed_length > 2) ? 'successful' : 'unsuccessful'}"
+                                "expr": {
+                                    "lang": "JSEval",
+                                    "value": "{return (job.inputs.minimum_seed_length > 2) ? 'successful' : 'unsuccessful'}"
+                                }
                             },
-                            "$inherit": "reads"
+                            "__inherit__": "reads"
                         }
                     }
                 }
@@ -152,7 +155,10 @@
                     "order": 1,
                     "prefix": "-t",
                     "value": {
-                        "$expr": "job['allocatedResources']['cpu']"
+                        "expr": {
+                            "lang": "JSEval",
+                            "value": "job['allocatedResources']['cpu']"
+                        }
                     }
                 }
             ]

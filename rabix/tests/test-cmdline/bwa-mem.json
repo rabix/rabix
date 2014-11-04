@@ -128,7 +128,7 @@
                         "streamable": "Yes",
                         "meta": {
                             "file_type": "sam",
-                            "$inherit": "reads"
+                            "__inherit__": "reads"
                         }
                     }
                 },
@@ -157,7 +157,10 @@
                     "order": 1,
                     "prefix": "-t",
                     "value": {
-                        "$expr": "job['allocatedResources']['cpu']"
+                        "expr": {
+                            "lang": "JSEval",
+                            "value": "job['allocatedResources']['cpu']"
+                        }
                     }
                 }
             ]
