@@ -76,7 +76,14 @@
                     "type": "file",
                     "required": "Yes",
                     "adapter": {
-                        "order": 2
+                        "order": 2,
+                        "secondaryFiles": [
+                            "*.amb",
+                            "*.ann",
+                            "*.bwt",
+                            "*.pac",
+                            "*.sa"
+                        ]
                     }
                 },
                 "reads": {
@@ -117,7 +124,7 @@
         "outputs": {
             "type": "object",
             "required": [
-                "sam", "tab"
+                "sam"
             ],
             "properties": {
                 "sam": {
@@ -129,15 +136,6 @@
                         "meta": {
                             "file_type": "sam",
                             "__inherit__": "reads"
-                        }
-                    }
-                },
-                "tab": {
-                    "type": "file",
-                    "adapter": {
-                        "glob": "output.tab",
-                        "meta": {
-                            "file_type": "tab"
                         }
                     }
                 }
