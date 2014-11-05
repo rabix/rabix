@@ -10,23 +10,14 @@ from six.moves import reduce
 from jsonschema import Draft4Validator
 
 from rabix.cliche.ref_resolver import from_url
+from rabix.cliche.expressions.evaluator import Evaluator
 
 
-def evaluate(expression, job, context):
-    if expression.startswith('{'):
-        exp_tpl = '''function () {
-        job = %s;
-        self = %s;
-        return function()%s();}()
-        '''
-    else:
-        exp_tpl = '''function () {
-        job = %s;
-        self = %s;
-        return %s;}()
-        '''
-    exp = exp_tpl % (json.dumps(job), json.dumps(context), expression)
-    return execjs.eval(exp)
+ev = Evaluator()
+
+
+def evaluate(lang, expression, job, context, *args, **kwargs):
+    return ev.evaluate(lang, expression, job, context, *args, **kwargs)
 
 
 def intersect_dicts(d1, d2):
@@ -48,7 +39,7 @@ class Argument(object):
         self.item_separator = self.adapter.get('itemSeparator', ',')
         self.transform = self.adapter.get('transform')
         if self.transform:
-            value = evaluate(self.transform, self.job, value)
+            value = evaluate(self.transform, self.job, value)  # TODO:
         elif self.schema.get('type') in ('file', 'directory'):
             value = value['path']
         self.value = value
@@ -167,7 +158,8 @@ class Adapter(object):
         for k, v in six.iteritems(res):
             if isinstance(v, dict):
                 resolved['allocatedResources'][k] =\
-                    evaluate(v['$expr'], resolved, None)
+                    evaluate(v['expr']['lang'], v['expr']['value'], resolved,
+                             None)
         return resolved
 
     def cmd_line(self, job):
@@ -181,21 +173,23 @@ class Adapter(object):
 
     def _get_stdout_name(self, job):
         return self.stdout if isinstance(self.stdout, six.string_types) \
-            else evaluate(self.stdout['$expr'], job, None)
+            else evaluate(self.stdout['expr']['lang'], self.stdout[
+                'expr']['value'], job, None)
 
     @staticmethod
     def _get_value(arg, job):
         value = arg.get('value')
         if not value:
             raise Exception('Value not specified for arg %s' % arg)
-        if isinstance(value, dict) and '$expr' in value:
-            value = evaluate(value['$expr'], job, None)
+        if isinstance(value, dict) and 'expr' in value:
+            value = evaluate(value['expr']['lang'], value[
+                'expr']['value'], job, None)
         return value
 
     @staticmethod
     def _make_meta(file, adapter, job):
         meta, result = adapter.get('meta', {}), {}
-        inherit = meta.pop('$inherit', None)
+        inherit = meta.pop('__inherit__', None)
         if inherit:
             src = job['inputs'].get(inherit)
             if src and isinstance(src, list):
@@ -206,8 +200,9 @@ class Adapter(object):
                 result = src.get('meta', {})
         result.update(**meta)
         for k, v in six.iteritems(result):
-            if isinstance(v, dict) and '$expr' in v:
-                result[k] = evaluate(v['$expr'], job, file)
+            if isinstance(v, dict) and 'expr' in v:
+                result[k] = evaluate(v['expr']['lang'], v[
+                    'expr']['value'], job, file)
         return result
 
     def get_outputs(self, job_dir, job):

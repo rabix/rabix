@@ -21,7 +21,10 @@ def to_json(obj, fp=None):
 
 
 class InputRunner(object):
-    """ Will handle local files, 'data:,' URLs (for tests) and delegate other URLs to requests.get() """
+    """
+    Will handle local files, 'data:,' URLs (for tests) and delegate other
+    URLs to requests.get()
+    """
     def __init__(self, job, inputs, dir=None):
         self.inputs = inputs
         self.job = job
@@ -39,16 +42,23 @@ class InputRunner(object):
             single = filter(is_single, [i for i in self.inputs])
             lists = filter(is_array, [i for i in self.inputs])
             for inp in single:
-                secondaryFiles = self.inputs[inp].get('adapter', {}).get('secondaryFiles')
-                remaped_job['inputs'][inp]['path'] = self._download(input_values[inp]['path'])
-                remaped_job['inputs'][inp]['meta'] = self._meta(input_values[inp])
-                self._get_secondary_files(secondaryFiles, input_values[inp]['path'])
+                secondaryFiles = self.inputs[inp].get('adapter', {}).get(
+                    'secondaryFiles')
+                remaped_job['inputs'][inp]['path'] = self._download(
+                    input_values[inp]['path'])
+                remaped_job['inputs'][inp]['meta'] = self._meta(
+                    input_values[inp])
+                self._get_secondary_files(secondaryFiles, input_values[
+                    inp]['path'])
             for inp in lists:
-                secondaryFiles = self.inputs[inp].get('adapter', {}).get('secondaryFiles')
+                secondaryFiles = self.inputs[inp].get('adapter', {}).get(
+                    'secondaryFiles')
                 for num, inv in enumerate(input_values[inp]):
-                    remaped_job['inputs'][inp][num]['path'] = self._download(input_values[inp][num]['path'])
+                    remaped_job['inputs'][inp][num]['path'] = self._download(
+                        input_values[inp][num]['path'])
                     remaped_job['inputs'][inp][num]['meta'] = self._meta(inv)
-                    self._get_secondary_files(secondaryFiles, input_values[inp][num]['path'])
+                    self._get_secondary_files(secondaryFiles, input_values[
+                        inp][num]['path'])
             return remaped_job
 
     @property

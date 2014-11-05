@@ -87,7 +87,7 @@ tool:
         type: file
         adapter:
           meta:
-            $inherit: reads
+            __inherit__: reads
             file_type: sam
           stdout: Yes
           glob: output.sam
@@ -101,4 +101,6 @@ tool:
       - order: 1
         prefix: "-t"
         value:
-          $expr: job['allocatedResources']['cpu']
+          expr:
+            lang: JSEval
+            value: job['allocatedResources']['cpu']

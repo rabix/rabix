@@ -5,9 +5,16 @@
     "definitions": {
         "expression": {
             "type": "object",
-            "required": ["$expr"],
+            "required": ["expr"],
             "properties": {
-                "$expr": { "type": "string"}
+                "expr": {
+                    "type": "object",
+                    "required": ["lang", "value"],
+                    "properties": {
+                        "lang": {"type": "string"},
+                        "value": {"type": "string"}
+                    }
+                }
             }
         },
         "strOrExpr": {

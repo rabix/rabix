@@ -47,14 +47,16 @@ class Runner(object):
         pass
 
     def provide_files(self, job, dir=None):
-        return InputRunner(job, self.tool.get('inputs', {}).get('properties'), dir)()
+        return InputRunner(job, self.tool.get('inputs', {}).get(
+            'properties'), dir)()
 
 
 class DockerRunner(Runner):
     def __init__(self, tool, working_dir='./', dockr=None, stderr=None):
         stdout = tool.get('adapter', {}).get('stdout', None)
         super(DockerRunner, self).__init__(tool, working_dir, stdout)
-        self.docker_client = dockr or docker.Client(os.getenv("DOCKER_HOST", None), version='1.12')
+        self.docker_client = dockr or docker.Client(os.getenv(
+            "DOCKER_HOST", None), version='1.12')
 
     def _volumes(self, job):
         remaped_job = copy.deepcopy(job)

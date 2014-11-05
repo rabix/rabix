@@ -30,7 +30,14 @@
                     "type": "file",
                     "required": "Yes",
                     "adapter": {
-                        "order": 2
+                        "order": 2,
+                        "secondaryFiles": [
+                            "*.amb",
+                            "*.ann",
+                            "*.bwt",
+                            "*.pac",
+                            "*.sa"
+                        ]
                     }
                 },
                 "reads": {
@@ -95,7 +102,10 @@
                     "order": 1,
                     "prefix": "-t",
                     "value": {
-                        "$expr": "job['allocatedResources']['cpu']"
+                        "expr": {
+                            "lang": "JSEval",
+                            "value": "job['allocatedResources']['cpu']"
+                        }
                     }
                 }
             ]
