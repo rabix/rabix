@@ -15,7 +15,8 @@ class ExpressionEvalPlugin(IPlugin):
     def __init__(self):
         super(ExpressionEvalPlugin, self).__init__()
 
-    def evaluate(self, expression=None, job=None, context=None, *args, **kwargs):
+    def evaluate(self, expression=None, job=None, context=None, *args,
+                 **kwargs):
         raise RuntimeError('Not implemented')
 
 
@@ -31,10 +32,11 @@ class Evaluator(object):
         self.config.read(self.config_file)
 
         this_dir = os.path.abspath(os.path.dirname(__file__))
-        self.plugin_dir = plugin_dir or os.path.join(this_dir, self._default_dir)
+        self.plugin_dir = plugin_dir or os.path.join(
+            this_dir, self._default_dir)
         places = [self.plugin_dir, ]
-        [places.append(os.path.join(path, self.APP_NAME, "evaluators")) for path
-         in xdg_data_dirs]
+        [places.append(os.path.join(path, self.APP_NAME, "evaluators")) for
+         path in xdg_data_dirs]
 
         PluginManagerSingleton.setBehaviour([
             ConfigurablePluginManager,

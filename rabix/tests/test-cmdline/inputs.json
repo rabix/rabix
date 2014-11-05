@@ -1,4 +1,5 @@
 {
 "reference": "./rabix/tests/test-files/chr20.fa",
-"reads": ["./rabix/tests/test-files/example_human_Illumina.pe_1.fastq", "./rabix/tests/test-files/example_human_Illumina.pe_2.fastq"]
+"reads": ["./rabix/tests/test-files/example_human_Illumina.pe_1.fastq", "./rabix/tests/test-files/example_human_Illumina.pe_2.fastq"],
+"minimum_seed_length": 4
 }

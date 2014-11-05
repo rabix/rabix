@@ -8,7 +8,8 @@ class JSEval(evaluator.ExpressionEvalPlugin):
     def __init__(self):
         super(JSEval, self).__init__()
 
-    def evaluate(self, expression=None, job=None, context=None, *args, **kwargs):
+    def evaluate(self, expression=None, job=None, context=None, *args,
+                 **kwargs):
         if expression.startswith('{'):
             exp_tpl = '''function () {
             job = %s;

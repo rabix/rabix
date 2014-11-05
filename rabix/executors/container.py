@@ -10,7 +10,8 @@ log = logging.getLogger(__name__)
 
 
 def ensure_image(docker_client, image_id, uri):
-    if image_id and [x for x in docker_client.images() if x['Id'].startswith(image_id)]:
+    if image_id and [x for x in docker_client.images() if x['Id'].startswith(
+            image_id)]:
         log.debug("Provide image: found %s" % image_id)
         return
     else:

@@ -158,7 +158,8 @@ class Adapter(object):
         for k, v in six.iteritems(res):
             if isinstance(v, dict):
                 resolved['allocatedResources'][k] =\
-                    evaluate(v['expr']['lang'], v['expr']['value'], resolved, None)
+                    evaluate(v['expr']['lang'], v['expr']['value'], resolved,
+                             None)
         return resolved
 
     def cmd_line(self, job):
@@ -172,7 +173,8 @@ class Adapter(object):
 
     def _get_stdout_name(self, job):
         return self.stdout if isinstance(self.stdout, six.string_types) \
-            else evaluate(self.stdout['expr']['lang'], self.stdout['expr']['value'], job, None)
+            else evaluate(self.stdout['expr']['lang'], self.stdout[
+                'expr']['value'], job, None)
 
     @staticmethod
     def _get_value(arg, job):
@@ -180,7 +182,8 @@ class Adapter(object):
         if not value:
             raise Exception('Value not specified for arg %s' % arg)
         if isinstance(value, dict) and 'expr' in value:
-            value = evaluate(value['expr']['lang'], value['expr']['value'], job, None)
+            value = evaluate(value['expr']['lang'], value[
+                'expr']['value'], job, None)
         return value
 
     @staticmethod
@@ -198,7 +201,8 @@ class Adapter(object):
         result.update(**meta)
         for k, v in six.iteritems(result):
             if isinstance(v, dict) and 'expr' in v:
-                result[k] = evaluate(v['expr']['lang'], v['expr']['value'], job, file)
+                result[k] = evaluate(v['expr']['lang'], v[
+                    'expr']['value'], job, file)
         return result
 
     def get_outputs(self, job_dir, job):

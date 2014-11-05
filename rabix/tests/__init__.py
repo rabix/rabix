@@ -68,7 +68,7 @@ mock_app_good_repo = {
                 "container": {
                     "type": "docker",
                     "uri": "docker:ubuntu#14.10",
-                    "imageId": "f14704ad99b8"
+                    "imageId": "277eb4304907"
                 }
             },
             "resources": {},
