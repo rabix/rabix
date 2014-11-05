@@ -1,7 +1,8 @@
 import docopt
 import sys
 import logging
-
+import six
+import collections
 from rabix import __version__ as version
 from rabix.executors.runner import DockerRunner, NativeRunner
 from rabix.cliche.adapter import Adapter, from_url
@@ -12,24 +13,29 @@ TEMPLATE_JOB = {
     'app': 'http://example.com/app.json',
     'inputs': {},
     'platform': 'http://example.org/my_platform/v1',
-    'allocatedResources': {}
+    'allocatedResources': {
+        "cpu": 4,
+        "mem": 5000,
+        "ports": [],
+        "diskSpace": 20000,
+        "network": False
+    }
 }
 
 USAGE = '''
 Usage:
-    rabix [-v...] [-hci] [-d <dir>] -j <job> [-t <tool>] [-- {inputs}...]
-    rabix [-v...] [-hci] [-d <dir>] -t <tool> [--] {inputs}...
+    rabix <tool> [-v...] [-hcI] [-d <dir>] [-i <inp>] [-- {inputs}...]
     rabix --version
 
-Options:
+    Options:
   -d --dir=<dir>       Working directory for the task. If not provided one will
                        be auto generated in the current dir.
-  -h --help            Show this help message. In conjunction with job or tool,
+  -h --help            Show this help message. In conjunction with tool,
                        it will print inputs you can provide for the job.
-  -i --install         Only install referenced tools. Do not run anything.
-  -j --job=<job>       URI to job order document to run.
+
+  -I --install         Only install referenced tools. Do not run anything.
+  -i --inp-file=<inp>  Inputs
   -c --print-cli       Only print calculated command line. Do not run anything.
-  -t --tool=<tool>     URI to tool description document to run.
   -v --verbose         Verbosity. More Vs more output.
      --version         Print version and exit.
 '''
@@ -39,39 +45,91 @@ Usage:
   tool {inputs}
 '''
 
-TOOL_TEMPLATE_JOB = '''
-Usage:
-  tool [{inputs}]
-'''
+
+def update_dict(dct, new_dct):
+    for key, val in six.iteritems(new_dct):
+        t = dct
+        if '.' in key:
+            for k in key.split('.'):
+                if k == key.split('.')[-1]:
+                    if isinstance(val, collections.Mapping):
+                        t = t.setdefault(k, {})
+                        update_dict(t, new_dct[key])
+                    else:
+                        t[k] = val
+                else:
+                    if not isinstance(t.get(k), collections.Mapping):
+                        t[k] = {}
+                    t = t.setdefault(k, {})
+        else:
+            if isinstance(val, collections.Mapping):
+                t = t.setdefault(key, {})
+                update_dict(t, new_dct[key])
+            else:
+                t[key] = val
 
 
-def make_tool_usage_string(tool, template=TOOL_TEMPLATE):
+def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp={}):
+
+    def required(req, arg, inputs):
+        inp = inputs.keys()
+        if req and (arg not in inp):
+            return True
+        return False
+
     inputs = tool.get('inputs', {}).get('properties')
     usage_str = []
+    param_str = []
     for k, v in inputs.items():
         if v.get('type') == 'file':
-            arg = '--%s=<%s_file>' % (k, k)
-            usage_str.append(arg if v.get('required') else '[%s]' % arg)
-        elif v.get('type') == 'array' and \
-                (v.get('items').get('type') == 'file' or
-                    v.get('items').get('type') == 'directory'):
-            arg = '--%s=<%s_file>...' % (k, k)
-            usage_str.append(arg if v.get('required') else '[%s]' % arg)
+            arg = '--%s=<file>' % k
+            usage_str.append(arg if required(v.get('required'), k, inp)
+                             else '[%s]' % arg)
+        elif v.get('type') == 'array':
+            if ((v.get('items').get('type') == 'file' or v.get(
+                    'items').get('type') == 'directory')):
+                arg = '--%s=<file>...' % k
+                usage_str.append(arg if required(v.get('required'), k, inp)
+                                 else '[%s]' % arg)
+            else:
+                arg = '--%s=<array_%s_separator(%s)>...' % (k, v.get(
+                    'items').get('type'), v.get('adapter').get(
+                        'itemSeparator'))
+                param_str.append(arg if required(v.get('required'), k, inp)
+                                 else '[%s]' % arg)
+        else:
+            arg = '--%s=<%s>' % (k, v.get('type'))
+            param_str.append(arg if required(v.get('required'), k, inp)
+                             else '[%s]' % arg)
+    usage_str.extend(param_str)
     return template.format(inputs=' '.join(usage_str))
+
+
+def resolve(k, v, nval, inp):
+    if isinstance(nval, list):
+        if v.get('type') != 'array':
+            raise Exception('Too many values')
+        inp[k] = []
+        for nv in nval:
+            if (v['items']['type'] == 'file' or v['items'][
+                    'type'] == 'directory'):
+                inp[k].append({'path': nv})
+            else:
+                inp[k].append(nv)
+    else:
+        if (v['type'] == 'file' or v['type'] == 'directory'):
+            inp[k] = {'path': nval}
+        else:
+            inp[k] = nval
 
 
 def get_inputs(tool, args):
     inp = {}
     inputs = tool.get('inputs', {}).get('properties')
-    for k in inputs.keys():
-        val = args.get('--' + k)
-        if val:
-            if isinstance(val, list):
-                inp[k] = []
-                for v in val:
-                    inp[k].append({'path': v})
-            else:
-                inp[k] = {'path': val}
+    for k, v in six.iteritems(inputs):
+        nval = args.get('--' + k) or args.get(k)
+        if nval:
+            resolve(k, v, nval, inp)
     return {'inputs': inp}
 
 
@@ -82,17 +140,18 @@ def update_paths(job, inputs):
 
 
 def get_tool(args):
-    if args['--tool']:
-        return from_url(args['--tool'])
-    if args['--job']:
-        return from_url(args['--job']).get('tool')
+    if args['<tool>']:
+        return from_url(args['<tool>'])
 
 
 def dry_run_parse(args=None):
     args = args or sys.argv[1:]
     args = args + ['an_input']
     usage = USAGE.format(inputs='<inputs>')
-    return docopt.docopt(usage, args, version=version, help=False)
+    try:
+        return docopt.docopt(usage, args, version=version, help=False)
+    except docopt.DocoptExit:
+        return
 
 
 def main():
@@ -102,18 +161,20 @@ def main():
         return
 
     usage = USAGE.format(inputs='<inputs>')
+    tool_usage = usage
 
     if len(sys.argv) == 2 and \
-            (sys.argv[1] == '--help' or
-             sys.argv[1] == '-h'):
+            (sys.argv[1] == '--help' or sys.argv[1] == '-h'):
         print(USAGE)
         return
 
     dry_run_args = dry_run_parse()
+    if not dry_run_args:
+        print(USAGE)
+        return
 
-    if not (dry_run_args['--tool'] or dry_run_args['--job']):
-        print('You have to specify a tool, either directly with '
-              '--tool option or using a job that references a tool')
+    if not (dry_run_args['<tool>']):
+        print('You have to specify a tool, with --tool option')
         print(usage)
         return
 
@@ -129,23 +190,20 @@ def main():
         print("Install successful.")
         return
 
-    tool_usage = make_tool_usage_string(tool, USAGE)
     try:
         args = docopt.docopt(usage, version=version, help=False)
         job = TEMPLATE_JOB
-        set_log_level(args['--verbose'])
-        tool_inputs = {}
-        if args['--job']:
-            job_from_arg = from_url(args.get('--job'))
-            job_from_arg.pop('tool')
-            job = job_from_arg
-            tool_inputs_usage = make_tool_usage_string(tool, template=TOOL_TEMPLATE_JOB)
-            if args['<inputs>']:
-                tool_inputs = docopt.docopt(tool_inputs_usage, args['<inputs>'])
-        else:
-            tool_inputs_usage = make_tool_usage_string(tool, template=TOOL_TEMPLATE)
-            if args['<inputs>']:
-                tool_inputs = docopt.docopt(tool_inputs_usage, args['<inputs>'])
+        set_log_level(dry_run_args['--verbose'])
+
+        if args['--inp-file']:
+            input_file = from_url(args.get('--inp-file'))
+            update_dict(job['inputs'], get_inputs(tool, input_file)['inputs'])
+
+        tool_inputs_usage = make_tool_usage_string(
+            tool, template=TOOL_TEMPLATE, inp=job['inputs'])
+        tool_usage = make_tool_usage_string(tool, USAGE, job['inputs'])
+
+        tool_inputs = docopt.docopt(tool_inputs_usage, args['<inputs>'])
 
         if args['--help']:
             print(tool_usage)

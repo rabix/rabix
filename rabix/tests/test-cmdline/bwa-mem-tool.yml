@@ -23,6 +23,7 @@ tool:
         required: Yes
         adapter:
           order: 2
+          secondaryFiles: ['*.amb', '*.ann', '*.bwt', '*.pac', '*.sa']
   #        transform: self.path.split('.').reverse().splice(1).reverse().join('.')
       reads:
         type: array
@@ -60,7 +61,7 @@ tool:
           glob: output.sam
           streamable: Yes
           meta:
-            $inherit: reads
+            __inherit__: reads
             file_type: sam
   adapter:
     baseCmd: [bwa, mem]
@@ -69,4 +70,6 @@ tool:
       - order: 1
         prefix: "-t"
         value:
-          $expr: job['allocatedResources']['cpu']
+          expr:
+            lang: JSEval
+            value: job['allocatedResources']['cpu']

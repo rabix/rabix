@@ -28,7 +28,7 @@ $ pip install git+https://github.com/rabix/rabix
 Check if everything works by installing an example tool:
 
 ```
-$ rabix --install --tool https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool
+$ rabix --install https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool
 ```
 
 The "install" command simply pre-fetches referenced docker image.
@@ -37,20 +37,14 @@ run the tool, which should fetch only the JSON files and present you with
 input options:
  
 ```
-$ rabix --tool https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool 
+$ rabix https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool 
 ```
 
 Optionally, run the tool with some example data. It won't take long:
 
 ```
-$ rabix --tool https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool \
-  --reference path/to/reference \
-  --reads path/to/read1 \
-  --reads path/to/read2
-```
-
-You can also provide job JSON file with specified paths to files in it.
-
-```
-$ rabix --job https://s3.amazonaws.com/rabix/rabix-test/bwa-mem-remote.json#job \ 
+$ rabix https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool \
+ -- --reference https://s3.amazonaws.com/rabix/rabix-test/chr20.fa 
+ --reads https://s3.amazonaws.com/rabix/rabix-test/example_human_Illumina.pe_1.fastq
+ --reads https://s3.amazonaws.com/rabix/rabix-test/example_human_Illumina.pe_2.fastq
 ```
