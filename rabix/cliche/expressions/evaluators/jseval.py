@@ -12,14 +12,14 @@ class JSEval(evaluator.ExpressionEvalPlugin):
                  **kwargs):
         if expression.startswith('{'):
             exp_tpl = '''function () {
-            job = %s;
-            self = %s;
+            $job = %s;
+            $self = %s;
             return function()%s();}()
             '''
         else:
             exp_tpl = '''function () {
-            job = %s;
-            self = %s;
+            $job = %s;
+            $self = %s;
             return %s;}()
             '''
         exp = exp_tpl % (json.dumps(job), json.dumps(context), expression)

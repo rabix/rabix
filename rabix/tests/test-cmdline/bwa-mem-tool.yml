@@ -71,5 +71,5 @@ tool:
         prefix: "-t"
         value:
           expr:
-            lang: JSEval
-            value: job['allocatedResources']['cpu']
+            lang: javascript
+            value: $job['allocatedResources']['cpu']
