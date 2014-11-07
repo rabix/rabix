@@ -22,11 +22,12 @@ setup(
                             'rabix-tools = rabix.tools.cli:main'],
     },
     install_requires=requires,
-    package_data={'rabix': ['models/schema/*.json']},
+    package_data={'rabix': ['models/schema/*.json', 'cliche/expressions/evaluators/*.expr-plugin']},
     long_description=io.open('README.md').read(),
     zip_safe=False,
     test_suite='tests',
     license='AGPLv3',
+
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',

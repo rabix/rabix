@@ -1,5 +1,5 @@
 # JobOrder
-job:
+$job:
   inputs: # dict that matches the schema defined in tool
     reference:
       path: ./rabix/tests/test-files/chr20.fa

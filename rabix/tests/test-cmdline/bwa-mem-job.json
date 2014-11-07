@@ -1,5 +1,5 @@
 {
-    "job": {
+    "$job": {
         "inputs": {
             "reference": {
                 "path": "./rabix/tests/test-files/chr20.fa",

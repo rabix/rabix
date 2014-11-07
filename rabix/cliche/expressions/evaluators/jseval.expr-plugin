@@ -1,9 +1,9 @@
 [Core]
-Name = JSEval
+Name = javascript
 Module = jseval
 
 [Documentation]
 Author = Sinisa Ivkovic
 Version = 0.1
-Website = http://lotsofplugins.com
+Website = http://www.rabix.org
 Description = Rabix Plugin for Javascript evaluation
