@@ -1,0 +1,348 @@
+{"softwareDescription": {
+    "repo_owner": "sinisa88",
+    "repo_name": "BWA",
+    "name": "BWA MEM"
+}, "documentAuthor": "sinisa.ivkovic@sbgenomics.com", "requirements": {
+    "environment": {
+        "container": {
+            "type": "docker",
+            "uri": "docker://images.sbgenomics.com/rabix/bwa#9d3b9b0359cf",
+            "imageId": "9d3b9b0359cf"
+        }
+    },
+    "resources": {
+        "cpu": 0,
+        "mem": 5000,
+        "ports": [],
+        "diskSpace": 0,
+        "network": false
+    }
+}, "inputs": {
+    "type": "object",
+    "properties": {
+        "reference": {
+            "type": "file",
+            "required": true,
+            "adapter": {
+                "order": 2,
+                "secondaryFiles": [
+                    "*.amb",
+                    "*.ann",
+                    "*.bwt",
+                    "*.pac",
+                    "*.sa"
+                ]
+            }
+        },
+        "reads": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "required": true,
+            "items": {
+                "type": "file"
+            },
+            "adapter": {
+                "order": 3,
+                "listStreamable": true
+            }
+        },
+        "minimum_seed_length": {
+            "type": "integer",
+            "adapter": {
+                "order": 1,
+                "prefix": "-k",
+                "separator": "_"
+            }
+        },
+        "min_std_max_min": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+                "type": "number"
+            },
+            "adapter": {
+                "order": 1,
+                "prefix": "",
+                "separator": "_"
+            }
+        },
+        "band_width_for_banded_alignment": {
+            "type": "integer",
+            "adapter": {
+                "separator": "",
+                "prefix": "-w",
+                "order": 1
+            },
+            "required": false
+        },
+        "off-diagonal_X-dropoff": {
+            "type": "integer",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-d",
+                "order": 1
+            },
+            "required": false
+        },
+        "skip_seeds_with_more_than_INT_occurrences": {
+            "type": "integer",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-c",
+                "order": 1
+            },
+            "required": false
+        },
+        "drop_chains_shorter_than_FLOAT_fraction_of_the_longest_overlapping_chain": {
+            "type": "string",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-D",
+                "order": 1
+            }
+        },
+        "perform_at_most_INT_rounds_of_mate_rescues_for_each_read": {
+            "type": "integer",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-m",
+                "order": 1
+            },
+            "required": false
+        },
+        "look_for_internal_seeds_inside_a_seed_longer_than_k*1.5": {
+            "type": "string",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-r",
+                "order": 1
+            },
+            "required": false,
+            "enum": null
+        },
+        "discard_a_chain_if_seeded_bases_shorter_than_ INT": {
+            "type": "integer",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-W",
+                "order": 1
+            },
+            "required": false
+        },
+        "skip_mate_rescue": {
+            "type": "boolean",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-S",
+                "order": 1
+            },
+            "required": false
+        },
+        "skip_pairing;mate_rescue_performed_unless_-S_also_in_use": {
+            "type": "boolean",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-P",
+                "order": 1
+            },
+            "required": false
+        },
+        "discard_full-length_exact_matches": {
+            "type": "boolean",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-e",
+                "order": 1
+            },
+            "required": false
+        },
+        "score_for_a_sequence_match,which_scales_options_-TdBOELU_unless_overridden": {
+            "type": "integer",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-A",
+                "order": 1
+            },
+            "required": false
+        },
+        "penalty_for_a_mismatch": {
+            "type": "integer",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-B",
+                "order": 1
+            },
+            "required": false
+        },
+        "gap_open_penalties_for_deletions_and_insertions": {
+            "type": "array",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-O",
+                "order": 1,
+                "listSeparator": ","
+            },
+            "required": false,
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+                "type": "number"
+            }
+        },
+        "gap_extension_penalty;a_gap_of_size_k_cost_{-O}+{-E}*k'": {
+            "type": "array",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-E",
+                "order": 1,
+                "listSeparator": ","
+            },
+            "required": false,
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+                "type": "number"
+            }
+        },
+        "penalty_for_5'-and_3'-end_clipping": {
+            "type": "array",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-L",
+                "order": 1,
+                "listSeparator": ","
+            },
+            "required": false,
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+                "type": "number"
+            }
+        },
+        "penalty_for_an_unpaired_read_pair": {
+            "type": "integer",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-U",
+                "order": 1
+            },
+            "required": false
+        },
+        "read_type.Setting_-x_changes_multiple_parameters_unless_overriden": {
+            "type": "string",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-x",
+                "order": 1
+            }
+        },
+        "first_query_file_consists_of_interleaved_paired-end_sequences": {
+            "type": "boolean",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-p",
+                "order": 1
+            },
+            "required": false
+        },
+        "read_group_header_line": {
+            "type": "string",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-R",
+                "order": 1
+            }
+        },
+        "minimum_score_to_output": {
+            "type": "integer",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-T",
+                "order": 1
+            },
+            "required": false
+        },
+        "if_there_are_<INT_hits_with_score>80%_of_the_max_score,output_all_in_XA": {
+            "type": "integer",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-h",
+                "order": 0
+            },
+            "required": false
+        },
+        "output_all_alignments_for_SE_or_unpaired_PE": {
+            "type": "boolean",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-a",
+                "order": 1
+            },
+            "required": false
+        },
+        "append_FASTA/FASTQ_comment_to_SAM_output": {
+            "type": "boolean",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-C",
+                "order": 1
+            },
+            "required": false
+        },
+        "use_soft_clipping_for_supplementary_alignments": {
+            "type": "boolean",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-Y",
+                "order": 1
+            },
+            "required": false
+        },
+        "mark_shorter_split_hits_as_secondary": {
+            "type": "boolean",
+            "adapter": {
+                "separator": "_",
+                "prefix": "-M",
+                "order": 1
+            },
+            "required": false
+        }
+    }
+}, "outputs": {
+    "type": "object",
+    "properties": {
+        "sam": {
+            "type": "file",
+            "adapter": {
+                "streamable": true,
+                "glob": "output.sam",
+                "meta": {
+                    "file_type": "sam",
+                    "__inherit__": "reads"
+                },
+                "secondaryFiles": []
+            }
+        }
+    }
+}, "adapter": {
+    "baseCmd": ["bwa"],
+    "stdout": "output.sam",
+    "args": [
+        {
+            "order": 0,
+            "value": "mem"
+        },
+        {
+            "order": 1,
+            "prefix": "-t",
+            "value": {
+                "expr": {
+                    "value": "$job['allocatedResources']['cpu']",
+                    "lang": "javascript"
+                }
+            }
+        }
+    ]
+}}

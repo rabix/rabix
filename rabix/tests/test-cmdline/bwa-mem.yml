@@ -1,5 +1,5 @@
 # JobOrder
-job:
+$job:
   tool:
     $ref: "#tool"
   inputs: # dict that matches the schema defined in tool
@@ -102,5 +102,5 @@ tool:
         prefix: "-t"
         value:
           expr:
-            lang: JSEval
-            value: job['allocatedResources']['cpu']
+            lang: javascript
+            value: $job['allocatedResources']['cpu']
