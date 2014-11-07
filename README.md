@@ -2,17 +2,18 @@
 
 ## Reproducible Analyses for Bioinformatics 
 
-The goal of this project is to provide an easy way to package, distribute and
-run tools and pipelines using [docker](http://docker.com) images.
+Rabix is an open source implementation of the specification being developed on the
+ [Common Workflow Language mailing list](https://groups.google.com/forum/#!forum/common-workflow-language).
 
-Eventually, we plan to have the following:
+CWL is an informal task force consisting of people from various organizations that have an interest in portability
+ of bioinformatics workflows.
+The goal is to specify a way to describe bioinformatics tools and workflows that is powerful,
+ easy to use and allows for portability of tools/workflows and reproducibility of runs.
 
-* Schema and protocol specification.
-* Tools to run apps and pipelines.
-* An SDK to easily package tools and pipelines into reusable components.
+To play with describing tools and making workflows visit [rabix.org](http://rabix.org).
 
-Note that this project is still under development. You can run pipelines, but
-can't (easily) make them yet.
+This repo includes a local python executor (currently only running tools) and some utilities for building docker images.
+
 
 ### Install
 
@@ -43,8 +44,8 @@ $ rabix https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool
 Optionally, run the tool with some example data. It won't take long:
 
 ```
-$ rabix https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool \
- -- --reference https://s3.amazonaws.com/rabix/rabix-test/chr20.fa 
- --reads https://s3.amazonaws.com/rabix/rabix-test/example_human_Illumina.pe_1.fastq
+$ rabix https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json#tool -- \
+ --reference https://s3.amazonaws.com/rabix/rabix-test/chr20.fa \
+ --reads https://s3.amazonaws.com/rabix/rabix-test/example_human_Illumina.pe_1.fastq \
  --reads https://s3.amazonaws.com/rabix/rabix-test/example_human_Illumina.pe_2.fastq
 ```
