@@ -1,10 +1,8 @@
 import os
-import json
 import copy
 import operator
 import glob
 import six
-import execjs
 
 from six.moves import reduce
 from jsonschema import Draft4Validator
