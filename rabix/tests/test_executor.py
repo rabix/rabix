@@ -9,7 +9,7 @@ from rabix.tests import mock_app_bad_repo, mock_app_good_repo
 from rabix.executors.cli import get_tool, main, dry_run_parse
 
 
-#@nottest
+@nottest
 @raises(Exception)
 def test_provide_image_bad_repo():
     uri = mock_app_bad_repo["tool"]["requirements"]["environment"][
@@ -20,7 +20,7 @@ def test_provide_image_bad_repo():
     ensure_image(docker_client, imageId, uri)
 
 
-#@nottest
+@nottest
 def test_provide_image_good_repo():
     uri = mock_app_good_repo["tool"]["requirements"]["environment"][
         "container"]["uri"]
@@ -42,7 +42,7 @@ def test_cmd_line():
     assert tool2
 
 
-#@nottest
+@nottest
 def test_expr_and_meta():
     sys.argv = ['rabix', '-i', './rabix/tests/test-cmdline/inputs.json',
                 './rabix/tests/test-expr/bwa-mem1.json#tool',
@@ -62,7 +62,7 @@ def test_expr_and_meta():
     shutil.rmtree(os.path.abspath('./test2'))
 
 
-#@nottest
+@nottest
 def test_fetch_remote_files():
     sys.argv = ['rabix', '--dir', 'testdir',
                 './rabix/tests/test-cmdline/bwa-mem-tool.yml#tool', '--',
@@ -77,7 +77,7 @@ def test_fetch_remote_files():
     shutil.rmtree(os.path.abspath('./testdir'))
 
 
-#@nottest
+@nottest
 def test_params_from_input_file():
     sys.argv = ['rabix', '-i', 'rabix/tests/test-cmdline/inputs.json',
                 'rabix/tests/test-expr/bwa-mem1.json#tool',
@@ -87,7 +87,7 @@ def test_params_from_input_file():
     shutil.rmtree(os.path.abspath('./testdir'))
 
 
-#@nottest
+@nottest
 def test_override_input():
     sys.argv = ['rabix', '-i', 'rabix/tests/test-cmdline/inputs.json', '--d',
                 'testdir', 'rabix/tests/test-expr/bwa-mem1.json#tool', '--',
