@@ -1,8 +1,8 @@
+import os
 import copy
 import operator
 import six
 import logging
-import os
 import glob
 
 from jsonschema import Draft4Validator

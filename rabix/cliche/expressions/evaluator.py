@@ -41,7 +41,7 @@ class Evaluator(object):
         PluginManagerSingleton.setBehaviour([
             ConfigurablePluginManager,
             VersionedPluginManager,
-            ])
+        ])
 
         self.manager = PluginManagerSingleton.get()
         self.manager.setConfigParser(self.config, self.write_config)

@@ -7,7 +7,6 @@ import uuid
 import stat
 import copy
 
-from multiprocessing import Process
 from rabix.executors.io import InputRunner
 from rabix.executors.container import Container, ensure_image
 from rabix.cliche.adapter import CLIJob
@@ -159,6 +158,7 @@ class NativeRunner(Runner):
 
 
 if __name__ == '__main__':
+    from multiprocessing import Process
 
     '''
     Streaming between two containers test.
