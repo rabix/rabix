@@ -1,0 +1,66 @@
+tools:
+  add:
+    "@type": Script
+    inputs:
+      type: object
+      properties:
+        a:
+          type: integer
+        b:
+          type: integer
+    outputs:
+      type: object
+      properties:
+        c:
+          type: integer
+    script: $job.inputs.a + $job.inputs.b
+
+  mul:
+    "@type": Script
+    inputs:
+      type: object
+      properties:
+        a:
+          type: integer
+        b:
+          type: integer
+    outputs:
+      type: object
+      properties:
+        c:
+          type: integer
+    script: $job.inputs.a * $job.inputs.b
+
+workflows:
+  add_one_mul_two:
+    "@type": Workflow
+    steps:
+      - id: add_one
+        app: {"$ref": "#/tools/add"}
+        inputs:
+          a:
+            $from: a
+          b: 1
+      - id: times_two
+        app: {"$ref": "#/tools/mul"}
+        inputs:
+          a:
+            $from: add_one.c
+          b: 2
+        outputs:
+          c:
+            $to: result
+
+jobs:
+  batch_add_one_mul_two:
+    "@type": Job
+    app: {"$ref": "#workflows/add_one_mul_two"}
+    inputs:
+      a: [1, 2, 3]
+
+tests:
+  batch_add_one_mul_two:
+    "@type": Test
+    job: {"$ref": "#/jobs/batch_add_one_mul_two"}
+    outputs:
+      result: [4, 6, 8]
