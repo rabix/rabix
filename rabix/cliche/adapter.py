@@ -29,6 +29,11 @@ def intersect_dicts(d1, d2):
     return {k: v for k, v in six.iteritems(d1) if v == d2.get(k)}
 
 
+def sort_args(args):
+    with_indices = sorted(enumerate(args), key=lambda a: [a[1].position, a[0]])
+    return [a[1] for a in with_indices]
+
+
 class Argument(object):
     def __init__(self, job, value, schema, adapter=None):
         self.job = job
@@ -62,15 +67,15 @@ class Argument(object):
 
     def get_args_and_stdin(self, adapter_mixins=None):
         args = [Argument(self.job, v, self._schema_for(k)) for k, v in
-                six.iteritems(self.value)]
+                sorted(six.iteritems(self.value))]
         args += adapter_mixins or []
-        args.sort(key=lambda a: [a.position, a.arg_list()])
+        args = sort_args(args)
         stdin = [a.value for a in args if a.is_stdin()]
         return reduce(operator.add, [a.arg_list() for a in args], []),\
             stdin[0] if stdin else None
 
     def arg_list(self):
-        if self.is_stdin():
+        if self.is_stdin() or self.adapter is None:
             return []
         if isinstance(self.value, dict):
             return self._as_dict()
@@ -96,8 +101,8 @@ class Argument(object):
 
     def _as_dict(self):
         args = [Argument(self.job, v, self._schema_for(k)) for k, v
-                in six.iteritems(self.value)]
-        args.sort(key=lambda a: [a.position, a.arg_list()])
+                in sorted(six.iteritems(self.value))]
+        args = sort_args(args)
         return reduce(operator.add, [a.arg_list() for a in args], [])
 
     def _as_list(self):
@@ -166,13 +171,17 @@ class Adapter(object):
                     evaluate(v, resolved, None)
         return resolved
 
+    def _base_args(self, job):
+        e = lambda x: evaluate(x, job, None) if isinstance(x, dict) else x
+        return map(e, self.base_cmd)
+
     def get_shell_args(self, job):
         job = self._resolve_job_resources(job)
         arg_list, stdin = self._arg_list_and_stdin(job)
         stdout = self._get_stdout_name(job)
         stdin = ['<', stdin] if stdin else []
         stdout = ['>', stdout] if stdout else []
-        return map(six.text_type, self.base_cmd + arg_list + stdin + stdout)
+        return map(six.text_type, self._base_args(job) + arg_list + stdin + stdout)
 
     def cmd_line(self, job):
         return ' '.join(self.get_shell_args(job))
