@@ -16,7 +16,14 @@ from rabix.cliche.expressions.evaluator import Evaluator
 ev = Evaluator()
 
 
-def evaluate(lang, expression, job, context, *args, **kwargs):
+def evaluate(expr_object, job, context, *args, **kwargs):
+    error_msg = 'Expression needs to be an object with "$expr". Got: %s' % expr_object
+    if not isinstance(expr_object, dict):
+        raise TypeError(error_msg)
+    expression = expr_object.get('$expr', {}).get('value')
+    lang = expr_object.get('$expr', {}).get('lang', 'javascript')
+    if not isinstance(expression, six.string_types) or not isinstance(lang, six.string_types):
+        raise ValueError(error_msg)
     return ev.evaluate(lang, expression, job, context, *args, **kwargs)
 
 
@@ -31,15 +38,15 @@ class Argument(object):
         if 'oneOf' in self.schema:
             self.schema = self._schema_from_opts(schema['oneOf'], value)
         self.adapter = adapter or self.schema.get('adapter', {})
-        self.position = self.adapter.get('order', 99)
+        self.position = self.adapter.get('order', 9999999)
         self.prefix = self.adapter.get('prefix')
-        self.separator = self.adapter.get('separator')
+        self.separator = self.adapter.get('separator', '')  # TODO: default to ' '?
         if self.separator == ' ':
             self.separator = None
         self.item_separator = self.adapter.get('itemSeparator', ',')
         self.transform = self.adapter.get('transform')
         if self.transform:
-            value = evaluate(self.transform, self.job, value)  # TODO:
+            value = evaluate(self.transform, self.job, value)
         elif self.schema.get('type') in ('file', 'directory'):
             value = value['path']
         self.value = value
@@ -59,7 +66,7 @@ class Argument(object):
         args = [Argument(self.job, v, self._schema_for(k)) for k, v in
                 six.iteritems(self.value)]
         args += adapter_mixins or []
-        args.sort(key=lambda x: x.position)
+        args.sort(key=lambda a: [a.position, a.arg_list()])
         stdin = [a.value for a in args if a.is_stdin()]
         return reduce(operator.add, [a.arg_list() for a in args], []),\
             stdin[0] if stdin else None
@@ -92,7 +99,7 @@ class Argument(object):
     def _as_dict(self):
         args = [Argument(self.job, v, self._schema_for(k)) for k, v
                 in six.iteritems(self.value)]
-        args.sort(key=lambda x: x.position)
+        args.sort(key=lambda a: [a.position, a.arg_list()])
         return reduce(operator.add, [a.arg_list() for a in args], [])
 
     def _as_list(self):
@@ -100,16 +107,16 @@ class Argument(object):
         args = [Argument(self.job, item, item_schema) for item in self.value]
         if not self.prefix:
             return reduce(operator.add, [a.arg_list() for a in args], [])
-        if not self.separator and not self.item_separator:
+        if self.separator is None and self.item_separator is None:
             return reduce(operator.add, [[self.prefix] + a.arg_list()
                                          for a in args], [])
-        if self.separator and not self.item_separator:
+        if self.separator is not None and self.item_separator is None:
             return [self.prefix + self.separator + a._list_item() for a
                     in args if a._list_item() is not None]
         args_as_strings = [a._list_item() for a in args
                            if a._list_item() is not None]
         joined = self.item_separator.join(args_as_strings)
-        if not self.separator and self.item_separator:
+        if self.separator is None and self.item_separator is not None:
             return [self.prefix, joined]
         return [self.prefix + self.separator + joined]
 
@@ -158,32 +165,34 @@ class Adapter(object):
         for k, v in six.iteritems(res):
             if isinstance(v, dict):
                 resolved['allocatedResources'][k] =\
-                    evaluate(v['expr']['lang'], v['expr']['value'], resolved,
-                             None)
+                    evaluate(v, resolved, None)
         return resolved
 
-    def cmd_line(self, job):
+    def get_shell_args(self, job):
         job = self._resolve_job_resources(job)
         arg_list, stdin = self._arg_list_and_stdin(job)
         stdout = self._get_stdout_name(job)
         stdin = ['<', stdin] if stdin else []
         stdout = ['>', stdout] if stdout else []
-        return ' '.join(map(six.text_type,
-                            self.base_cmd + arg_list + stdin + stdout))
+        return map(six.text_type, self.base_cmd + arg_list + stdin + stdout)
+
+    def cmd_line(self, job):
+        return ' '.join(self.get_shell_args(job))
 
     def _get_stdout_name(self, job):
-        return self.stdout if isinstance(self.stdout, six.string_types) \
-            else evaluate(self.stdout['expr']['lang'], self.stdout[
-                'expr']['value'], job, None)
+        if isinstance(self.stdout, six.string_types):
+            return self.stdout
+        if '$expr' in self.stdout:
+            return evaluate(self.stdout, job, None)
+        return self.stdout['path']  # TODO: remove?
 
     @staticmethod
     def _get_value(arg, job):
         value = arg.get('value')
         if not value:
             raise Exception('Value not specified for arg %s' % arg)
-        if isinstance(value, dict) and 'expr' in value:
-            value = evaluate(value['expr']['lang'], value[
-                'expr']['value'], job, None)
+        if isinstance(value, dict) and '$expr' in value:
+            value = evaluate(value, job, None)
         return value
 
     @staticmethod
@@ -200,9 +209,8 @@ class Adapter(object):
                 result = src.get('meta', {})
         result.update(**meta)
         for k, v in six.iteritems(result):
-            if isinstance(v, dict) and 'expr' in v:
-                result[k] = evaluate(v['expr']['lang'], v[
-                    'expr']['value'], job, file)
+            if isinstance(v, dict) and '$expr' in v:
+                result[k] = evaluate(v, job, file)
         return result
 
     def get_outputs(self, job_dir, job):
