@@ -2,13 +2,13 @@ import os
 import copy
 import operator
 import glob
-import six
 
-from six.moves import reduce
+import six
 from jsonschema import Draft4Validator
 
-from rabix.cliche.ref_resolver import from_url
-from rabix.cliche.expressions.evaluator import Evaluator
+from six.moves import reduce
+from rabix.common.ref_resolver import from_url
+from rabix.expressions.evaluator import Evaluator
 
 
 ev = Evaluator()
