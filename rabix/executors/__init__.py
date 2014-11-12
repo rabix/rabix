@@ -1,3 +1,2 @@
 DOCKER_API_VERSION = '1.12'
 DEFAULT_TIMEOUT_SECONDS = 60
-__version__ = '0.3.0'

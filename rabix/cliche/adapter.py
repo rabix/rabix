@@ -8,8 +8,9 @@ import glob
 from jsonschema import Draft4Validator
 import jsonschema.exceptions
 
-from rabix.cliche.ref_resolver import resolve_pointer
-from rabix.cliche.expressions.evaluator import Evaluator
+from six.moves import reduce
+from rabix.common.ref_resolver import from_url
+from rabix.expressions.evaluator import Evaluator
 
 
 ev = Evaluator()

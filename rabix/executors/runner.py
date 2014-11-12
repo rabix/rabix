@@ -11,6 +11,9 @@ from rabix.executors.io import InputRunner
 from rabix.executors.container import Container, ensure_image
 from rabix.cliche.adapter import CLIJob
 from rabix.tests import infinite_loop, infinite_read
+from rabix.expressions.evaluator import Evaluator
+from rabix.common.errors import RabixError
+from rabix.workflows.workflow import Workflow
 
 
 log = logging.getLogger(__name__)
@@ -153,8 +156,38 @@ class NativeRunner(Runner):
     def __init__(self, tool, working_dir='./', stdout=None, stderr=None):
         super(NativeRunner, self).__init__(tool, working_dir, stdout, stderr)
 
-    def run(self, command):
+    def run_job(self, job):
         pass
+
+
+class ExpressionRunner(Runner):
+
+    def __init__(self, tool, working_dir='./', stdout=None, stderr='out.err'):
+        super(ExpressionRunner, self).__init__(
+            tool, working_dir, stdout, stderr
+        )
+        self.evaluator = Evaluator()
+
+    def run_job(self, job):
+        script = self.tool['script']
+        if isinstance(script, six.string_types):
+            lang = None
+            expr = script
+        elif isinstance(script, dict):
+            lang = script['lang']
+            expr = script['value']
+        else:
+            raise RabixError("invalid script")
+
+        self.evaluator.evaluate(lang, expr, job, None)
+
+
+class WorkflowRunner(Runner):
+    def __init__(self, tool, working_dir='./', stdout=None, stderr='out.err'):
+        super(WorkflowRunner, self).__init__(tool, working_dir, stdout, stderr)
+
+    def run_job(self, job):
+        wf = Workflow(self.tool['steps'])
 
 
 if __name__ == '__main__':

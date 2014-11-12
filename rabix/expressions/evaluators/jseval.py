@@ -1,6 +1,8 @@
 import json
+
 import execjs
-from rabix.cliche.expressions import evaluator
+
+from rabix.expressions import evaluator
 
 
 class JSEval(evaluator.ExpressionEvalPlugin):
