@@ -69,7 +69,7 @@ class Argument(object):
 
     def get_args(self, adapter_mixins=None):
         args = [Argument(self.job, v, self._schema_for(k), basedir=self.basedir) for k, v in
-                sorted(six.iteritems(self.value))]
+                sorted(six.iteritems(self.value)) if 'adapter' in self._schema_for(k)]
         args = (adapter_mixins or []) + args
         args = sort_args(args)
         return reduce(operator.add, [a.arg_list() for a in args], [])
@@ -96,7 +96,7 @@ class Argument(object):
 
     def _as_dict(self):
         args = [Argument(self.job, v, self._schema_for(k), basedir=self.basedir) for k, v
-                in sorted(six.iteritems(self.value))]
+                in sorted(six.iteritems(self.value)) if 'adapter' in self._schema_for(k)]
         args = sort_args(args)
         return reduce(operator.add, [a.arg_list() for a in args], [])
 
