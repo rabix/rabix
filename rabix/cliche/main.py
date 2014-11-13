@@ -4,8 +4,8 @@ import json
 import argparse
 import os
 
-from rabix.cliche.ref_resolver import from_url
-from rabix.cliche.adapter import CLIJob
+from rabix.common.ref_resolver import from_url
+from rabix.cli.adapter import CLIJob
 
 
 def main():

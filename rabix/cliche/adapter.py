@@ -1,16 +1,16 @@
-import os
 import copy
 import operator
 import six
 import logging
+import os
 import glob
 
 from jsonschema import Draft4Validator
 import jsonschema.exceptions
 
 from six.moves import reduce
-from rabix.common.ref_resolver import from_url
-from rabix.expressions.evaluator import Evaluator
+from rabix.common.ref_resolver import resolve_pointer
+from rabix.expressions import Evaluator
 
 
 ev = Evaluator()
@@ -106,7 +106,7 @@ class InputAdapter(object):
     def as_dict(self, mix_with=None):
         sch = lambda key: self.schema.get('properties', {}).get(key, {})
         adapters = [InputAdapter(v, self.job, sch(k), key=k) for k, v in six.iteritems(self.value)]
-        adapters = (mix_with or []) + filter(lambda adp: adp.has_adapter, adapters)
+        adapters = (mix_with or []) + [adp for adp in adapters if adp.has_adapter]
         return reduce(operator.add, [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)], [])
 
     def as_list(self):
@@ -133,26 +133,26 @@ class InputAdapter(object):
 
 
 class CLIJob(object):
-    def __init__(self, job_dict, tool_dict, path_mapper=lambda x: x):
+    def __init__(self, job_dict, app, path_mapper=lambda x: x):
         self.job = copy.deepcopy(job_dict)
-        self.tool = tool_dict
+        self.app = app
         self.path_mapper = path_mapper
         self.rewrite_paths(self.job['inputs'])
-        self.adapter = self.tool.get('adapter', {})
+        self.adapter = self.app.adapter or {}
         self.stdin = eval_resolve(self.adapter.get('stdin'), self.job)
         self.stdout = eval_resolve(self.adapter.get('stdout'), self.job)
         self.base_cmd = self.adapter.get('baseCmd', [])
         if isinstance(self.base_cmd, six.string_types):
             self.base_cmd = self.base_cmd.split(' ')
         self.args = self.adapter.get('args', [])
-        self.input_schema = self.tool.get('inputs', {})
-        self.output_schema = self.tool.get('outputs', {})
+        self.input_schema = self.app.inputs.schema
+        self.output_schema = self.app.outputs.schema
 
     def make_arg_list(self):
-        adapters = [InputAdapter(a['value'], self.job, {}, a, k) for k, a in enumerate(self.args)]
+        adapters = [InputAdapter(a['value'], self.job, {}, a) for a in self.args]
         args = InputAdapter(self.job['inputs'], self.job, self.input_schema).as_dict(adapters)
         base_cmd = [eval_resolve(item, self.job) for item in self.base_cmd]
-        return map(six.text_type, base_cmd + args)
+        return [six.text_type(arg) for arg in base_cmd + args]
 
     def cmd_line(self):
         a = self.make_arg_list()
