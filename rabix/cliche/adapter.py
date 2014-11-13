@@ -119,7 +119,6 @@ class Argument(object):
         return [self.prefix + self.separator + joined]
 
     def _list_item(self):
-        print self.value, self.arg_list()
         as_arg_list = self.arg_list()
         if not as_arg_list:
             return None
