@@ -37,8 +37,9 @@ def sort_args(args):
 
 
 class Argument(object):
-    def __init__(self, job, value, schema, adapter=None, basedir=""):
+    def __init__(self, job, value, schema, adapter=None, basedir='.'):
         self.job = job
+        self.basedir = basedir
         self.schema = schema or {}
         if 'oneOf' in self.schema:
             self.schema = self._schema_from_opts(schema['oneOf'], value)
@@ -53,7 +54,9 @@ class Argument(object):
         if self.transform:
             value = evaluate(self.transform, self.job, value)
         elif self.schema.get('type') in ('file', 'directory'):
-            value = value['path'] if os.path.isabs(value['path']) else os.path.join(basedir, value['path'])
+            if not value['path']:
+                raise ValueError('path must be set for file types.')
+            value = os.path.normpath(os.path.join(basedir, value['path']))
         self.value = value
 
     def __int__(self):
@@ -67,22 +70,19 @@ class Argument(object):
         if key in self.schema.get('properties', {}):
             return self.schema['properties'][key]
 
-    def get_args(self, adapter_mixins=None, basedir=""):
-        args = [Argument(self.job, v, self._schema_for(k), basedir=basedir) for k, v in
+    def get_args(self, adapter_mixins=None):
+        args = [Argument(self.job, v, self._schema_for(k), basedir=self.basedir) for k, v in
                 sorted(six.iteritems(self.value))]
-        args += adapter_mixins or []
+        args = (adapter_mixins or []) + args
         args = sort_args(args)
-        return reduce(operator.add, [a.arg_list(basedir) for a in args], [])
+        return reduce(operator.add, [a.arg_list() for a in args], [])
 
-    def arg_list(self, basedir):
+    def arg_list(self):
         if isinstance(self.value, dict):
-            return self._as_dict(basedir)
+            return self._as_dict()
         if isinstance(self.value, list):
-            return self._as_list(basedir)
-        if self.adapter:
-            return self._as_primitive()
-        else:
-            return []
+            return self._as_list()
+        return self._as_primitive()
 
     def _as_primitive(self):
         if self.value in (None, False):
@@ -97,32 +97,30 @@ class Argument(object):
                 else [self.prefix, self.value]
         return [self.prefix + self.separator + six.text_type(self.value)]
 
-    def _as_dict(self, basedir):
-        args = [Argument(self.job, v, self._schema_for(k), basedir=basedir) for k, v
+    def _as_dict(self):
+        args = [Argument(self.job, v, self._schema_for(k), basedir=self.basedir) for k, v
                 in sorted(six.iteritems(self.value))]
         args = sort_args(args)
-        return reduce(operator.add, [a.arg_list(basedir) for a in args], [])
+        return reduce(operator.add, [a.arg_list() for a in args], [])
 
-    def _as_list(self, basedir):
+    def _as_list(self):
         item_schema = self.schema.get('items', {})
-        args = [Argument(self.job, item, item_schema, basedir=basedir) for item in self.value]
+        args = [Argument(self.job, item, item_schema, basedir=self.basedir) for item in self.value]
         if not self.prefix:
-            return reduce(operator.add, [a.arg_list(basedir) for a in args], [])
+            return reduce(operator.add, [a.arg_list() for a in args], [])
         if self.separator is None and self.item_separator is None:
-            return reduce(operator.add, [[self.prefix] + a.arg_list()
-                                         for a in args], [])
+            return reduce(operator.add, [[self.prefix] + a.arg_list() for a in args], [])
         if self.separator is not None and self.item_separator is None:
-            return [self.prefix + self.separator + a._list_item() for a
-                    in args if a._list_item() is not None]
-        args_as_strings = [a._list_item(basedir) for a in args
-                           if a._list_item(basedir) is not None]
+            return [self.prefix + self.separator + a._list_item() for a in args if a._list_item() is not None]
+        args_as_strings = filter(None, [a._list_item() for a in args])
         joined = self.item_separator.join(args_as_strings)
         if self.separator is None and self.item_separator is not None:
             return [self.prefix, joined]
         return [self.prefix + self.separator + joined]
 
-    def _list_item(self, basedir):
-        as_arg_list = self.arg_list(basedir)
+    def _list_item(self):
+        print self.value, self.arg_list()
+        as_arg_list = self.arg_list()
         if not as_arg_list:
             return None
         if len(as_arg_list) > 1:
@@ -143,8 +141,9 @@ class Argument(object):
 
 
 class Adapter(object):
-    def __init__(self, tool):
+    def __init__(self, tool, basedir):
         self.tool = tool
+        self.basedir = basedir
         self.adapter = tool.get('adapter', {})
         self.base_cmd = self.adapter.get('baseCmd', [])
         if isinstance(self.base_cmd, six.string_types):
@@ -155,15 +154,15 @@ class Adapter(object):
         self.input_schema = self.tool.get('inputs', {})
         self.output_schema = self.tool.get('outputs', {})
 
-    def _arg_list_and_stdin(self, job, basedir):
-        adapter_args = [Argument(job, self._get_value(a, job), {}, a, basedir=basedir)
+    def _arg_list_and_stdin(self, job):
+        adapter_args = [Argument(job, self._get_value(a, job), {}, a, basedir=self.basedir)
                         for a in self.args]
 
         stdin = self._get_value({"value": self.stdin}, job) if self.stdin else None
-        stdin = stdin if stdin is None or os.path.isabs(stdin) else os.path.join(basedir, stdin)
+        stdin = stdin if stdin is None else os.path.normpath(os.path.join(self.basedir, stdin))
 
-        return Argument(job, job['inputs'], self.input_schema, basedir=basedir).\
-            get_args(adapter_args, basedir=basedir), stdin
+        return Argument(job, job['inputs'], self.input_schema, basedir=self.basedir).\
+            get_args(adapter_args), stdin
 
     def _resolve_job_resources(self, job):
         resolved = copy.deepcopy(job)
