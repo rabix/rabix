@@ -19,9 +19,9 @@ def main():
 
     tool = from_url(args.tool)
     job = from_url(args.job_order)
-    adapter = Adapter(tool)
+    adapter = Adapter(tool, basedir=args.basedir or '.')
     base_args = adapter._base_args(job)
-    args, stdin = adapter._arg_list_and_stdin(job, basedir=args.basedir)
+    args, stdin = adapter._arg_list_and_stdin(job)
     stdout = adapter._get_stdout_name(job)
     print(json.dumps({
         'args': map(six.text_type, base_args + args),
