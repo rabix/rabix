@@ -24,7 +24,7 @@ $job:
     mem: 5000
     ports: []
     diskSpace: 20000
-    network: No
+    network: false
 
 
 
@@ -41,7 +41,7 @@ tool:
     resources:
       cpu: 0
       mem: 5000
-      network: No
+      network: false
     platformFeatures:
       - "http://example.org/transforms#strip_ext"
   inputs:
@@ -50,19 +50,19 @@ tool:
     properties:
       reference:
         type: file
-        required: Yes
+        required: true
         adapter:
           order: 2
   #        transform: self.path.split('.').reverse().splice(1).reverse().join('.')
       reads:
         type: array
-        required: Yes
+        required: true
         minItems: 1
         maxItems: 2
         items:
           type: file
           adapter:
-            streamable: Yes
+            streamable: true
       minimum_seed_length:
         type: integer
         adapter:
@@ -89,9 +89,9 @@ tool:
           meta:
             __inherit__: reads
             file_type: sam
-          stdout: Yes
+          stdout: true
           glob: output.sam
-          streamable: Yes
+          streamable: true
   adapter:
     baseCmd: [bwa, mem]
     stdout: output.sam

@@ -13,7 +13,7 @@
             "resources": {
                 "cpu": 0,
                 "mem": 5000,
-                "network": "No"
+                "network": false
             },
             "platformFeatures": [
                 "http://example.org/transforms#strip_ext"
@@ -28,7 +28,7 @@
             "properties": {
                 "reference": {
                     "type": "file",
-                    "required": "Yes",
+                    "required": true,
                     "adapter": {
                         "order": 2,
                         "secondaryFiles": [
@@ -42,13 +42,13 @@
                 },
                 "reads": {
                     "type": "array",
-                    "required": "Yes",
+                    "required": true,
                     "minItems": 1,
                     "maxItems": 2,
                     "items": {
                         "type": "file",
                         "adapter": {
-                            "streamable": "Yes"
+                            "streamable": true
                         }
                     }
                 },
@@ -84,9 +84,9 @@
                 "sam": {
                     "type": "file",
                     "adapter": {
-                        "stdout": "Yes",
+                        "stdout": true,
                         "glob": "output.sam",
-                        "streamable": "Yes"
+                        "streamable": true
                     }
                 }
             }

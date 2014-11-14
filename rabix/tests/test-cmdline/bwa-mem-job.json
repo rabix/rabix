@@ -28,7 +28,7 @@
             "mem": 5000,
             "ports": [],
             "diskSpace": 20000,
-            "network": "No"
+            "network": false
         }
     }
 }
