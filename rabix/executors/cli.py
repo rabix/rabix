@@ -73,34 +73,55 @@ def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp={}):
 
     def required(req, arg, inputs):
         inp = inputs.keys()
-        if req and (arg not in inp):
+        if (arg in req) and (arg not in inp):
             return True
         return False
 
-    inputs = tool.get('inputs', {}).get('properties')
-    usage_str = []
-    param_str = []
-    for k, v in inputs.items():
-        if v.get('type') == 'file':
-            arg = '--%s=<file>' % k
-            usage_str.append(arg if required(v.get('required'), k, inp)
-                             else '[%s]' % arg)
-        elif v.get('type') == 'array':
-            if ((v.get('items').get('type') == 'file' or v.get(
+    def resolve(k, v, req, usage_str, param_str, inp={}):
+        if v.get('type') == 'array':
+            if (v.get('items').get('type') == 'object'):
+                print('Input %s needs to be specified using --inp-file' % k)
+            # if v.get('items').get('oneOf'):
+            #         param_str.append('(')
+            #         for obj in v.get('items').get('oneOf'):
+            #             resolve_object(k, obj, usage_str, param_str)
+            #             param_str.append('|')
+            #         param_str.pop()
+            #         param_str.append(')')
+            #     else:
+            #         resolve_object(k, v.get('items'), usage_str, param_str)
+            elif ((v.get('items').get('type') == 'file' or v.get(
                     'items').get('type') == 'directory')):
                 arg = '--%s=<file>...' % k
-                usage_str.append(arg if required(v.get('required'), k, inp)
+                usage_str.append(arg if required(req, k, inp)
                                  else '[%s]' % arg)
             else:
                 arg = '--%s=<array_%s_separator(%s)>...' % (k, v.get(
                     'items').get('type'), v.get('adapter').get(
-                        'itemSeparator'))
-                param_str.append(arg if required(v.get('required'), k, inp)
+                    'itemSeparator'))
+                param_str.append(arg if required(req, k, inp)
                                  else '[%s]' % arg)
+        elif v.get('type') == 'file':
+            arg = '--%s=<file>' % k
+            usage_str.append(arg if required(req, k, inp)
+                             else '[%s]' % arg)
         else:
             arg = '--%s=<%s>' % (k, v.get('type'))
-            param_str.append(arg if required(v.get('required'), k, inp)
+            param_str.append(arg if required(req, k, inp)
                              else '[%s]' % arg)
+
+    def resolve_object(name, obj, usage_str, param_str, inp={}, root=False):
+        properties = obj.get('properties')
+        required = obj.get('required')
+        for k, v in six.iteritems(properties):
+            key = k if root else '.'.join([name, k])
+            resolve(key, v, required, usage_str, param_str, inp)
+
+    inputs = tool.get('inputs')
+    usage_str = []
+    param_str = []
+
+    resolve_object('inputs', inputs, usage_str, param_str, root=True)
     usage_str.extend(param_str)
     return template.format(inputs=' '.join(usage_str))
 
@@ -117,7 +138,7 @@ def resolve(k, v, nval, inp):
             else:
                 inp[k].append(nv)
     else:
-        if (v['type'] == 'file' or v['type'] == 'directory'):
+        if v['type'] == 'file' or v['type'] == 'directory':
             inp[k] = {'path': nval}
         else:
             inp[k] = nval
