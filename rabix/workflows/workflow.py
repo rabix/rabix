@@ -8,41 +8,49 @@ from rabix.common.errors import ValidationError
 class Workflow(object):
 
     def __init__(self, steps):
-        self.graph = Graph()
+        self.step_graph = Graph()
+        self.job_graph = Graph()
         self.inputs = {}
         self.outputs = {}
 
         for step in steps:
             print("Add node %s" % step["id"])
-            self.graph.add_node(step["id"],  step["app"])
+            self.step_graph.add_node(step["id"],  step["app"])
 
         for step in steps:
             for inp, val in six.iteritems(step["inputs"]):
-                if isinstance(val, dict) and "$from" in val:
-                    if "." in val["$from"]:
-                        node, outp = val["$from"].split(".")
-                        print("Adding edge: %s(%s) -> %s(%s)" %
-                              (node, outp, step["id"], inp))
-                        self.graph.add_edge(node, step["id"], (outp, inp))
-                    else:
-                        self.inputs[val["$from"]] = \
-                            step["app"]["inputs"]["properties"][inp]
+                if isinstance(val, list):
+                    for item in val:
+                        self.add_edge_or_input(step, item)
+                else:
+                    self.add_edge_or_input(step, val)
             if "outputs" in step:
                 for outp, val in six.iteritems(step["outputs"]):
                     self.outputs[val["$to"]] = \
                         step["app"]["outputs"]["properties"][outp]
 
-        for node in self.graph.node_list():
-            print("Node: %s, %s, %s, %s" % self.graph.describe_node(node))
+        for node in self.step_graph.node_list():
+            print("Node: %s, %s, %s, %s" % self.step_graph.describe_node(node))
 
-        if not self.graph.connected():
+        if not self.step_graph.connected():
             pass
             #raise ValidationError("Graph is not connected")
 
-    def outputs(self, job_id, outputs):
-        pass
+    def add_edge_or_input(self, step, inp):
+        if isinstance(inp, dict) and "$from" in inp:
+            if "." in inp["$from"]:
+                node, outp = inp["$from"].split(".")
+                print("Adding edge: %s(%s) -> %s(%s)" %
+                      (node, outp, step["id"], inp))
+                self.step_graph.add_edge(node, step["id"], (outp, inp))
+            else:
+                self.inputs[inp["$from"]] = \
+                    step["app"]["inputs"]["properties"][inp]
 
     def ready_nodes(self):
+        pass
+
+    def run_job(self, job):
         pass
 
 
@@ -56,6 +64,6 @@ if __name__ == '__main__':
     doc = from_url(root_relative('examples/workflow.yml'))
 
     wf = Workflow(doc['workflows']['add_one_mul_two']['steps'])
-    print(wf.graph.forw_topo_sort())
+    print(wf.step_graph.forw_topo_sort())
     print(wf.inputs)
     print(wf.outputs)
