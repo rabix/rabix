@@ -17,7 +17,7 @@ This repo includes a local python executor (currently only running tools) and so
 
 ### Install
 
-First, [install docker](https://docs.docker.com/installation/#installation) on
+First, [install docker](https://docs.docker.com/installation/#installation) and [Node.js](http://nodejs.org/) on
 a linux machine.
  
 Second, install rabix via pip:
