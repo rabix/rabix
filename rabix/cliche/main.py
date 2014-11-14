@@ -2,10 +2,10 @@
 
 import json
 import argparse
-import six
+import os
 
 from rabix.cliche.ref_resolver import from_url
-from rabix.cliche.adapter import Adapter
+from rabix.cliche.adapter import CLIJob
 
 
 def main():
@@ -19,14 +19,15 @@ def main():
 
     tool = from_url(args.tool)
     job = from_url(args.job_order)
-    adapter = Adapter(tool, basedir=args.basedir or '.')
-    base_args = adapter._base_args(job)
-    args, stdin = adapter._arg_list_and_stdin(job)
-    stdout = adapter._get_stdout_name(job)
+
+    def path_mapper(path):
+        return os.path.normpath(os.path.join('/conformance/test/', path))
+
+    cli_job = CLIJob(job, tool, path_mapper)
     print(json.dumps({
-        'args': map(six.text_type, base_args + args),
-        'stdin': stdin,
-        'stdout': stdout,
+        'args': cli_job.make_arg_list(),
+        'stdin': cli_job.stdin,
+        'stdout': cli_job.stdout,
     }))
 
 
