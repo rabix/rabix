@@ -28,7 +28,7 @@
             "properties": {
                 "reference": {
                     "type": "file",
-                    "required": "Yes",
+                    "required": true,
                     "adapter": {
                         "order": 2,
                         "secondaryFiles": [
@@ -42,7 +42,7 @@
                 },
                 "reads": {
                     "type": "array",
-                    "required": "Yes",
+                    "required": true,
                     "minItems": 1,
                     "maxItems": 2,
                     "adapter": {

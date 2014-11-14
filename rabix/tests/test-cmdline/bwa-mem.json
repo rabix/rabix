@@ -74,7 +74,6 @@
             "properties": {
                 "reference": {
                     "type": "file",
-                    "required": "Yes",
                     "adapter": {
                         "order": 2,
                         "secondaryFiles": [
