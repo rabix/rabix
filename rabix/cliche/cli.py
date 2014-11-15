@@ -264,5 +264,5 @@ def test_tmap_mapall():
     print(gen_cli(tool, job))
 
 
-test_bwa_mem()
-test_tmap_mapall()
+#test_bwa_mem()
+#test_tmap_mapall()
