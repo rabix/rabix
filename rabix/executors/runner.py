@@ -34,7 +34,7 @@ class Runner(object):
         if not os.path.isabs(working_dir):
             working_dir = os.path.abspath(working_dir)
         self.tool = tool
-        self.enviroment = tool['requirements']['environment']
+        self.enviroment = tool.get('requirements', {}).get('environment')
         self.working_dir = working_dir
         self.stdout = stdout
         self.stderr = stderr
