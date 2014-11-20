@@ -32,7 +32,6 @@ class Workflow(object):
 
         for step in steps:
             node_id = step['id']
-            print('Adding node %s' % node_id)
             self.add_node(node_id,  AppNode(step['app'], {}))
 
         for step in steps:
@@ -63,8 +62,6 @@ class Workflow(object):
         if isinstance(input_val, dict) and '$from' in input_val:
             if '.' in input_val['$from']:
                 node, outp = input_val['$from'].split('.')
-                print('Adding edge: %s(%s) -> %s(%s)' %
-                      (node, outp, node_id, input_name))
                 self.graph.add_edge(node, node_id, Relation(outp, input_name))
             else:
                 wf_input = input_val['$from']
@@ -91,6 +88,12 @@ class Workflow(object):
         if node_id in self.graph.nodes:
             raise ValidationError('Duplicate node ID: %s' % node_id)
         self.graph.add_node(node_id, node)
+
+    def hide_nodes(self, type):
+        for node_id in self.graph.node_list():
+            node = self.graph.node_data(node_id)
+            if isinstance(node, type):
+                self.graph.hide_node(node_id)
 
 
 # Smoke test
