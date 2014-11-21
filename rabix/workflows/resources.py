@@ -1,3 +1,4 @@
+import multiprocessing
 
 
 class ResourceManager(object):

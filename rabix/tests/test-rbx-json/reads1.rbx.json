@@ -1,0 +1,13 @@
+{
+    "path": "../test-files/chr20.fa",
+    "meta": {
+        "file_type": "fasta"
+},
+"secondaryFiles": [
+    "*.amb",
+    "*.ann",
+    "*.bwt",
+    "*.pac",
+    "*.sa"
+    ]
+}
