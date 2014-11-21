@@ -6,6 +6,8 @@ import logging
 import uuid
 import stat
 import copy
+import importlib
+
 
 from rabix.executors.io import InputRunner
 from rabix.executors.container import Container, ensure_image
@@ -18,6 +20,39 @@ from rabix.workflows.execution_graph import ExecutionGraph
 
 
 log = logging.getLogger(__name__)
+
+RUNNERS = {
+    "docker": "rabix.executors.runner.DockerRunners",
+    "native": "rabix.executors.runner.NativeRunner",
+    "Script": "rabix.executors.runner.ExpressionRunner",
+    "Workflow": "rabix.executors.runner.WorkflowRunner"
+}
+
+
+def run(tool, job):
+    runner = get_runner(tool)
+    runner(tool).run_job(job)
+
+
+def get_runner(tool, runners=RUNNERS):
+    runner_path = (
+        tool.get("@type") or
+        tool["requirements"]["environment"]["container"]["type"]
+    )
+    print(runner_path)
+    clspath = runners.get(runner_path, None)
+    if not clspath:
+        raise Exception('Runner not specified')
+    mod_name, cls_name = clspath.rsplit('.', 1)
+    try:
+        mod = importlib.import_module(mod_name)
+    except ImportError:
+        raise Exception('Unknown module %s' % mod_name)
+    try:
+        cls = getattr(mod, cls_name)
+    except AttributeError:
+        raise Exception('Unknown executor %s' % cls_name)
+    return cls
 
 
 class BindDict(dict):
@@ -223,9 +258,9 @@ class WorkflowRunner(Runner):
     def run_job(self, job):
         wf = Workflow(self.tool['steps'])
         eg = ExecutionGraph(wf, job)
-        while (eg.has_next()):
+        while eg.has_next():
             next = eg.next_job()
-            next.execute()
+            run(next.tool, next.job)
 
 
 if __name__ == '__main__':

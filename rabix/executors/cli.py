@@ -5,7 +5,7 @@ import logging
 import six
 import collections
 from rabix import __version__ as version
-from rabix.executors.runner import DockerRunner, NativeRunner
+from rabix.executors.runner import get_runner
 from rabix.cliche.adapter import Adapter, from_url
 from rabix.common.util import set_log_level
 from rabix.workflows.resources import ResourceManager
@@ -238,7 +238,7 @@ def main():
         print("Couldn't find tool.")
         return
 
-    runner = DockerRunner(tool)
+    runner = get_runner(tool)
 
     if dry_run_args['--install']:
         runner.install()

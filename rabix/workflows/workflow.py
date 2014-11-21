@@ -1,4 +1,5 @@
 import six
+import logging
 
 from collections import namedtuple
 from altgraph.Graph import Graph
@@ -6,6 +7,7 @@ from altgraph.Graph import Graph
 from rabix.common.errors import ValidationError
 from rabix.common.util import wrap_in_list
 
+log = logging.getLogger(__name__)
 
 AppNode = namedtuple('AppNode', ['app', 'inputs'])
 InputNode = namedtuple('InputNode', ['schema'])
@@ -107,8 +109,6 @@ if __name__ == '__main__':
     doc = from_url(root_relative('examples/workflow.yml'))
 
     wf = Workflow(doc['workflows']['add_one_mul_two']['steps'])
-    wf.graph.hide_node('a')
-    wf.graph.hide_node('result')
     print(wf.graph.forw_topo_sort())
 
     for edge in wf.graph.edges:
