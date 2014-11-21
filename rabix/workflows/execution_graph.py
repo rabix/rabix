@@ -1,27 +1,9 @@
-import importlib
 import six
 
 from collections import defaultdict
 
-from rabix.workflows import CONFIG
 from rabix.workflows.workflow import InputNode, OutputNode, InputRelation
 from rabix.common.errors import RabixError
-
-
-def get_runner(runner, config):
-    clspath = config['runners'].get(runner, None)
-    if not clspath:
-        raise Exception('Runner not specified')
-    mod_name, cls_name = clspath.rsplit('.', 1)
-    try:
-        mod = importlib.import_module(mod_name)
-    except ImportError:
-        raise Exception('Unknown module %s' % mod_name)
-    try:
-        cls = getattr(mod, cls_name)
-    except AttributeError:
-        raise Exception('Unknown executor %s' % cls_name)
-    return cls
 
 
 # FIXME: should two scalars be merged into a list? Scalar be added to a list?
@@ -44,8 +26,8 @@ def recursive_merge(dst, src):
 
 class Executable(object):
 
-    def __init__(self, node_id, tool, inputs, input_counts, outputs,
-                 config=CONFIG, working_dir='./'):
+    def __init__(self, node_id, tool, inputs, input_counts, outputs):
+        self.result = None
         self.status = 'WAITING'
         self.node_id = node_id
         self.tool = tool
@@ -53,14 +35,6 @@ class Executable(object):
         self.input_counts = input_counts
         self.outputs = outputs
 
-        self.runner_path = (
-            tool.get("@type") or
-            tool["requirements"]["environment"]["container"]["type"]
-        )
-
-        self.executor = get_runner(self.runner_path, config)(
-            tool, working_dir=working_dir
-        )
         self.running = []
         self.resources = None
 
@@ -81,11 +55,9 @@ class Executable(object):
         return self.resolved
 
     def propagate_result(self, result):
+        self.result = result
         for k, v in six.iteritems(result):
             self.outputs[k].resolve_input(v)
-
-    def execute(self):
-        self.executor.run_job(self.job)
 
 
 class Relation(object):
@@ -191,5 +163,3 @@ if __name__ == '__main__':
     job = doc['jobs']['batch_add_one_mul_two']
 
     eg = ExecutionGraph(wf, job)
-    while eg.has_next():
-        eg.next_job().execute()

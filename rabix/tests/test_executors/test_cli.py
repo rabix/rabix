@@ -3,8 +3,10 @@ import sys
 import json
 import docker
 import shutil
-from rabix.executors.container import ensure_image
+
 from nose.tools import nottest, raises
+
+from rabix.executors.container import ensure_image
 from rabix.tests import mock_app_bad_repo, mock_app_good_repo
 from rabix.executors.cli import get_tool, main, dry_run_parse
 
