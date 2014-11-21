@@ -14,6 +14,7 @@ from rabix.tests import infinite_loop, infinite_read
 from rabix.expressions.evaluator import Evaluator
 from rabix.common.errors import RabixError
 from rabix.workflows.workflow import Workflow
+from rabix.workflows.execution_graph import ExecutionGraph
 
 
 log = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ class Runner(object):
         if not os.path.isabs(working_dir):
             working_dir = os.path.abspath(working_dir)
         self.tool = tool
-        self.enviroment = tool['requirements']['environment']
+        self.enviroment = tool.get('requirements', {}).get('environment')
         self.working_dir = working_dir
         self.stdout = stdout
         self.stderr = stderr
@@ -204,7 +205,7 @@ class ExpressionRunner(Runner):
     def run_job(self, job):
         script = self.tool['script']
         if isinstance(script, six.string_types):
-            lang = None
+            lang = 'javascript'
             expr = script
         elif isinstance(script, dict):
             lang = script['lang']
@@ -221,6 +222,10 @@ class WorkflowRunner(Runner):
 
     def run_job(self, job):
         wf = Workflow(self.tool['steps'])
+        eg = ExecutionGraph(wf, job)
+        while (eg.has_next()):
+            next = eg.next_job()
+            next.execute()
 
 
 if __name__ == '__main__':

@@ -1,59 +1,102 @@
 import six
 
+from collections import namedtuple
 from altgraph.Graph import Graph
 
 from rabix.common.errors import ValidationError
+from rabix.common.util import wrap_in_list
+
+
+AppNode = namedtuple('AppNode', ['app', 'inputs'])
+InputNode = namedtuple('InputNode', ['schema'])
+OutputNode = namedtuple('OutputNode', ['schema'])
+
+Relation = namedtuple('Relation', ['src_port', 'dst_port'])
+InputRelation = namedtuple('InputRelation', ['dst_port'])
+OutputRelation = namedtuple('OutputRelation', ['src_port'])
 
 
 class Workflow(object):
 
     def __init__(self, steps):
-        self.step_graph = Graph()
-        self.job_graph = Graph()
-        self.inputs = {}
-        self.outputs = {}
+        self.graph = Graph()
+        self.inputs = {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+        self.outputs = {
+            "type": "object",
+            "properties": {}
+        }
 
         for step in steps:
-            print("Add node %s" % step["id"])
-            self.step_graph.add_node(step["id"],  step["app"])
+            node_id = step['id']
+            self.add_node(node_id,  AppNode(step['app'], {}))
 
         for step in steps:
-            for inp, val in six.iteritems(step["inputs"]):
-                if isinstance(val, list):
-                    for item in val:
-                        self.add_edge_or_input(step, item)
-                else:
-                    self.add_edge_or_input(step, val)
-            if "outputs" in step:
-                for outp, val in six.iteritems(step["outputs"]):
-                    self.outputs[val["$to"]] = \
-                        step["app"]["outputs"]["properties"][outp]
+            # inputs
+            for input_port, input_val in six.iteritems(step['inputs']):
+                inputs = wrap_in_list(input_val)
+                for item in inputs:
+                    self.add_edge_or_input(step, input_port, item)
 
-        for node in self.step_graph.node_list():
-            print("Node: %s, %s, %s, %s" % self.step_graph.describe_node(node))
+            # outputs
+            if 'outputs' in step:
+                for output_port, input_val in six.iteritems(step['outputs']):
+                    output_schema = step['app']['outputs']['properties'][output_port]
+                    output_node = OutputNode(output_schema)
+                    output_id = input_val['$to']
+                    self.add_node(output_id, output_node)
+                    self.graph.add_edge(
+                        step['id'], output_id, OutputRelation(output_port)
+                    )
+                    self.outputs['properties'][output_id] = output_schema
 
-        if not self.step_graph.connected():
+        if not self.graph.connected():
             pass
-            #raise ValidationError("Graph is not connected")
+            #raise ValidationError('Graph is not connected')
 
-    def add_edge_or_input(self, step, inp):
-        if isinstance(inp, dict) and "$from" in inp:
-            if "." in inp["$from"]:
-                node, outp = inp["$from"].split(".")
-                print("Adding edge: %s(%s) -> %s(%s)" %
-                      (node, outp, step["id"], inp))
-                self.step_graph.add_edge(node, step["id"], (outp, inp))
+    def add_edge_or_input(self, step, input_name, input_val):
+        node_id = step['id']
+        if isinstance(input_val, dict) and '$from' in input_val:
+            if '.' in input_val['$from']:
+                node, outp = input_val['$from'].split('.')
+                self.graph.add_edge(node, node_id, Relation(outp, input_name))
             else:
-                self.inputs[inp["$from"]] = \
-                    step["app"]["inputs"]["properties"][inp]
+                wf_input = input_val['$from']
 
-    def ready_nodes(self):
-        pass
+                # TODO: merge input schemas if one input goes to different apps
+                input_schema = step['app']['inputs']['properties'][input_name]
+                io_node = InputNode(input_schema)
 
-    def run_job(self, job):
-        pass
+                self.inputs['properties'][wf_input] = input_schema
+                required = step['app']['inputs'].get('required', [])
+                if wf_input in required:
+                    self.inputs['required'].appennd(wf_input)
+
+                self.add_node(wf_input, io_node)
+                self.graph.add_edge(
+                    wf_input, node_id, InputRelation(input_name)
+                )
+
+        else:
+            self.graph.node_data(node_id).inputs[input_name] = input_val
+
+    # Graph.add_node silently fails if node already exists
+    def add_node(self, node_id, node):
+        if node_id in self.graph.nodes:
+            raise ValidationError('Duplicate node ID: %s' % node_id)
+        self.graph.add_node(node_id, node)
+
+    def hide_nodes(self, type):
+        for node_id in self.graph.node_list():
+            node = self.graph.node_data(node_id)
+            if isinstance(node, type):
+                self.graph.hide_node(node_id)
 
 
+# Smoke test
 if __name__ == '__main__':
     from os.path import abspath, join
     from rabix.common.ref_resolver import from_url
@@ -64,6 +107,12 @@ if __name__ == '__main__':
     doc = from_url(root_relative('examples/workflow.yml'))
 
     wf = Workflow(doc['workflows']['add_one_mul_two']['steps'])
-    print(wf.step_graph.forw_topo_sort())
+    wf.graph.hide_node('a')
+    wf.graph.hide_node('result')
+    print(wf.graph.forw_topo_sort())
+
+    for edge in wf.graph.edges:
+        print(wf.graph.describe_edge(edge))
+
     print(wf.inputs)
     print(wf.outputs)
