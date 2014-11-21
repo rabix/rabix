@@ -1,9 +1,13 @@
 import six
+import logging
 
 from collections import defaultdict
 
-from rabix.workflows.workflow import InputNode, OutputNode, InputRelation
+from rabix.workflows.workflow import \
+    IONode, InputRelation, Relation, OutputRelation
 from rabix.common.errors import RabixError
+
+log = logging.getLogger(__name__)
 
 
 # FIXME: should two scalars be merged into a list? Scalar be added to a list?
@@ -46,6 +50,7 @@ class Executable(object):
         return True
 
     def resolve_input(self, input_port, results):
+        log.debug("Resolving input '%s' with value %s" % (input_port, results))
         input_count = self.input_counts[input_port]
         if input_count <= 0:
             raise RabixError("Input already satisfied")
@@ -55,12 +60,14 @@ class Executable(object):
         return self.resolved
 
     def propagate_result(self, result):
+        log.debug("Propagating result: %s" % result)
         self.result = result
         for k, v in six.iteritems(result):
+            log.debug("Propagating result: %s, %s" % (k, v))
             self.outputs[k].resolve_input(v)
 
 
-class Relation(object):
+class ExecRelation(object):
 
     def __init__(self, node, input_port):
         self.node = node
@@ -70,6 +77,16 @@ class Relation(object):
         self.node.resolve_input(self.input_port, result)
 
 
+class OutRelation(object):
+
+    def __init__(self, graph, name):
+        self.name = name
+        self.graph = graph
+
+    def resolve_input(self, result):
+        self.graph.outputs[self.name] = result
+
+
 class ExecutionGraph(object):
 
     def __init__(self, workflow, job):
@@ -77,23 +94,22 @@ class ExecutionGraph(object):
         self.executables = {}
         self.ready = {}
         self.job = job
+        self.outputs = {}
 
         graph = workflow.graph
-
-        workflow.hide_nodes(OutputNode)
 
         for node_id in graph.back_topo_sort()[1]:
             executable = self.make_executable(node_id)
             if executable:
                 self.executables[node_id] = executable
 
-        workflow.hide_nodes(InputNode)
+        workflow.hide_nodes(IONode)
 
         self.order = graph.back_topo_sort()[1]
 
     def make_executable(self, node_id):
         node = self.graph.node_data(node_id)
-        if isinstance(node, InputNode):
+        if isinstance(node, IONode):
             return None
 
         out_edges = self.graph.out_edges(node_id)
@@ -102,12 +118,16 @@ class ExecutionGraph(object):
         outputs = {}
         input_counts = ExecutionGraph.count_inputs(self.graph, in_edges)
         for out_edge in out_edges:
-            tail = self.executables[self.graph.tail(out_edge)]
-            ports = self.graph.edge_data(out_edge)
-            outputs[ports.src_port] = Relation(tail, ports.dst_port)
+            rel = self.graph.edge_data(out_edge)
+            if isinstance(rel, Relation):
+                tail = self.executables[self.graph.tail(out_edge)]
+                outputs[rel.src_port] = ExecRelation(tail, rel.dst_port)
+            elif isinstance(rel, OutputRelation):
+                tail = self.graph.tail(out_edge)
+                outputs[rel.src_port] = OutRelation(self, tail)
 
         executable = Executable(
-            node_id, node.app, node.inputs, input_counts, out_edges
+            node_id, node.app, node.inputs, input_counts, outputs
         )
 
         for in_edge in in_edges:
