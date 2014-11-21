@@ -88,7 +88,7 @@ class InputRunner(object):
                         input_value[num]['path'])
                     remaped_job[inp][num]['meta'] = self._meta(inv)
                     secFiles = self._get_secondary_files(
-                            secondaryFiles, input_value[num]['path'])
+                        secondaryFiles, input_value[num]['path'])
                     if secFiles:
                         remaped_job[inp][num]['secondaryFiles'] = secFiles
 
@@ -101,10 +101,8 @@ class InputRunner(object):
             if secFiles:
                 rbx['secondaryFiles'] = secFiles
 
-
     def _prompt_file(self):
         pass
-
 
     @property
     def task_dir(self):
@@ -194,7 +192,7 @@ class InputRunner(object):
             cont = raw_input('Metadata not found. Do you want to set it manually? [Y/n]').lower().strip()
         else:
             cont = raw_input('Do you want to add another key? [Y/n]').lower().strip()
-        if cont == 'y' or cont =='':
+        if cont == 'y' or cont == '':
             key = raw_input("Key: ")
             value = raw_input("Value: ")
             metadata[key] = value

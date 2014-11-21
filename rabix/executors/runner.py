@@ -115,8 +115,8 @@ class DockerRunner(Runner):
         is_array = lambda i: inputs[i]['type'] == 'array' and any([
             inputs[i]['items']['type'] == 'directory',
             inputs[i]['items']['type'] == 'file'])
-        is_object = lambda i: inputs[i]['type'] == 'array' and \
-                              inputs[i]['items']['type'] == 'object'
+        is_object = lambda i: (inputs[i]['type'] == 'array' and
+                               inputs[i]['items']['type'] == 'object')
 
         if inputs:
             single = filter(is_single, [i for i in inputs])
