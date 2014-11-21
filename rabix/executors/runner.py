@@ -1,18 +1,71 @@
 import os
+import docker
+import six
 import json
 import logging
 import uuid
 import stat
 import copy
-import docker
+import importlib
+
 
 from rabix.executors.io import InputRunner
 from rabix.executors.container import Container, ensure_image
 from rabix.cliche.adapter import CLIJob
 from rabix.tests import infinite_loop, infinite_read
+from rabix.expressions.evaluator import Evaluator
+from rabix.common.errors import RabixError
+from rabix.workflows.workflow_app import WorkflowApp
+from rabix.workflows.execution_graph import ExecutionGraph
 
 
 log = logging.getLogger(__name__)
+
+RUNNERS = {
+    "docker": "rabix.executors.runner.DockerRunner",
+    "native": "rabix.executors.runner.NativeRunner",
+    "Script": "rabix.executors.runner.ExpressionRunner",
+    "Workflow": "rabix.executors.runner.WorkflowRunner"
+}
+
+
+def run(tool, job):
+    runner = get_runner(tool)
+    return runner(tool).run_job(job)
+
+
+def get_runner(tool, runners=RUNNERS):
+    runner_path = (
+        tool.get("@type") or
+        tool["requirements"]["environment"]["container"]["type"]
+    )
+    clspath = runners.get(runner_path, None)
+    if not clspath:
+        raise Exception('Runner not specified')
+    mod_name, cls_name = clspath.rsplit('.', 1)
+    try:
+        mod = importlib.import_module(mod_name)
+    except ImportError:
+        raise Exception('Unknown module %s' % mod_name)
+    try:
+        cls = getattr(mod, cls_name)
+    except AttributeError:
+        raise Exception('Unknown executor %s' % cls_name)
+    return cls
+
+
+def match_shape(schema, job):
+    jobs = [job]
+    for input, inp_scm in six.iteritems(schema['inputs']['properties']):
+        if inp_scm['type'] != 'array' and isinstance(job[input], list):
+            jobs_tmp = []
+            for job in jobs:
+                for val in job[input]:
+                    new_job = job.copy()
+                    new_job[input] = val
+                    jobs_tmp.append(new_job)
+            jobs = jobs_tmp
+    return jobs
 
 
 class BindDict(dict):
@@ -161,7 +214,8 @@ class DockerRunner(Runner):
         volumes, binds, remaped_job = self._volumes(job)
         volumes['/' + job_dir] = {}
         binds['/' + job_dir] = os.path.abspath(job_dir)
-        container = self._run(['bash', '-c', adapter.cmd_line(remaped_job)],
+        adapter = CLIJob(remaped_job, self.tool)
+        container = self._run(['bash', '-c', adapter.cmd_line()],
                               vol=volumes, bind=binds, env=self._envvars,
                               work_dir='/' + job_dir)
         container.get_stderr(file='/'.join([os.path.abspath(job_dir),
@@ -191,6 +245,42 @@ class NativeRunner(Runner):
     def run_job(self, job):
         pass
 
+
+class ExpressionRunner(Runner):
+
+    def __init__(self, tool, working_dir='./', stdout=None, stderr='out.err'):
+        super(ExpressionRunner, self).__init__(
+            tool, working_dir, stdout, stderr
+        )
+        self.evaluator = Evaluator()
+
+    def run_job(self, job):
+        script = self.tool['script']
+        if isinstance(script, six.string_types):
+            lang = 'javascript'
+            expr = script
+        elif isinstance(script, dict):
+            lang = script['lang']
+            expr = script['value']
+        else:
+            raise RabixError("invalid script")
+
+        result = self.evaluator.evaluate(lang, expr, job, None)
+        return result
+
+
+class WorkflowRunner(Runner):
+    def __init__(self, tool, working_dir='./', stdout=None, stderr='out.err'):
+        super(WorkflowRunner, self).__init__(tool, working_dir, stdout, stderr)
+
+    def run_job(self, job):
+        wf = WorkflowApp(self.tool['steps'])
+        eg = ExecutionGraph(wf, job)
+        while eg.has_next():
+            next = eg.next_job()
+            result = run(next.tool, next.job)
+            next.propagate_result(result)
+        return eg.outputs
 
 if __name__ == '__main__':
     from multiprocessing import Process

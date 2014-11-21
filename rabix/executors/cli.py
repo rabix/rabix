@@ -5,12 +5,10 @@ import logging
 import six
 import collections
 from rabix import __version__ as version
-from rabix.executors.runner import DockerRunner, NativeRunner
-from rabix.cliche.ref_resolver import from_url
+from rabix.executors.runner import get_runner
 from rabix.cliche.adapter import CLIJob
 from rabix.common.util import set_log_level
-from rabix.workflows.resources import ResourceManager
-
+from rabix.common.ref_resolver import from_url
 
 TEMPLATE_RESOURCES = {
     "cpu": 4,
@@ -52,6 +50,7 @@ Usage:
   tool {inputs}
 '''
 
+
 def make_resources_usage_string(template=TEMPLATE_RESOURCES):
     param_str = []
     for k, v in six.iteritems(template):
@@ -86,7 +85,9 @@ def update_dict(dct, new_dct):
                 t[key] = val
 
 
-def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp={}):
+def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp=None):
+
+    inp = inp or {}
 
     def required(req, arg, inputs):
         inp = inputs.keys()
@@ -96,7 +97,7 @@ def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp={}):
 
     def resolve(k, v, req, usage_str, param_str, inp):
         if v.get('type') == 'array':
-            if (v.get('items').get('type') == 'object'):
+            if v.get('items').get('type') == 'object':
                 pass
             elif ((v.get('items').get('type') == 'file' or v.get(
                     'items').get('type') == 'directory')):
@@ -156,18 +157,20 @@ def resolve(k, v, nval, inp, startdir=None):
         else:
             inp[k] = nval
 
+
 def get_inputs_from_file(tool, args, startdir):
     inp = {}
-    inputs = tool.get('inputs', {}).get('properties') # for inputs
+    inputs = tool.get('inputs', {}).get('properties')  # for inputs
     resolve_objects(inp, inputs, args, startdir)
     return {'inputs': inp}
+
 
 def resolve_objects(inp, inputs, args, startdir):
     for k, v in six.iteritems(inputs):
         nval = args.get(k)
         if nval:
-            if v.get('type') == 'array' and (
-                        v.get('items', {}).get('type') == 'object'): # for inner objects
+            if (v.get('type') == 'array' and
+                    v.get('items', {}).get('type') == 'object'):  # for inner objects
                 inp[k] = []
                 for sk, sv in enumerate(nval):
                     inp[k].append({})
@@ -239,7 +242,8 @@ def main():
         print("Couldn't find tool.")
         return
 
-    runner = DockerRunner(tool)
+    runner = get_runner(tool)
+    runner = runner(tool)
 
     if dry_run_args['--install']:
         runner.install()
@@ -254,8 +258,10 @@ def main():
         if args['--inp-file']:
             startdir = os.path.dirname(args.get('--inp-file'))
             input_file = from_url(args.get('--inp-file'))
-            update_dict(job['inputs'], get_inputs_from_file(tool, input_file, startdir)[
-                'inputs'])
+            update_dict(
+                job['inputs'],
+                get_inputs_from_file(tool, input_file, startdir)['inputs']
+            )
 
         tool_inputs_usage = make_tool_usage_string(
             tool, template=TOOL_TEMPLATE, inp=job['inputs'])
@@ -276,7 +282,6 @@ def main():
             return
 
         runner.run_job(job, job_id=args.get('--dir'))
-
 
     except docopt.DocoptExit:
         print(tool_usage)
