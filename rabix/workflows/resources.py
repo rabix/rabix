@@ -7,4 +7,3 @@ class ResourceManager(object):
         self.total_cpu = cpu
         self.total_memory = memory
         self.network = network
-

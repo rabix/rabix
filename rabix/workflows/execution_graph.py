@@ -114,7 +114,7 @@ class ExecutionGraph(object):
             rel = self.graph.edge_data(in_edge)
             head = self.graph.head(in_edge)
             if (isinstance(rel, InputRelation) and
-                        head in self.job['inputs']):
+                    head in self.job['inputs']):
 
                 executable.resolve_input(
                     rel.dst_port, self.job['inputs'][head]
