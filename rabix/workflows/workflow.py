@@ -10,8 +10,8 @@ from rabix.common.util import wrap_in_list
 log = logging.getLogger(__name__)
 
 AppNode = namedtuple('AppNode', ['app', 'inputs'])
-InputNode = namedtuple('InputNode', ['schema'])
-OutputNode = namedtuple('OutputNode', ['schema'])
+IONode = namedtuple('IONode', ['schema'])
+# OutputNode = namedtuple('OutputNode', ['schema'])
 
 Relation = namedtuple('Relation', ['src_port', 'dst_port'])
 InputRelation = namedtuple('InputRelation', ['dst_port'])
@@ -47,7 +47,7 @@ class Workflow(object):
             if 'outputs' in step:
                 for output_port, input_val in six.iteritems(step['outputs']):
                     output_schema = step['app']['outputs']['properties'][output_port]
-                    output_node = OutputNode(output_schema)
+                    output_node = IONode(output_schema)
                     output_id = input_val['$to']
                     self.add_node(output_id, output_node)
                     self.graph.add_edge(
@@ -70,7 +70,7 @@ class Workflow(object):
 
                 # TODO: merge input schemas if one input goes to different apps
                 input_schema = step['app']['inputs']['properties'][input_name]
-                io_node = InputNode(input_schema)
+                io_node = IONode(input_schema)
 
                 self.inputs['properties'][wf_input] = input_schema
                 required = step['app']['inputs'].get('required', [])

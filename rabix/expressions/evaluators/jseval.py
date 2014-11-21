@@ -1,8 +1,11 @@
 import json
+import logging
 
 import execjs
 
 from rabix.expressions import evaluator
+
+log = logging.getLogger(__name__)
 
 
 class JSEval(evaluator.ExpressionEvalPlugin):
@@ -12,6 +15,7 @@ class JSEval(evaluator.ExpressionEvalPlugin):
 
     def evaluate(self, expression=None, job=None, context=None, *args,
                  **kwargs):
+        log.debug("expression: %s" % expression)
         if expression.startswith('{'):
             exp_tpl = '''function () {
             $job = %s;
@@ -25,4 +29,6 @@ class JSEval(evaluator.ExpressionEvalPlugin):
             return %s;}()
             '''
         exp = exp_tpl % (json.dumps(job), json.dumps(context), expression)
-        return execjs.eval(exp)
+        result = execjs.eval(exp)
+        log.debug("result: %s" % result)
+        return result
