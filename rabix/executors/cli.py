@@ -51,6 +51,7 @@ Usage:
   tool {inputs}
 '''
 
+
 def make_resources_usage_string(template=TEMPLATE_RESOURCES):
     param_str = []
     for k, v in six.iteritems(template):
@@ -155,18 +156,20 @@ def resolve(k, v, nval, inp, startdir=None):
         else:
             inp[k] = nval
 
+
 def get_inputs_from_file(tool, args, startdir):
     inp = {}
-    inputs = tool.get('inputs', {}).get('properties') # for inputs
+    inputs = tool.get('inputs', {}).get('properties')  # for inputs
     resolve_objects(inp, inputs, args, startdir)
     return {'inputs': inp}
+
 
 def resolve_objects(inp, inputs, args, startdir):
     for k, v in six.iteritems(inputs):
         nval = args.get(k)
         if nval:
-            if v.get('type') == 'array' and (
-                        v.get('items', {}).get('type') == 'object'): # for inner objects
+            if (v.get('type') == 'array' and
+                    v.get('items', {}).get('type') == 'object'):  # for inner objects
                 inp[k] = []
                 for sk, sv in enumerate(nval):
                     inp[k].append({})
@@ -275,7 +278,6 @@ def main():
             return
 
         runner.run_job(job, job_id=args.get('--dir'))
-
 
     except docopt.DocoptExit:
         print(tool_usage)

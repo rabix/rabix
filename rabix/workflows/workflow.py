@@ -57,7 +57,7 @@ class Workflow(object):
 
         if not self.graph.connected():
             pass
-            #raise ValidationError('Graph is not connected')
+            # raise ValidationError('Graph is not connected')
 
     def add_edge_or_input(self, step, input_name, input_val):
         node_id = step['id']
