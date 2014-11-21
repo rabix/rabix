@@ -1,3 +1,4 @@
+import os
 import docopt
 import sys
 import logging
@@ -8,6 +9,15 @@ from rabix.executors.runner import DockerRunner, NativeRunner
 from rabix.cliche.ref_resolver import from_url
 from rabix.cliche.adapter import CLIJob
 from rabix.common.util import set_log_level
+from rabix.workflows.resources import ResourceManager
+
+
+TEMPLATE_RESOURCES = {
+    "cpu": 4,
+    "mem": 5000,
+    "diskSpace": 20000,
+    "network": False
+}
 
 
 TEMPLATE_JOB = {
@@ -15,17 +25,13 @@ TEMPLATE_JOB = {
     'inputs': {},
     'platform': 'http://example.org/my_platform/v1',
     'allocatedResources': {
-        "cpu": 4,
-        "mem": 5000,
-        "ports": [],
-        "diskSpace": 20000,
-        "network": False
+
     }
 }
 
 USAGE = '''
 Usage:
-    rabix <tool> [-v...] [-hcI] [-d <dir>] [-i <inp>] [-- {inputs}...]
+    rabix <tool> [-v...] [-hcI] [-d <dir>] [-i <inp>] [{resources}] [-- {inputs}...]
     rabix --version
 
     Options:
@@ -45,6 +51,16 @@ TOOL_TEMPLATE = '''
 Usage:
   tool {inputs}
 '''
+
+def make_resources_usage_string(template=TEMPLATE_RESOURCES):
+    param_str = []
+    for k, v in six.iteritems(template):
+        if type(v) is bool:
+            arg = '--resources.%s' % k
+        else:
+            arg = '--resources.%s=<%s>' % (k, type(v).__name__)
+        param_str.append(arg)
+    return ' '.join(param_str)
 
 
 def update_dict(dct, new_dct):
@@ -78,19 +94,10 @@ def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp={}):
             return True
         return False
 
-    def resolve(k, v, req, usage_str, param_str, inp={}):
+    def resolve(k, v, req, usage_str, param_str, inp):
         if v.get('type') == 'array':
             if (v.get('items').get('type') == 'object'):
-                print('Input %s needs to be specified using --inp-file' % k)
-            # if v.get('items').get('oneOf'):
-            #         param_str.append('(')
-            #         for obj in v.get('items').get('oneOf'):
-            #             resolve_object(k, obj, usage_str, param_str)
-            #             param_str.append('|')
-            #         param_str.pop()
-            #         param_str.append(')')
-            #     else:
-            #         resolve_object(k, v.get('items'), usage_str, param_str)
+                pass
             elif ((v.get('items').get('type') == 'file' or v.get(
                     'items').get('type') == 'directory')):
                 arg = '--%s=<file>...' % k
@@ -111,7 +118,7 @@ def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp={}):
             param_str.append(arg if required(req, k, inp)
                              else '[%s]' % arg)
 
-    def resolve_object(name, obj, usage_str, param_str, inp={}, root=False):
+    def resolve_object(name, obj, usage_str, param_str, inp, root=False):
         properties = obj.get('properties')
         required = obj.get('required')
         for k, v in six.iteritems(properties):
@@ -122,12 +129,13 @@ def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp={}):
     usage_str = []
     param_str = []
 
-    resolve_object('inputs', inputs, usage_str, param_str, root=True)
+    resolve_object('inputs', inputs, usage_str, param_str, inp, root=True)
     usage_str.extend(param_str)
-    return template.format(inputs=' '.join(usage_str))
+    return template.format(resources=make_resources_usage_string(),
+                           inputs=' '.join(usage_str))
 
 
-def resolve(k, v, nval, inp):
+def resolve(k, v, nval, inp, startdir=None):
     if isinstance(nval, list):
         if v.get('type') != 'array':
             raise Exception('Too many values')
@@ -135,14 +143,38 @@ def resolve(k, v, nval, inp):
         for nv in nval:
             if (v['items']['type'] == 'file' or v['items'][
                     'type'] == 'directory'):
+                if startdir:
+                    nv = os.path.join(startdir, nv)
                 inp[k].append({'path': nv})
             else:
                 inp[k].append(nv)
     else:
         if v['type'] == 'file' or v['type'] == 'directory':
+            if startdir:
+                nval = os.path.join(startdir, nval)
             inp[k] = {'path': nval}
         else:
             inp[k] = nval
+
+def get_inputs_from_file(tool, args, startdir):
+    inp = {}
+    inputs = tool.get('inputs', {}).get('properties') # for inputs
+    resolve_objects(inp, inputs, args, startdir)
+    return {'inputs': inp}
+
+def resolve_objects(inp, inputs, args, startdir):
+    for k, v in six.iteritems(inputs):
+        nval = args.get(k)
+        if nval:
+            if v.get('type') == 'array' and (
+                        v.get('items', {}).get('type') == 'object'): # for inner objects
+                inp[k] = []
+                for sk, sv in enumerate(nval):
+                    inp[k].append({})
+                    resolve_objects(inp[k][sk], inputs[k].get('items').get(
+                        'properties'), sv, startdir)
+            else:
+                resolve(k, v, nval, inp, startdir)
 
 
 def get_inputs(tool, args):
@@ -169,7 +201,8 @@ def get_tool(args):
 def dry_run_parse(args=None):
     args = args or sys.argv[1:]
     args = args + ['an_input']
-    usage = USAGE.format(inputs='<inputs>')
+    usage = USAGE.format(resources=make_resources_usage_string(),
+                         inputs='<inputs>')
     try:
         return docopt.docopt(usage, args, version=version, help=False)
     except docopt.DocoptExit:
@@ -182,7 +215,8 @@ def main():
         print(USAGE)
         return
 
-    usage = USAGE.format(inputs='<inputs>')
+    usage = USAGE.format(resources=make_resources_usage_string(),
+                         inputs='<inputs>')
     tool_usage = usage
 
     if len(sys.argv) == 2 and \
@@ -218,8 +252,10 @@ def main():
         set_log_level(dry_run_args['--verbose'])
 
         if args['--inp-file']:
+            startdir = os.path.dirname(args.get('--inp-file'))
             input_file = from_url(args.get('--inp-file'))
-            update_dict(job['inputs'], get_inputs(tool, input_file)['inputs'])
+            update_dict(job['inputs'], get_inputs_from_file(tool, input_file, startdir)[
+                'inputs'])
 
         tool_inputs_usage = make_tool_usage_string(
             tool, template=TOOL_TEMPLATE, inp=job['inputs'])
@@ -240,6 +276,7 @@ def main():
             return
 
         runner.run_job(job, job_id=args.get('--dir'))
+
 
     except docopt.DocoptExit:
         print(tool_usage)

@@ -1,20 +1,15 @@
 import os
-import docker
-import six
 import json
 import logging
 import uuid
 import stat
 import copy
+import docker
 
 from rabix.executors.io import InputRunner
 from rabix.executors.container import Container, ensure_image
 from rabix.cliche.adapter import CLIJob
 from rabix.tests import infinite_loop, infinite_read
-from rabix.expressions.evaluator import Evaluator
-from rabix.common.errors import RabixError
-from rabix.workflows.workflow import Workflow
-from rabix.workflows.execution_graph import ExecutionGraph
 
 
 log = logging.getLogger(__name__)
@@ -49,6 +44,9 @@ class Runner(object):
     def install(self):
         pass
 
+    def write_result(self, result):
+        pass
+
     def provide_files(self, job, dir=None):
         return InputRunner(job, self.tool.get('inputs', {}).get(
             'properties'), dir)()
@@ -65,35 +63,69 @@ class DockerRunner(Runner):
         remaped_job = copy.deepcopy(job)
         volumes = {}
         binds = {}
-        is_single = lambda i: any([inputs[i]['type'] == 'directory',
-                                  inputs[i]['type'] == 'file'])
-        is_array = lambda i: inputs[i]['type'] == 'array' and any([
-            inputs[i]['items']['type'] == 'directory',
-            inputs[i]['items']['type'] == 'file'])
 
         inputs = self.tool.get('inputs', {}).get('properties')
         input_values = remaped_job.get('inputs')
+        self._remap(inputs, input_values, volumes, binds, remaped_job[
+            'inputs'])
+
+        return volumes, BindDict(binds), remaped_job
+
+    def _remap(self, inputs, input_values, volumes, binds, remaped_job,
+               parent=None):
+        is_single = lambda i: any([inputs[i]['type'] == 'directory',
+                                   inputs[i]['type'] == 'file'])
+        is_array = lambda i: inputs[i]['type'] == 'array' and any([
+            inputs[i]['items']['type'] == 'directory',
+            inputs[i]['items']['type'] == 'file'])
+        is_object = lambda i: (inputs[i]['type'] == 'array' and
+                               inputs[i]['items']['type'] == 'object')
+
         if inputs:
             single = filter(is_single, [i for i in inputs])
             lists = filter(is_array, [i for i in inputs])
+            objects = filter(is_object, [i for i in inputs])
             for inp in single:
+                self._remap_single(inp, input_values, volumes, binds,
+                                   remaped_job, parent)
+            for inp in lists:
+                self._remap_list(inp, input_values, volumes, binds,
+                                 remaped_job, parent)
+            for obj in objects:
+                if input_values.get(obj):
+                    for num, o in enumerate(input_values[obj]):
+                        self._remap(inputs[obj]['items']['properties'],
+                                    o, volumes, binds, remaped_job[obj][num],
+                                    parent='/'.join([obj, str(num)]))
+
+    def _remap_single(self, inp, input_values, volumes, binds, remaped_job,
+                      parent):
+        if input_values.get(inp):
+            if parent:
+                docker_dir = '/' + '/'.join([parent, inp])
+            else:
                 docker_dir = '/' + inp
+            dir_name, file_name = os.path.split(
+                os.path.abspath(input_values[inp]['path']))
+            volumes[docker_dir] = {}
+            binds[docker_dir] = dir_name
+            remaped_job[inp]['path'] = '/'.join(
+                [docker_dir, file_name])
+
+    def _remap_list(self, inp, input_values, volumes, binds, remaped_job,
+                    parent):
+        if input_values[inp]:
+            for num, inv in enumerate(input_values[inp]):
+                if parent:
+                    docker_dir = '/' + '/'.join([parent, inp, str(num)])
+                else:
+                    docker_dir = '/' + '/'.join([inp, str(num)])
                 dir_name, file_name = os.path.split(
-                    os.path.abspath(input_values[inp]['path']))
+                    os.path.abspath(inv['path']))
                 volumes[docker_dir] = {}
                 binds[docker_dir] = dir_name
-                remaped_job['inputs'][inp]['path'] = '/'.join(
+                remaped_job[inp][num]['path'] = '/'.join(
                     [docker_dir, file_name])
-            for inp in lists:
-                for num, inv in enumerate(input_values[inp]):
-                    docker_dir = '/' + '/'.join([inp, str(num)])
-                    dir_name, file_name = os.path.split(
-                        os.path.abspath(inv['path']))
-                    volumes[docker_dir] = {}
-                    binds[docker_dir] = dir_name
-                    remaped_job['inputs'][inp][num]['path'] = '/'.join(
-                        [docker_dir, file_name])
-            return volumes, BindDict(binds), remaped_job
 
     @property
     def _envvars(self):
@@ -129,8 +161,7 @@ class DockerRunner(Runner):
         volumes, binds, remaped_job = self._volumes(job)
         volumes['/' + job_dir] = {}
         binds['/' + job_dir] = os.path.abspath(job_dir)
-        adapter = CLIJob(remaped_job, self.tool)
-        container = self._run(['bash', '-c', adapter.cmd_line()],
+        container = self._run(['bash', '-c', adapter.cmd_line(remaped_job)],
                               vol=volumes, bind=binds, env=self._envvars,
                               work_dir='/' + job_dir)
         container.get_stderr(file='/'.join([os.path.abspath(job_dir),
@@ -145,7 +176,7 @@ class DockerRunner(Runner):
                     with open(v['path'] + '.meta', 'w') as m:
                         json.dump(meta, m)
             json.dump(outputs, f)
-            print(outputs)
+            return outputs
 
     def install(self):
         ensure_image(self.docker_client,
@@ -159,40 +190,6 @@ class NativeRunner(Runner):
 
     def run_job(self, job):
         pass
-
-
-class ExpressionRunner(Runner):
-
-    def __init__(self, tool, working_dir='./', stdout=None, stderr='out.err'):
-        super(ExpressionRunner, self).__init__(
-            tool, working_dir, stdout, stderr
-        )
-        self.evaluator = Evaluator()
-
-    def run_job(self, job):
-        script = self.tool['script']
-        if isinstance(script, six.string_types):
-            lang = 'javascript'
-            expr = script
-        elif isinstance(script, dict):
-            lang = script['lang']
-            expr = script['value']
-        else:
-            raise RabixError("invalid script")
-
-        self.evaluator.evaluate(lang, expr, job, None)
-
-
-class WorkflowRunner(Runner):
-    def __init__(self, tool, working_dir='./', stdout=None, stderr='out.err'):
-        super(WorkflowRunner, self).__init__(tool, working_dir, stdout, stderr)
-
-    def run_job(self, job):
-        wf = Workflow(self.tool['steps'])
-        eg = ExecutionGraph(wf, job)
-        while (eg.has_next()):
-            next = eg.next_job()
-            next.execute()
 
 
 if __name__ == '__main__':
