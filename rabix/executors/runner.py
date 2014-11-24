@@ -22,7 +22,7 @@ from rabix.workflows.execution_graph import ExecutionGraph
 log = logging.getLogger(__name__)
 
 RUNNERS = {
-    "docker": "rabix.executors.runner.DockerRunners",
+    "docker": "rabix.executors.runner.DockerRunner",
     "native": "rabix.executors.runner.NativeRunner",
     "Script": "rabix.executors.runner.ExpressionRunner",
     "Workflow": "rabix.executors.runner.WorkflowRunner"
@@ -39,7 +39,6 @@ def get_runner(tool, runners=RUNNERS):
         tool.get("@type") or
         tool["requirements"]["environment"]["container"]["type"]
     )
-    print(runner_path)
     clspath = runners.get(runner_path, None)
     if not clspath:
         raise Exception('Runner not specified')
@@ -197,7 +196,6 @@ class DockerRunner(Runner):
         volumes, binds, remaped_job = self._volumes(job)
         volumes['/' + job_dir] = {}
         binds['/' + job_dir] = os.path.abspath(job_dir)
-        print(remaped_job)
         container = self._run(['bash', '-c', adapter.cmd_line(remaped_job)],
                               vol=volumes, bind=binds, env=self._envvars,
                               work_dir='/' + job_dir)

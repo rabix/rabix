@@ -59,10 +59,10 @@ tool:
         required: true
         minItems: 1
         maxItems: 2
+        adapter:
+          streamable: true
         items:
           type: file
-          adapter:
-            streamable: true
       minimum_seed_length:
         type: integer
         adapter:

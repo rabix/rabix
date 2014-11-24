@@ -242,6 +242,7 @@ def main():
         return
 
     runner = get_runner(tool)
+    runner = runner(tool)
 
     if dry_run_args['--install']:
         runner.install()

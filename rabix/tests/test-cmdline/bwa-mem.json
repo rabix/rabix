@@ -100,11 +100,11 @@
                     "type": "array",
                     "minItems": 1,
                     "maxItems": 2,
+                    "adapter": {
+                        "streamable": true
+                    },
                     "items": {
-                        "type": "file",
-                        "adapter": {
-                            "streamable": true
-                        }
+                        "type": "file"
                     }
                 },
                 "minimum_seed_length": {
