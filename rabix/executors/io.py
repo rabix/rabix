@@ -196,8 +196,7 @@ class InputRunner(object):
             key = raw_input("Key: ")
             value = raw_input("Value: ")
             metadata[key] = value
-            self._metadata_prompt(metadata)
-            return metadata
+            return self._metadata_prompt(metadata)
         elif cont == 'n':
             return metadata
 
