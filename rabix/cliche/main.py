@@ -21,7 +21,7 @@ def main():
     job = from_url(args.job_order)
 
     def path_mapper(path):
-        return os.path.normpath(os.path.join('/conformance/test/', path))
+        return os.path.normpath(os.path.join(args.basedir or '.', path))
 
     cli_job = CLIJob(job, tool, path_mapper)
     print(json.dumps({
