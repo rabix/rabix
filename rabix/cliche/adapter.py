@@ -2,6 +2,8 @@ import copy
 import operator
 import six
 import logging
+import os
+import glob
 
 from jsonschema import Draft4Validator
 import jsonschema.exceptions
@@ -11,6 +13,7 @@ from rabix.cliche.expressions.evaluator import Evaluator
 
 
 ev = Evaluator()
+log = logging.getLogger(__name__)
 
 
 def evaluate(expr_object, job, context=None, *args, **kwargs):
@@ -146,3 +149,28 @@ class CLIJob(object):
         elif isinstance(val, dict):
             for item in six.itervalues(val):
                 self.rewrite_paths(item)
+
+    def get_outputs(self, job_dir):
+        result, outs = {}, self.output_schema.get('properties', {})
+        for k, v in six.iteritems(outs):
+            adapter = v['adapter']
+            files = glob.glob(os.path.join(job_dir, adapter['glob']))
+            result[k] = [{'path': p, 'meta': self._meta(p, adapter)} for p in files]
+            if v['type'] != 'array':
+                result[k] = result[k][0] if result[k] else None
+        return result
+
+    def _meta(self, path, adapter):
+        meta, result = adapter.get('meta', {}), {}
+        inherit = meta.pop('__inherit__', None)
+        if inherit:
+            src = job['inputs'].get(inherit)
+            if isinstance(src, list):
+                result = reduce(intersect_dicts, [x.get('meta', {}) for x in src]) \
+                    if len(src) > 1 else src[0].get('meta', {})
+            elif isinstance(src, dict):
+                result = src.get('meta', {})
+        result.update(**meta)
+        for k, v in six.iteritems(result):
+            result[k] = eval_resolve(v, self.job, context=path)
+        return result
