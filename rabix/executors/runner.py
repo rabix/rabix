@@ -11,11 +11,11 @@ import importlib
 
 from rabix.executors.io import InputRunner
 from rabix.executors.container import Container, ensure_image
-from rabix.cliche.adapter import CLIJob
+from rabix.cliche.adapter import Adapter
 from rabix.tests import infinite_loop, infinite_read
 from rabix.expressions.evaluator import Evaluator
 from rabix.common.errors import RabixError
-from rabix.workflows.workflow_app import WorkflowApp
+from rabix.workflows.workflow import Workflow
 from rabix.workflows.execution_graph import ExecutionGraph
 
 
@@ -31,7 +31,7 @@ RUNNERS = {
 
 def run(tool, job):
     runner = get_runner(tool)
-    return runner(tool).run_job(job)
+    runner(tool).run_job(job)
 
 
 def get_runner(tool, runners=RUNNERS):
@@ -52,20 +52,6 @@ def get_runner(tool, runners=RUNNERS):
     except AttributeError:
         raise Exception('Unknown executor %s' % cls_name)
     return cls
-
-
-def match_shape(schema, job):
-    jobs = [job]
-    for input, inp_scm in six.iteritems(schema['inputs']['properties']):
-        if inp_scm['type'] != 'array' and isinstance(job[input], list):
-            jobs_tmp = []
-            for job in jobs:
-                for val in job[input]:
-                    new_job = job.copy()
-                    new_job[input] = val
-                    jobs_tmp.append(new_job)
-            jobs = jobs_tmp
-    return jobs
 
 
 class BindDict(dict):
@@ -95,9 +81,6 @@ class Runner(object):
         return str(uuid.uuid4())
 
     def install(self):
-        pass
-
-    def write_result(self, result):
         pass
 
     def provide_files(self, job, dir=None):
@@ -205,17 +188,15 @@ class DockerRunner(Runner):
 
     def run_job(self, job, job_id=None):
         job_dir = job_id or self.rnd_name()
-        if not os.path.exists(job_dir):
-            os.mkdir(job_dir)
+        os.mkdir(job_dir)
         os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
                  stat.S_IWOTH)
         job = self.provide_files(job, os.path.abspath(job_dir))
-
+        adapter = Adapter(self.tool)
         volumes, binds, remaped_job = self._volumes(job)
         volumes['/' + job_dir] = {}
         binds['/' + job_dir] = os.path.abspath(job_dir)
-        adapter = CLIJob(remaped_job, self.tool)
-        container = self._run(['bash', '-c', adapter.cmd_line()],
+        container = self._run(['bash', '-c', adapter.cmd_line(remaped_job)],
                               vol=volumes, bind=binds, env=self._envvars,
                               work_dir='/' + job_dir)
         container.get_stderr(file='/'.join([os.path.abspath(job_dir),
@@ -223,14 +204,14 @@ class DockerRunner(Runner):
         if not container.is_success():
             raise RuntimeError("err %s" % container.get_stderr())
         with open(os.path.abspath(job_dir) + '/result.json', 'w') as f:
-            outputs = adapter.get_outputs(os.path.abspath(job_dir))
+            outputs = adapter.get_outputs(os.path.abspath(job_dir), job)
             for k, v in six.iteritems(outputs):
                 if v:
                     meta = v.pop('meta', {})
                     with open(v['path'] + '.meta', 'w') as m:
                         json.dump(meta, m)
             json.dump(outputs, f)
-            return outputs
+            print(outputs)
 
     def install(self):
         ensure_image(self.docker_client,
@@ -265,8 +246,7 @@ class ExpressionRunner(Runner):
         else:
             raise RabixError("invalid script")
 
-        result = self.evaluator.evaluate(lang, expr, job, None)
-        return result
+        self.evaluator.evaluate(lang, expr, job, None)
 
 
 class WorkflowRunner(Runner):
@@ -274,13 +254,12 @@ class WorkflowRunner(Runner):
         super(WorkflowRunner, self).__init__(tool, working_dir, stdout, stderr)
 
     def run_job(self, job):
-        wf = WorkflowApp(self.tool['steps'])
+        wf = Workflow(self.tool['steps'])
         eg = ExecutionGraph(wf, job)
         while eg.has_next():
             next = eg.next_job()
-            result = run(next.tool, next.job)
-            next.propagate_result(result)
-        return eg.outputs
+            run(next.tool, next.job)
+
 
 if __name__ == '__main__':
     from multiprocessing import Process
