@@ -1,3 +1,4 @@
+import logging
 
 from nose.tools import nottest, raises
 
@@ -5,6 +6,8 @@ from os.path import abspath, join
 from rabix.common.ref_resolver import from_url
 
 from rabix.executors.runner import *
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 def test_workflow():
@@ -16,4 +19,5 @@ def test_workflow():
     job = doc['jobs']['batch_add_one_mul_two']
     print(workflow)
     print(job)
-    run(workflow, job)
+    result = run(workflow, job)
+    print(result)

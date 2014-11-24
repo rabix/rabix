@@ -85,7 +85,9 @@ def update_dict(dct, new_dct):
                 t[key] = val
 
 
-def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp={}):
+def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp=None):
+
+    inp = inp or {}
 
     def required(req, arg, inputs):
         inp = inputs.keys()
@@ -95,7 +97,7 @@ def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp={}):
 
     def resolve(k, v, req, usage_str, param_str, inp):
         if v.get('type') == 'array':
-            if (v.get('items').get('type') == 'object'):
+            if v.get('items').get('type') == 'object':
                 pass
             elif ((v.get('items').get('type') == 'file' or v.get(
                     'items').get('type') == 'directory')):

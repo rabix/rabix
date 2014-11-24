@@ -31,7 +31,7 @@ RUNNERS = {
 
 def run(tool, job):
     runner = get_runner(tool)
-    runner(tool).run_job(job)
+    return runner(tool).run_job(job)
 
 
 def get_runner(tool, runners=RUNNERS):
@@ -81,6 +81,9 @@ class Runner(object):
         return str(uuid.uuid4())
 
     def install(self):
+        pass
+
+    def write_result(self, result):
         pass
 
     def provide_files(self, job, dir=None):
@@ -213,7 +216,7 @@ class DockerRunner(Runner):
                     with open(v['path'] + '.meta', 'w') as m:
                         json.dump(meta, m)
             json.dump(outputs, f)
-            print(outputs)
+            return outputs
 
     def install(self):
         ensure_image(self.docker_client,
@@ -248,7 +251,8 @@ class ExpressionRunner(Runner):
         else:
             raise RabixError("invalid script")
 
-        self.evaluator.evaluate(lang, expr, job, None)
+        result = self.evaluator.evaluate(lang, expr, job, None)
+        return result
 
 
 class WorkflowRunner(Runner):
@@ -260,8 +264,9 @@ class WorkflowRunner(Runner):
         eg = ExecutionGraph(wf, job)
         while eg.has_next():
             next = eg.next_job()
-            run(next.tool, next.job)
-
+            result = run(next.tool, next.job)
+            next.propagate_result(result)
+        return eg.outputs
 
 if __name__ == '__main__':
     from multiprocessing import Process
