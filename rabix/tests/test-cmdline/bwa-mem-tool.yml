@@ -30,10 +30,10 @@ tool:
         required: Yes
         minItems: 1
         maxItems: 2
+        adapter:
+          streamable: Yes
         items:
           type: file
-          adapter:
-            streamable: Yes
       minimum_seed_length:
         type: integer
         adapter:

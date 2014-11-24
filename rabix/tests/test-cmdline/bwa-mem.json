@@ -91,11 +91,11 @@
                     "required": "Yes",
                     "minItems": 1,
                     "maxItems": 2,
+                    "adapter": {
+                        "streamable": "Yes"
+                    },
                     "items": {
-                        "type": "file",
-                        "adapter": {
-                            "streamable": "Yes"
-                        }
+                        "type": "file"
                     }
                 },
                 "minimum_seed_length": {
