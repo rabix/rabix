@@ -27,14 +27,27 @@ def evaluate(expr_object, job, context=None, *args, **kwargs):
     return ev.evaluate(expr_object.get('lang', 'javascript'), expr_object.get('value'), job, context, *args, **kwargs)
 
 
+def intersect_dicts(d1, d2):
+    return {k: v for k, v in six.iteritems(d1) if v == d2.get(k)}
+
+
 def eval_resolve(val, job, context=None):
     if not isinstance(val, dict):
         return val
-    if '$expr' in val:
-        return evaluate(val['$expr'], job, context)
-    if '$job' in val:
-        return resolve_pointer(job, val['$job'], default=None)
+    if 'expr' in val:
+        return evaluate(val['expr'], job, context)
+    if 'job' in val:
+        return resolve_pointer(job, val['job'], default=None)
     return val
+#
+# def eval_resolve(val, job, context=None):
+#     if not isinstance(val, dict):
+#         return val
+#     if '$expr' in val:
+#         return evaluate(val['$expr'], job, context)
+#     if '$job' in val:
+#         return resolve_pointer(job, val['$job'], default=None)
+#     return val
 
 
 class InputAdapter(object):
@@ -147,6 +160,14 @@ class CLIJob(object):
         base_cmd = [eval_resolve(item, self.job) for item in self.base_cmd]
         return map(six.text_type, base_cmd + args)
 
+    def cmd_line(self):
+        a = self.make_arg_list()
+        if self.stdin:
+            a += ['<', self.stdin]
+        if self.stdout:
+            a += ['>', self.stdout]
+        return ' '.join(a)  # TODO: escape
+
     def rewrite_paths(self, val):
         if isinstance(val, list):
             for item in val:
@@ -171,7 +192,7 @@ class CLIJob(object):
         meta, result = adapter.get('meta', {}), {}
         inherit = meta.pop('__inherit__', None)
         if inherit:
-            src = job['inputs'].get(inherit)
+            src = self.job['inputs'].get(inherit)
             if isinstance(src, list):
                 result = reduce(intersect_dicts, [x.get('meta', {}) for x in src]) \
                     if len(src) > 1 else src[0].get('meta', {})
