@@ -13,7 +13,7 @@
             "resources": {
                 "cpu": 0,
                 "mem": 5000,
-                "network": "No"
+                "network": false
             },
             "platformFeatures": [
                 "http://example.org/transforms#strip_ext"
@@ -84,9 +84,9 @@
                 "sam": {
                     "type": "file",
                     "adapter": {
-                        "stdout": "Yes",
+                        "stdout": true,
                         "glob": "output.sam",
-                        "streamable": "Yes"
+                        "streamable": true
                     }
                 }
             }
