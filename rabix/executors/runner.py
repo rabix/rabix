@@ -11,7 +11,7 @@ import importlib
 
 from rabix.executors.io import InputRunner
 from rabix.executors.container import Container, ensure_image
-from rabix.cliche.adapter import Adapter
+from rabix.cliche.adapter import CLIJob
 from rabix.tests import infinite_loop, infinite_read
 from rabix.expressions.evaluator import Evaluator
 from rabix.common.errors import RabixError
@@ -188,15 +188,17 @@ class DockerRunner(Runner):
 
     def run_job(self, job, job_id=None):
         job_dir = job_id or self.rnd_name()
-        os.mkdir(job_dir)
+        if not os.path.exists(job_dir):
+            os.mkdir(job_dir)
         os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
                  stat.S_IWOTH)
         job = self.provide_files(job, os.path.abspath(job_dir))
-        adapter = Adapter(self.tool)
+
         volumes, binds, remaped_job = self._volumes(job)
         volumes['/' + job_dir] = {}
         binds['/' + job_dir] = os.path.abspath(job_dir)
-        container = self._run(['bash', '-c', adapter.cmd_line(remaped_job)],
+        adapter = CLIJob(remaped_job, self.tool)
+        container = self._run(['bash', '-c', adapter.cmd_line()],
                               vol=volumes, bind=binds, env=self._envvars,
                               work_dir='/' + job_dir)
         container.get_stderr(file='/'.join([os.path.abspath(job_dir),
@@ -204,7 +206,7 @@ class DockerRunner(Runner):
         if not container.is_success():
             raise RuntimeError("err %s" % container.get_stderr())
         with open(os.path.abspath(job_dir) + '/result.json', 'w') as f:
-            outputs = adapter.get_outputs(os.path.abspath(job_dir), job)
+            outputs = adapter.get_outputs(os.path.abspath(job_dir))
             for k, v in six.iteritems(outputs):
                 if v:
                     meta = v.pop('meta', {})

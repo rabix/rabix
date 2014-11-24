@@ -1,7 +1,7 @@
 from os.path import dirname, join, abspath
 from nose.tools import nottest, raises
 
-from rabix.cliche.adapter import from_url
+from rabix.common.ref_resolver import from_url
 from rabix.executors.cli import TEMPLATE_JOB
 from rabix.executors.cli import update_dict
 from rabix.executors.cli import get_inputs_from_file

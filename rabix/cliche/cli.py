@@ -1,7 +1,7 @@
 import os
 from os.path import splitext
 
-from cliche.ref_resolver import from_url, resolve_pointer
+from rabix.common.ref_resolver import from_url, resolve_pointer
 
 # TODO: lists, transforms
 
@@ -264,5 +264,5 @@ def test_tmap_mapall():
     print(gen_cli(tool, job))
 
 
-test_bwa_mem()
-test_tmap_mapall()
+# test_bwa_mem()
+# test_tmap_mapall()

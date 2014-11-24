@@ -132,7 +132,7 @@
                     "adapter": {
                         "stdout": true,
                         "glob": "output.sam",
-                        "streamable": "Yes",
+                        "streamable": true,
                         "meta": {
                             "file_type": "sam",
                             "expr_test": {

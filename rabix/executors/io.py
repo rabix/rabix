@@ -10,7 +10,7 @@ import glob
 
 from six.moves.urllib import parse as urlparse
 from rabix.common.errors import ResourceUnavailable
-from rabix.cliche.adapter import from_url
+from rabix.common.ref_resolver import from_url
 
 log = logging.getLogger(__name__)
 
