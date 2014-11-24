@@ -12,9 +12,9 @@ logging.basicConfig(level=logging.DEBUG)
 
 @nottest
 def assert_execution(job, outputs):
-    workflow = job['app']
+    app = job['app']
 
-    result = run(workflow, job)
+    result = run(app, job)
     assert_equal(result, outputs)
 
 
@@ -23,8 +23,9 @@ def test_workflow():
 
     doc = from_url(path)
     tests = doc['tests']
-    print(tests)
     for test_name, test in six.iteritems(tests):
-        if not test.get('requiresFeatures'):
-            print("Running test: " + test_name)
+        reqs = test.get('requiresFeatures')
+        if not reqs or 'map' not in reqs:
+            print("Running test: " + test_name + "...")
             assert_execution(test['job'], test['outputs'])
+            print(test_name + " OK.")

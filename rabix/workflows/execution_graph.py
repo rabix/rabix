@@ -56,7 +56,13 @@ class Executable(object):
             raise RabixError("Input already satisfied")
         self.input_counts[input_port] = input_count - 1
         # recursive_merge(self.job['inputs'].get(input_port), results)
-        self.job['inputs'][input_port] = results
+        prev_result = self.job['inputs'].get(input_port)
+        if prev_result is None:
+            self.job['inputs'][input_port] = results
+        elif isinstance(prev_result, list):
+            prev_result.append(results)
+        else:
+            self.job['inputs'][input_port] = [prev_result, results]
         return self.resolved
 
     def propagate_result(self, result):

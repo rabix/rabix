@@ -62,25 +62,25 @@ class Workflow(object):
     def add_edge_or_input(self, step, input_name, input_val):
         node_id = step['id']
         if isinstance(input_val, dict) and '$from' in input_val:
-            if '.' in input_val['$from']:
-                node, outp = input_val['$from'].split('.')
-                self.graph.add_edge(node, node_id, Relation(outp, input_name))
-            else:
-                wf_input = input_val['$from']
+            frm = wrap_in_list(input_val['$from'])
+            for inp in frm:
+                if '.' in inp:
+                    node, outp = inp.split('.')
+                    self.graph.add_edge(node, node_id, Relation(outp, input_name))
+                else:
+                    # TODO: merge input schemas if one input goes to different apps
+                    input_schema = step['app']['inputs']['properties'][input_name]
+                    io_node = IONode(input_schema)
 
-                # TODO: merge input schemas if one input goes to different apps
-                input_schema = step['app']['inputs']['properties'][input_name]
-                io_node = IONode(input_schema)
+                    self.inputs['properties'][inp] = input_schema
+                    required = step['app']['inputs'].get('required', [])
+                    if input_name in required:
+                        self.inputs['required'].appennd(inp)
 
-                self.inputs['properties'][wf_input] = input_schema
-                required = step['app']['inputs'].get('required', [])
-                if wf_input in required:
-                    self.inputs['required'].appennd(wf_input)
-
-                self.add_node(wf_input, io_node)
-                self.graph.add_edge(
-                    wf_input, node_id, InputRelation(input_name)
-                )
+                    self.add_node(inp, io_node)
+                    self.graph.add_edge(
+                        inp, node_id, InputRelation(input_name)
+                    )
 
         else:
             self.graph.node_data(node_id).inputs[input_name] = input_val
