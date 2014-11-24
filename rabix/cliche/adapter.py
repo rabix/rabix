@@ -162,6 +162,14 @@ class CLIJob(object):
             a += ['>', self.stdout]
         return ' '.join(a)  # TODO: escape
 
+    def cmd_line(self):
+        a = self.make_arg_list()
+        if self.stdin:
+            a += ['<', self.stdin]
+        if self.stdout:
+            a += ['>', self.stdout]
+        return ' '.join(a)  # TODO: escape
+
     def rewrite_paths(self, val):
         if isinstance(val, list):
             for item in val:
