@@ -5,7 +5,8 @@ import six
 import collections
 from rabix import __version__ as version
 from rabix.executors.runner import DockerRunner, NativeRunner
-from rabix.cliche.adapter import Adapter, from_url
+from rabix.cliche.ref_resolver import from_url
+from rabix.cliche.adapter import CLIJob
 from rabix.common.util import set_log_level
 
 
@@ -213,8 +214,8 @@ def main():
         job = update_paths(job, inp)
 
         if args['--print-cli']:
-            adapter = Adapter(tool)
-            print(adapter.cmd_line(job))
+            adapter = CLIJob(job, tool)
+            print(adapter.cmd_line())
             return
 
         runner.run_job(job, job_id=args.get('--dir'))
