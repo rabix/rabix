@@ -148,7 +148,7 @@ class CLIJob(object):
         self.output_schema = self.tool.get('outputs', {})
 
     def make_arg_list(self):
-        adapters = [InputAdapter(a['value'], self.job, {}, a) for a in self.args]
+        adapters = [InputAdapter(a['value'], self.job, {}, a, k) for k, a in enumerate(self.args)]
         args = InputAdapter(self.job['inputs'], self.job, self.input_schema).as_dict(adapters)
         base_cmd = [eval_resolve(item, self.job) for item in self.base_cmd]
         return map(six.text_type, base_cmd + args)
