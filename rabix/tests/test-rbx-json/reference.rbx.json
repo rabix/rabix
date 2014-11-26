@@ -4,10 +4,10 @@
         "file_type": "fasta"
 },
 "secondaryFiles": [
-    "chr20.fa.amb",
-    "chr20.fa.ann",
-    "chr20.fa.bwt",
-    "chr20.fa.pac",
-    "chr20.fa.sa"
+    "amb",
+    "ann",
+    "bwt",
+    "pac",
+    "sa"
     ]
 }

@@ -38,6 +38,7 @@ class InputRunner(object):
         input_values = self.job.get('inputs')
         if self.inputs:
             self._resolve(self.inputs, input_values, remaped_job['inputs'])
+        print remaped_job
         return remaped_job
 
     def _resolve(self, inputs, input_values, remaped_job):
@@ -67,14 +68,16 @@ class InputRunner(object):
         if input_value:
             if input_value['path'].endswith('.rbx.json'):
                 remaped_job[inp] = self._resolve_rbx(input_value['path'])
-            secondaryFiles = copy.deepcopy(input.get(
-                'adapter', {}).get('secondaryFiles'))
-            remaped_job[inp]['path'] = self._download(input_value['path'])
-            remaped_job[inp]['meta'] = self._meta(input_value)
-            secFiles = self._get_secondary_files(
-                secondaryFiles, remaped_job[inp]['path'])
-            if secFiles:
-                remaped_job[inp]['secondaryFiles'] = secFiles
+            else:
+                secondaryFiles = copy.deepcopy(input.get(
+                    'adapter', {}).get('secondaryFiles'))
+                remaped_job[inp]['path'] = self._download(input_value['path'])
+                remaped_job[inp]['meta'] = self._meta(remaped_job[inp])
+                secFiles = self._get_secondary_files(
+                    secondaryFiles, input_value['path'])
+                if secFiles:
+                    remaped_job[inp]['secondaryFiles'] = secFiles
+                self._rbx_dump(remaped_job[inp])
 
     def _resolve_list(self, inp, input, input_value, remaped_job):
         if input_value:
@@ -86,23 +89,38 @@ class InputRunner(object):
                 else:
                     remaped_job[inp][num]['path'] = self._download(
                         input_value[num]['path'])
-                    remaped_job[inp][num]['meta'] = self._meta(inv)
+                    remaped_job[inp][num]['meta'] = self._meta(remaped_job[
+                        inp][num])
                     secFiles = self._get_secondary_files(
                         secondaryFiles, input_value[num]['path'])
                     if secFiles:
                         remaped_job[inp][num]['secondaryFiles'] = secFiles
+                    self._rbx_dump(remaped_job[inp][num])
 
     def _resolve_rbx(self, rbx_file):
         rbx = from_url(rbx_file)
-        rbx['path'] = self._download(rbx.get('path'))
-        if rbx('secondaryFiles'):
+        startdir = os.path.dirname(rbx_file)
+        if not os.path.isabs(rbx.get('path')):
+            path = os.path.join([startdir, rbx.get('path')])
+        else:
+            path = rbx.get('path')
+        print(path)
+        rbx['path'] = self._download(path)
+        if rbx.get('secondaryFiles'):
             secFiles = self._get_secondary_files(
-                rbx('secondaryFiles'), rbx['path'])
+                rbx['secondaryFiles'], rbx['path'],
+                autodetect=False, prompt=False)
             if secFiles:
                 rbx['secondaryFiles'] = secFiles
+        return rbx
 
-    def _prompt_file(self):
-        pass
+    def _rbx_dump(self, input):
+        cont = raw_input('Do you want to create rbx.json for file %s? [Y/n] ' % input['path']).lower().strip()
+        if cont == 'y' or cont == '':
+            filename = input['path'] + '.rbx.json'
+            with open(filename, 'w') as f:
+                json.dump(input, f)
+                log.info('File %s created.', filename)
 
     @property
     def task_dir(self):
@@ -125,6 +143,7 @@ class InputRunner(object):
         try:
             r.raise_for_status()
         except Exception as e:
+
             raise ResourceUnavailable(str(e))
         dest = self._get_dest_for_url(url)
         with open(dest, 'wb') as fp:
@@ -181,32 +200,38 @@ class InputRunner(object):
             with open(input['path'] + '.meta') as m:
                 file_meta = json.load(m)
         else:
-            file_meta = self._metadata_prompt()
+            file_meta = self._metadata_prompt(os.path.basename(input['path']))
         job_meta = input.get('meta', {})
         file_meta.update(job_meta)
         return file_meta
 
-    def _metadata_prompt(self, metadata=None):
-        if not metadata:
+    def _metadata_prompt(self, input, metadata=None):
+        cont = ''
+        if metadata is None:
             metadata = {}
-            cont = raw_input('Metadata not found. Do you want to set it manually? [Y/n]').lower().strip()
-        else:
-            cont = raw_input('Do you want to add another key? [Y/n]').lower().strip()
+            cont = raw_input('Metadata for file %s not found. '
+                             'Do you want to set it manually? [Y/n] '
+                             % input).lower().strip()
         if cont == 'y' or cont == '':
             key = raw_input("Key: ")
+            if key == '':
+                return metadata
             value = raw_input("Value: ")
+            if value == '':
+                return metadata
             metadata[key] = value
-            return self._metadata_prompt(metadata)
-        elif cont == 'n':
-            return metadata
+            return self._metadata_prompt(input, metadata)
+        return metadata
 
-    def _get_secondary_files(self, secondaryFiles, input):
+    def _get_secondary_files(self, secondaryFiles, input, autodetect=True,
+                             prompt=True):
 
         def get_file_path(path, ext):
-            return ''.join([path, ext[1:]]) if ext.startswith('*') else \
-                ''.join(['.'.join(path.split('.')[:-1]), ext])
+            return ''.join(['.'.join(path.split('.')[:-1]), ext]) if \
+                ext.startswith('.') else ''.join([path, '.', ext])
 
         def secondary_files_autodetect(path):
+            log.info('Searching for additional files for file: %s', path)
             return [fn for fn in glob.glob(path + '.*')
                     if not os.path.basename(fn).endswith('.meta')]
 
@@ -215,11 +240,45 @@ class InputRunner(object):
                 path = get_file_path(input, sf)
                 log.info('Downloading: %s', path)
                 self._download(path, metasearch=False)
-                secondaryFiles[n] = path
-        else:
-            secondaryFiles = []
-        autodetected = secondary_files_autodetect(input)
-        for sf in autodetected:
-            if sf not in secondaryFiles:
-                secondaryFiles.append(sf)
+        if autodetect:
+            if not secondaryFiles:
+                secondaryFiles = []
+            autodetected = secondary_files_autodetect(input)
+            ad = []
+            names = [os.path.basename(f) for f in secondaryFiles]
+            for sf in autodetected:
+                sf = sf.replace(input + '.', '')
+                if sf not in names:
+                    ad.append(sf)
+            if ad:
+                cont = raw_input('Do you want to include autodetected '
+                                 'additional files for file %s %s? [Y/n] '
+                                 % (input, str(ad))).lower().strip()
+                if cont == 'y' or cont == '':
+                    log.info("Additional files %s included" % str(ad))
+                    secondaryFiles.extend(ad)
+        if prompt:
+            prompt = self._prompt_files(input, secFiles=secondaryFiles)
+            self._get_secondary_files(prompt, input, autodetect=False,
+                                      prompt=False)
         return secondaryFiles
+
+    def _prompt_files(self, input, prompt=None, secFiles=None):
+        cont = ''
+        if prompt is None:
+            prompt = []
+            cont = raw_input('Do you want to include some additional '
+                             'files for file %s %s? [Y/n] '
+                             % (input, str(secFiles))).lower().strip()
+        if cont == 'y' or cont == '':
+            ext = raw_input('Extension: ')
+            if ext == '':
+                return prompt
+            elif ext in secFiles:
+                log.error('Extension %s already included' % ext)
+            else:
+                prompt.append(ext)
+                secFiles.append(ext)
+            return self._prompt_files(input, prompt, secFiles=secFiles)
+        else:
+            return prompt
