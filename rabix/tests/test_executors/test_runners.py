@@ -10,6 +10,7 @@ from rabix.executors.runner import *
 
 logging.basicConfig(level=logging.DEBUG)
 
+
 @nottest
 def assert_execution(job, outputs):
     app = job['app']
