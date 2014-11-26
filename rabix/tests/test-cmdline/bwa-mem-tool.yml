@@ -23,7 +23,7 @@ tool:
         required: true
         adapter:
           order: 2
-          secondaryFiles: ['*.amb', '*.ann', '*.bwt', '*.pac', '*.sa']
+          secondaryFiles: ['amb', 'ann', 'bwt', 'pac', 'sa']
   #        transform: self.path.split('.').reverse().splice(1).reverse().join('.')
       reads:
         type: array

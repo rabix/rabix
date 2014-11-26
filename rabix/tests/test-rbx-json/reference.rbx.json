@@ -4,10 +4,10 @@
         "file_type": "fasta"
 },
 "secondaryFiles": [
-    "*.amb",
-    "*.ann",
-    "*.bwt",
-    "*.pac",
-    "*.sa"
+    "amb",
+    "ann",
+    "bwt",
+    "pac",
+    "sa"
     ]
 }
