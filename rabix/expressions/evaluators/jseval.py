@@ -29,6 +29,8 @@ class JSEval(evaluator.ExpressionEvalPlugin):
             return %s;}()
             '''
         exp = exp_tpl % (json.dumps(job), json.dumps(context), expression)
+        log.debug("exec code: %s" % exp)
+
         result = execjs.eval(exp)
         log.debug("result: %s" % result)
         return result

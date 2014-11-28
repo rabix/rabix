@@ -22,7 +22,7 @@ setup(
                             'rabix-tools = rabix.tools.cli:main'],
     },
     install_requires=requires,
-    package_data={'rabix': ['models/schema/*.json', 'cliche/expressions/evaluators/*.expr-plugin']},
+    package_data={'rabix': ['expressions/evaluators/*.expr-plugin']},
     long_description=io.open('README.md').read(),
     zip_safe=False,
     test_suite='tests',
