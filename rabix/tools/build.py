@@ -8,7 +8,7 @@ from os import getenv
 from os.path import abspath
 from docker.utils.utils import parse_repository_tag
 
-from rabix.executors.container import Container, find_image, get_image
+from rabix.docker.container import Container, find_image, get_image
 from rabix.common.errors import RabixError
 
 log = logging.getLogger(__name__)

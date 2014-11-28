@@ -1,10 +1,9 @@
-from os.path import dirname, join, abspath
-from nose.tools import nottest, raises
+from os.path import dirname, join
 
-from rabix.cliche.adapter import from_url
-from rabix.executors.cli import TEMPLATE_JOB
-from rabix.executors.cli import update_dict
-from rabix.executors.cli import get_inputs_from_file
+from rabix.common.ref_resolver import from_url
+from rabix.cli import TEMPLATE_JOB
+from rabix.cli import update_dict
+from rabix.cli import get_inputs_from_file
 
 
 def test_remap_job():

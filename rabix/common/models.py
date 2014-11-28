@@ -1,8 +1,4 @@
-import six
-
 from uuid import uuid4
-
-from rabix.common.errors import ValidationError
 
 
 class App(object):
@@ -43,6 +39,7 @@ class App(object):
     def to_dict(self):
         return {
             '@id': self.id,
+            '@type': 'App',
             'inputs': [inp.to_dict() for inp in self.inputs],
             'outputs': [outp.to_dict() for outp in self.outputs],
             'appDescription': self.app_description,
@@ -114,17 +111,6 @@ class Job(object):
             d.get('@id', str(uuid4())), context.from_dict(d['app']), d['inputs']
         )
 
-# def from_dict(d):
-#     if d is None:
-#         return None
-#     if isinstance(d, list):
-#         return [from_dict(e) for e in d]
-#     if not isinstance(d, dict):
-#         return d
-#     if not '@type' in d:
-#         return {k: from_dict(v) for k, v in six.iteritems(d)}
-#     type_name = d['@type']
-#     typ = TYPE_MAP.get(type_name)
-#     if not typ:
-#         raise ValidationError("Unknown type: %s" % type_name)
-#     return typ.from_dict(d)
+
+class Resource(object):
+    pass
