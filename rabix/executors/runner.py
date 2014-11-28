@@ -15,7 +15,7 @@ from rabix.cliche.adapter import Adapter
 from rabix.tests import infinite_loop, infinite_read
 from rabix.expressions.evaluator import Evaluator
 from rabix.common.errors import RabixError
-from rabix.workflows.workflow import Workflow
+from rabix.workflows.workflow_app import WorkflowApp
 from rabix.workflows.execution_graph import ExecutionGraph
 
 
@@ -52,6 +52,20 @@ def get_runner(tool, runners=RUNNERS):
     except AttributeError:
         raise Exception('Unknown executor %s' % cls_name)
     return cls
+
+
+def match_shape(schema, job):
+    jobs = [job]
+    for input, inp_scm in six.iteritems(schema['inputs']['properties']):
+        if inp_scm['type'] != 'array' and isinstance(job[input], list):
+            jobs_tmp = []
+            for job in jobs:
+                for val in job[input]:
+                    new_job = job.copy()
+                    new_job[input] = val
+                    jobs_tmp.append(new_job)
+            jobs = jobs_tmp
+    return jobs
 
 
 class BindDict(dict):
@@ -254,7 +268,7 @@ class WorkflowRunner(Runner):
         super(WorkflowRunner, self).__init__(tool, working_dir, stdout, stderr)
 
     def run_job(self, job):
-        wf = Workflow(self.tool['steps'])
+        wf = WorkflowApp(self.tool['steps'])
         eg = ExecutionGraph(wf, job)
         while eg.has_next():
             next = eg.next_job()

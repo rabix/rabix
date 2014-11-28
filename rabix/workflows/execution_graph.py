@@ -3,39 +3,22 @@ import logging
 
 from collections import defaultdict
 
-from rabix.workflows.workflow import \
-    IONode, InputRelation, Relation, OutputRelation
+from rabix.workflows.workflow_app import \
+    InputRelation, Relation, OutputRelation
 from rabix.common.errors import RabixError
+from rabix.common.models import IO
 
 log = logging.getLogger(__name__)
 
 
-# FIXME: should two scalars be merged into a list? Scalar be added to a list?
-# Does that depend on the schema? Should type mismatches be an error?
-def recursive_merge(dst, src):
-    for k, v in six.iteritems(src):
-        dst_val = dst.get(k)
-        if isinstance(v, dict):
-            if isinstance(dst_val, dict):
-                dst[k] = recursive_merge(dst_val, v)
-            else:
-                dst[k] = v
-        elif isinstance(v, list):
-            if isinstance(dst_val, list):
-                dst[k] = dst_val + v
-            else:
-                dst[k] = v
-    return dst
+class PartialJob(object):
 
-
-class Executable(object):
-
-    def __init__(self, node_id, tool, inputs, input_counts, outputs):
+    def __init__(self, node_id, app, input_connections, input_counts, outputs):
         self.result = None
         self.status = 'WAITING'
         self.node_id = node_id
-        self.tool = tool
-        self.job = {'inputs': inputs}
+        self.tool = app
+        self.job = {'inputs': input_connections}
         self.input_counts = input_counts
         self.outputs = outputs
 
@@ -109,13 +92,13 @@ class ExecutionGraph(object):
             if executable:
                 self.executables[node_id] = executable
 
-        workflow.hide_nodes(IONode)
+        workflow.hide_nodes(IO)
 
         self.order = graph.back_topo_sort()[1]
 
     def make_executable(self, node_id):
         node = self.graph.node_data(node_id)
-        if isinstance(node, IONode):
+        if isinstance(node, IO):
             return None
 
         out_edges = self.graph.out_edges(node_id)
@@ -132,7 +115,7 @@ class ExecutionGraph(object):
                 tail = self.graph.tail(out_edge)
                 outputs[rel.src_port] = OutRelation(self, tail)
 
-        executable = Executable(
+        executable = PartialJob(
             node_id, node.app, node.inputs, input_counts, outputs
         )
 
@@ -178,14 +161,14 @@ class ExecutionGraph(object):
 if __name__ == '__main__':
     from os.path import abspath, join
     from rabix.common.ref_resolver import from_url
-    from rabix.workflows.workflow import Workflow
+    from rabix.workflows.workflow_app import WorkflowApp
 
     def root_relative(path):
         return abspath(join(__file__, '../../../', path))
 
     doc = from_url(root_relative('examples/workflow.yml'))
 
-    wf = Workflow(doc['workflows']['add_one_mul_two']['steps'])
+    wf = WorkflowApp(doc['workflows']['add_one_mul_two']['steps'])
     job = doc['jobs']['batch_add_one_mul_two']
 
     eg = ExecutionGraph(wf, job)
