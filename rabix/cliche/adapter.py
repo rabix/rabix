@@ -133,20 +133,20 @@ class InputAdapter(object):
 
 
 class CLIJob(object):
-    def __init__(self, job_dict, tool_dict, path_mapper=lambda x: x):
+    def __init__(self, job_dict, app, path_mapper=lambda x: x):
         self.job = copy.deepcopy(job_dict)
-        self.tool = tool_dict
+        self.app = app
         self.path_mapper = path_mapper
         self.rewrite_paths(self.job['inputs'])
-        self.adapter = self.tool.get('adapter', {})
+        self.adapter = self.app.adapter or {}
         self.stdin = eval_resolve(self.adapter.get('stdin'), self.job)
         self.stdout = eval_resolve(self.adapter.get('stdout'), self.job)
         self.base_cmd = self.adapter.get('baseCmd', [])
         if isinstance(self.base_cmd, six.string_types):
             self.base_cmd = self.base_cmd.split(' ')
         self.args = self.adapter.get('args', [])
-        self.input_schema = self.tool.get('inputs', {})
-        self.output_schema = self.tool.get('outputs', {})
+        self.input_schema = self.app.inputs.schema
+        self.output_schema = self.app.outputs.schema
 
     def make_arg_list(self):
         adapters = [InputAdapter(a['value'], self.job, {}, a) for a in self.args]

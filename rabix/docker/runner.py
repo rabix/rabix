@@ -42,11 +42,11 @@ class BindDict(dict):
 class Runner(object):
     WORKING_DIR = '/work'
 
-    def __init__(self, tool, working_dir='./', stdout=None, stderr='out.err'):
+    def __init__(self, app, working_dir='./', stdout=None, stderr='out.err'):
         if not os.path.isabs(working_dir):
             working_dir = os.path.abspath(working_dir)
-        self.tool = tool
-        self.enviroment = tool.get('requirements', {}).get('environment')
+        self.app = app
+        self.enviroment = (app.requirements or {}).get('environment')
         self.working_dir = working_dir
         self.stdout = stdout
         self.stderr = stderr
@@ -64,14 +64,13 @@ class Runner(object):
         pass
 
     def provide_files(self, job, dir=None):
-        return InputRunner(job, self.tool.get('inputs', {}).get(
-            'properties'), dir)()
+        return InputRunner(job, self.app.inputs.schema['properties'], dir)()
 
 
 class DockerRunner(Runner):
-    def __init__(self, tool, working_dir='./', dockr=None, stderr=None):
-        stdout = tool.get('adapter', {}).get('stdout', None)
-        super(DockerRunner, self).__init__(tool, working_dir, stdout)
+    def __init__(self, app, working_dir='./', dockr=None, stderr=None):
+        stdout = (app.adapter or {}).get('stdout', None)
+        super(DockerRunner, self).__init__(app, working_dir, stdout)
         self.docker_client = dockr or docker.Client(os.getenv(
             "DOCKER_HOST", None), version='1.12')
 
@@ -80,7 +79,7 @@ class DockerRunner(Runner):
         volumes = {}
         binds = {}
 
-        inputs = self.tool.get('inputs', {}).get('properties')
+        inputs = self.app.inputs.schema['properties']
         input_values = remaped_job.get('inputs')
         self._remap(inputs, input_values, volumes, binds, remaped_job[
             'inputs'])
@@ -145,7 +144,7 @@ class DockerRunner(Runner):
 
     @property
     def _envvars(self):
-        envvars = self.tool.get('adapter', {}).get('environment', {})
+        envvars = (self.app.adapter or {}).get('environment', {})
         envlst = []
         for env, val in six.iteritems(envvars):
             envlst.append('='.join([env, val]))
@@ -177,7 +176,7 @@ class DockerRunner(Runner):
         volumes, binds, remaped_job = self._volumes(job)
         volumes['/' + job_dir] = {}
         binds['/' + job_dir] = os.path.abspath(job_dir)
-        adapter = CLIJob(remaped_job, self.tool)
+        adapter = CLIJob(remaped_job, self.app)
         container = self._run(['bash', '-c', adapter.cmd_line()],
                               vol=volumes, bind=binds, env=self._envvars,
                               work_dir='/' + job_dir)
@@ -202,8 +201,8 @@ class DockerRunner(Runner):
 
 
 class NativeRunner(Runner):
-    def __init__(self, tool, working_dir='./', stdout=None, stderr=None):
-        super(NativeRunner, self).__init__(tool, working_dir, stdout, stderr)
+    def __init__(self, app, working_dir='./', stdout=None, stderr=None):
+        super(NativeRunner, self).__init__(app, working_dir, stdout, stderr)
 
     def run_job(self, job):
         pass
