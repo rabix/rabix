@@ -149,13 +149,3 @@ def to_json(obj, fp=None):
 
 def from_url(url, base_url=None):
     return loader.load(url, base_url)
-
-
-def test_tmap():
-    path = os.path.join(os.path.dirname(__file__), '../examples/tmap.yml')
-    expected_path = os.path.join(os.path.dirname(__file__),
-                                 '../examples/tmap_resolved.json')
-    doc = loader.load(path)
-    with open(expected_path) as fp:
-        expected = json.load(fp)
-    assert doc == expected

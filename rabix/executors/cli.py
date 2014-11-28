@@ -260,8 +260,10 @@ def main():
         if args['--inp-file']:
             startdir = os.path.dirname(args.get('--inp-file'))
             input_file = from_url(args.get('--inp-file'))
-            update_dict(job['inputs'], get_inputs_from_file(tool, input_file, startdir)[
-                'inputs'])
+            update_dict(
+                job['inputs'],
+                get_inputs_from_file(tool, input_file, startdir)['inputs']
+            )
 
         tool_inputs_usage = make_tool_usage_string(
             tool, template=TOOL_TEMPLATE, inp=job['inputs'])
