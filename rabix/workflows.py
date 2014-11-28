@@ -28,7 +28,8 @@ class Step(object):
 
     def to_dict(self):
         return {
-            "@id": self.id,
+            "id": self.id,
+            "@type": "Step",
             "app": self.app.to_dict(),
             "inputs": self.inputs,
             "outputs": self.outputs
@@ -37,7 +38,7 @@ class Step(object):
     @classmethod
     def from_dict(cls, context, d):
         return cls(
-            d["@id"],
+            d["id"],
             context.from_dict(d['app']),
             context.from_dict(d.get('inputs')),
             context.from_dict(d.get('outputs')))
@@ -54,6 +55,7 @@ class WorkflowApp(App):
         self.inputs = inputs or []
         self.outputs = outputs or []
         self.executor = executor
+        self.steps = steps
 
         for step in steps:
             self.add_node(step.id,  AppNode(step.app, {}))
@@ -125,6 +127,14 @@ class WorkflowApp(App):
             next = eg.next_job()
             self.executor.execute(next, eg.job_done)
         return eg.outputs
+
+    def to_dict(self):
+        d = super(WorkflowApp, self).to_dict()
+        d.update({
+            "@type": "Workflow",
+            'steps': [step.to_dict() for step in self.steps]
+        })
+        return d
 
     @classmethod
     def from_dict(cls, context, d):

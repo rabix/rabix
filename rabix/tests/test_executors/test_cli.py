@@ -1,14 +1,14 @@
 import os
 import sys
 import json
-import docker
 import shutil
 
+import docker
 from nose.tools import nottest, raises
 
-from rabix.executors.container import ensure_image
+from rabix.docker.container import ensure_image
 from rabix.tests import mock_app_bad_repo, mock_app_good_repo
-from rabix.executors.cli import get_tool, main, dry_run_parse
+from rabix.cli import get_tool, main, dry_run_parse
 
 
 @nottest
