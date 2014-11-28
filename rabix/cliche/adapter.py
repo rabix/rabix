@@ -112,7 +112,7 @@ class InputAdapter(object):
     def as_dict(self, mix_with=None):
         sch = lambda key: self.schema.get('properties', {}).get(key, {})
         adapters = [InputAdapter(v, self.job, sch(k), key=k) for k, v in six.iteritems(self.value)]
-        adapters = (mix_with or []) + filter(lambda adp: adp.has_adapter, adapters)
+        adapters = (mix_with or []) + [adp for adp in adapters if adp.has_adapter]
         return reduce(operator.add, [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)], [])
 
     def as_list(self):
@@ -158,7 +158,7 @@ class CLIJob(object):
         adapters = [InputAdapter(a['value'], self.job, {}, a) for a in self.args]
         args = InputAdapter(self.job['inputs'], self.job, self.input_schema).as_dict(adapters)
         base_cmd = [eval_resolve(item, self.job) for item in self.base_cmd]
-        return map(six.text_type, base_cmd + args)
+        return [six.text_type(arg) for arg in base_cmd + args]
 
     def cmd_line(self):
         a = self.make_arg_list()
