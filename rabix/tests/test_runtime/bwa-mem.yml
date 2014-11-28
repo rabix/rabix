@@ -1,6 +1,7 @@
 # JobOrder
 $job:
-  tool:
+  "@type": Job
+  app:
     $ref: "#tool"
   inputs: # dict that matches the schema defined in tool
     reference:
@@ -28,6 +29,7 @@ $job:
 
 # Tool
 tool:
+  "@type": Docker
   softwareDescription: {}
   documentAuthor: boysha
   requirements:

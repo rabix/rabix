@@ -26,10 +26,10 @@ class CliApp(App):
         pass
 
     def to_dict(self):
-        d = super(CliApp).to_dict()
+        d = super(CliApp, self).to_dict()
         d.update({
             "@type": "CliApp",
-            'adapter': self.adapter.to_dict(),
+            'adapter': self.adapter,
             'annotations': self.annotations,
             'platform_features': self.platform_features
         })
