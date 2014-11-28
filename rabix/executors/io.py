@@ -9,6 +9,7 @@ import requests
 import glob
 
 from six.moves.urllib import parse as urlparse
+from six.moves import input as raw_input
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.ref_resolver import from_url
 
@@ -38,7 +39,7 @@ class InputRunner(object):
         input_values = self.job.get('inputs')
         if self.inputs:
             self._resolve(self.inputs, input_values, remaped_job['inputs'])
-        print remaped_job
+        print(remaped_job)
         return remaped_job
 
     def _resolve(self, inputs, input_values, remaped_job):
