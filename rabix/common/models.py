@@ -82,12 +82,13 @@ class IO(object):
 
 class Job(object):
 
-    def __init__(self, job_id, app, inputs):
+    def __init__(self, job_id, app, inputs, allocated_resources):
         # if not app.validate_inputs(inputs):
         #     raise ValidationError("Invalid inputs for application %s" % app.id)
         self.id = job_id
         self.app = app
         self.inputs = inputs
+        self.allocated_resources = allocated_resources
 
     def run(self):
         return self.app.run(self)
@@ -97,7 +98,8 @@ class Job(object):
             '@id': self.id,
             '@type': 'Job',
             'app': self.app.to_dict(),
-            'inputs': self.inputs
+            'inputs': self.inputs,
+            'allocatedResources': self.allocated_resources
         }
 
     def __str__(self):
@@ -108,7 +110,8 @@ class Job(object):
     @classmethod
     def from_dict(cls, context, d):
         return cls(
-            d.get('@id', str(uuid4())), context.from_dict(d['app']), d['inputs']
+            d.get('@id', str(uuid4())), context.from_dict(d['app']),
+            d['inputs'], d.get('allocatedResources')
         )
 
 
