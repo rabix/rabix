@@ -1,57 +1,20 @@
 import os
-import docker
-import six
 import json
 import logging
 import uuid
 import stat
 import copy
-import importlib
 
+import docker
+import six
 
-from rabix.executors.io import InputRunner
-from rabix.executors.container import Container, ensure_image
+from rabix.common.io import InputRunner
+from rabix.docker.container import Container, ensure_image
 from rabix.cliche.adapter import CLIJob
 from rabix.tests import infinite_loop, infinite_read
-from rabix.expressions.evaluator import Evaluator
-from rabix.common.errors import RabixError
-from rabix.workflows.workflow_app import WorkflowApp
-from rabix.workflows.execution_graph import ExecutionGraph
 
 
 log = logging.getLogger(__name__)
-
-RUNNERS = {
-    "docker": "rabix.executors.runner.DockerRunner",
-    "native": "rabix.executors.runner.NativeRunner",
-    "Script": "rabix.executors.runner.ExpressionRunner",
-    "Workflow": "rabix.executors.runner.WorkflowRunner"
-}
-
-
-def run(tool, job):
-    runner = get_runner(tool)
-    return runner(tool).run_job(job)
-
-
-def get_runner(tool, runners=RUNNERS):
-    runner_path = (
-        tool.get("@type") or
-        tool["requirements"]["environment"]["container"]["type"]
-    )
-    clspath = runners.get(runner_path, None)
-    if not clspath:
-        raise Exception('Runner not specified')
-    mod_name, cls_name = clspath.rsplit('.', 1)
-    try:
-        mod = importlib.import_module(mod_name)
-    except ImportError:
-        raise Exception('Unknown module %s' % mod_name)
-    try:
-        cls = getattr(mod, cls_name)
-    except AttributeError:
-        raise Exception('Unknown executor %s' % cls_name)
-    return cls
 
 
 def match_shape(schema, job):
@@ -245,42 +208,6 @@ class NativeRunner(Runner):
     def run_job(self, job):
         pass
 
-
-class ExpressionRunner(Runner):
-
-    def __init__(self, tool, working_dir='./', stdout=None, stderr='out.err'):
-        super(ExpressionRunner, self).__init__(
-            tool, working_dir, stdout, stderr
-        )
-        self.evaluator = Evaluator()
-
-    def run_job(self, job):
-        script = self.tool['script']
-        if isinstance(script, six.string_types):
-            lang = 'javascript'
-            expr = script
-        elif isinstance(script, dict):
-            lang = script['lang']
-            expr = script['value']
-        else:
-            raise RabixError("invalid script")
-
-        result = self.evaluator.evaluate(lang, expr, job, None)
-        return result
-
-
-class WorkflowRunner(Runner):
-    def __init__(self, tool, working_dir='./', stdout=None, stderr='out.err'):
-        super(WorkflowRunner, self).__init__(tool, working_dir, stdout, stderr)
-
-    def run_job(self, job):
-        wf = WorkflowApp(self.tool['steps'])
-        eg = ExecutionGraph(wf, job)
-        while eg.has_next():
-            next = eg.next_job()
-            result = run(next.tool, next.job)
-            next.propagate_result(result)
-        return eg.outputs
 
 if __name__ == '__main__':
     from multiprocessing import Process

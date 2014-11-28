@@ -5,10 +5,11 @@ import logging
 import six
 import collections
 from rabix import __version__ as version
-from rabix.executors.runner import get_runner
 from rabix.cliche.adapter import CLIJob
 from rabix.common.util import set_log_level
 from rabix.common.ref_resolver import from_url
+
+from rabix.docker.runner import DockerRunner
 
 TEMPLATE_RESOURCES = {
     "cpu": 4,
@@ -242,8 +243,7 @@ def main():
         print("Couldn't find tool.")
         return
 
-    runner = get_runner(tool)
-    runner = runner(tool)
+    runner = DockerRunner(tool)
 
     if dry_run_args['--install']:
         runner.install()

@@ -39,7 +39,8 @@ class ScriptApp(App):
     def to_dict(self):
         d = super(ScriptApp, self).to_dict()
         d.update({
-            'script': self.script
+            "@type": "Script",
+            "script": self.script
         })
         return d
 

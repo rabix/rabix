@@ -6,7 +6,7 @@ from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
 import rabix.cliche.cli_app as cli_app
 import rabix.expressions.script_app as script_app
-import rabix.workflows.workflow_app as workflow_app
+import rabix.workflows as workflow_app
 import rabix.schema as schema
 from rabix.executor import Executor
 
