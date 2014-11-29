@@ -7,7 +7,7 @@ class Executor(object):
         pass
 
     def execute(self, jobs, callback=None):
-        # resources, instances, parallelization, scheduling, yada yada...
+        # TODO: resources, instances, parallelization, scheduling, yada yada...
         for job in wrap_in_list(jobs):
             result = job.run()
             if callback:

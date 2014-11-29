@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from rabix.cliche.cli_app import CliApp
+from rabix.cli.cli_app import CliApp
 from rabix.docker.runner import DockerRunner
 from rabix.schema import IOSchema
 
@@ -35,7 +35,9 @@ class DockerApp(CliApp):
     def to_dict(self):
         d = super(DockerApp, self).to_dict()
         d.update({
-            "@type": "Docker"
+            "@type": "Docker",
+            "inputs": self.inputs.to_dict(),
+            "outputs": self.outputs.to_dict()
         })
         return d
 

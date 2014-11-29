@@ -5,7 +5,7 @@ import argparse
 import os
 
 from rabix.common.ref_resolver import from_url
-from rabix.cliche.adapter import CLIJob
+from rabix.cli.adapter import CLIJob
 
 
 def main():

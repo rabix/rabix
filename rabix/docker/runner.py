@@ -10,7 +10,7 @@ import six
 
 from rabix.common.io import InputRunner
 from rabix.docker.container import Container, ensure_image
-from rabix.cliche.adapter import CLIJob
+from rabix.cli.adapter import CLIJob
 from rabix.tests import infinite_loop, infinite_read
 
 
