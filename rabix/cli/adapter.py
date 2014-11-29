@@ -12,7 +12,6 @@ from six.moves import reduce
 from rabix.common.ref_resolver import resolve_pointer
 from rabix.expressions import Evaluator
 
-
 ev = Evaluator()
 log = logging.getLogger(__name__)
 

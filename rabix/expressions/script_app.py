@@ -53,7 +53,3 @@ class ScriptApp(App):
                    app_description=d.get('appDescription'),
                    annotations=d.get('annotations'),
                    platform_features=d.get('platform_features'))
-
-
-def init(context):
-    context.add_type('Script', ScriptApp.from_dict)

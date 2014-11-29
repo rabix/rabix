@@ -18,7 +18,7 @@ setup(
     include_package_data=True,
     packages=find_packages(),
     entry_points={
-        'console_scripts': ['rabix = rabix.cli:main',
+        'console_scripts': ['rabix = rabix.main:main',
                             'rabix-tools = rabix.tools.cli:main'],
     },
     install_requires=requires,

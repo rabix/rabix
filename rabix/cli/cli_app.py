@@ -46,7 +46,3 @@ class CliApp(App):
                    adapter=context.from_dict(d.get('adapter')),
                    software_description=d.get('softwareDescription'),
                    requirements=d.get('requirements'))
-
-
-def init(context):
-    context.add_type('CliApp', CliApp.from_dict)
