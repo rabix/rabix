@@ -1,9 +1,9 @@
 from os.path import dirname, join
 
 from rabix.common.ref_resolver import from_url
-from rabix.cli import TEMPLATE_JOB
-from rabix.cli import update_dict
-from rabix.cli import get_inputs_from_file
+from rabix.main import TEMPLATE_JOB
+from rabix.main import update_dict
+from rabix.main import get_inputs_from_file
 
 
 def test_remap_job():

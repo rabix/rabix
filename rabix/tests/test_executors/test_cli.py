@@ -8,7 +8,7 @@ from nose.tools import nottest, raises
 
 from rabix.docker.container import ensure_image
 from rabix.tests import mock_app_bad_repo, mock_app_good_repo
-from rabix.cli import get_tool, main, dry_run_parse
+from rabix.main import get_tool, main, dry_run_parse
 
 
 @nottest

@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-import os
-import copy
-import operator
-import glob
-
-import six
 import copy
 import operator
 import six
@@ -16,8 +9,8 @@ from jsonschema import Draft4Validator
 import jsonschema.exceptions
 
 from six.moves import reduce
-from rabix.common.ref_resolver import from_url
-from rabix.expressions.evaluator import Evaluator
+from rabix.common.ref_resolver import resolve_pointer
+from rabix.expressions import Evaluator
 
 ev = Evaluator()
 log = logging.getLogger(__name__)

@@ -23,4 +23,6 @@ def test_workflow():
     doc = from_url(path)
     tests = doc['tests']
     for test_name, test in six.iteritems(tests):
-        yield assert_execution, context.from_dict(test['job']), test['outputs']
+        features = test.get('requiresFeatures', [])
+        if 'map' not in features:
+            yield assert_execution, context.from_dict(test['job']), test['outputs']
