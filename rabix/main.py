@@ -3,37 +3,21 @@ import docopt
 import sys
 import logging
 import six
-import collections
 
 from rabix import __version__ as version
-from rabix.common.util import set_log_level
+from rabix.common.util import set_log_level, dot_update_dict
 from rabix.common.models import Job, IO
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
 from rabix.cli.adapter import CLIJob
 from rabix.executor import Executor
+from rabix.cli import CliApp
 
 import rabix.cli
-import rabix.docker.docker_app as docker_app
+import rabix.docker
 import rabix.expressions
 import rabix.workflows
 import rabix.schema
-
-
-TYPE_MAP = {
-    'Job': Job.from_dict,
-    'IO': IO.from_dict
-}
-
-
-def init_context():
-    executor = Executor()
-    context = Context(TYPE_MAP, executor)
-
-    for module in rabix.cli, rabix.expressions, rabix.workflows, rabix.schema, docker_app:
-        module.init(context)
-
-    return context
 
 
 TEMPLATE_RESOURCES = {
@@ -88,30 +72,53 @@ def make_resources_usage_string(template=TEMPLATE_RESOURCES):
     return ' '.join(param_str)
 
 
-def update_dict(dct, new_dct):
-    for key, val in six.iteritems(new_dct):
-        t = dct
-        if '.' in key:
-            for k in key.split('.'):
-                if k == key.split('.')[-1]:
-                    if isinstance(val, collections.Mapping):
-                        t = t.setdefault(k, {})
-                        update_dict(t, new_dct[key])
-                    else:
-                        t[k] = val
-                else:
-                    if not isinstance(t.get(k), collections.Mapping):
-                        t[k] = {}
-                    t = t.setdefault(k, {})
-        else:
-            if isinstance(val, collections.Mapping):
-                t = t.setdefault(key, {})
-                update_dict(t, new_dct[key])
-            else:
-                t[key] = val
+TYPE_MAP = {
+    'Job': Job.from_dict,
+    'IO': IO.from_dict
+}
 
 
-def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp=None):
+def init_context():
+    executor = Executor()
+    context = Context(TYPE_MAP, executor)
+
+    for module in (
+            rabix.cli, rabix.expressions, rabix.workflows,
+            rabix.schema, rabix.docker
+    ):
+        module.init(context)
+
+    return context
+
+
+def fix_types(tool):
+    requirements = tool.get('requirements')
+
+    # container type
+    if (requirements and
+            isinstance(requirements.get('container'), dict) and
+            requirements['container'].get('type') == 'docker'):
+        requirements['container']['@type'] = 'Docker'
+
+    # tool type
+    if '@type' not in tool:
+        tool['@type'] = 'CommandLineTool'
+
+    if tool['@type'] == 'Workflow':
+        for step in tool['steps']:
+            fix_types(step['app'])
+
+    # schema type
+    inputs = tool.get('inputs')
+    if isinstance(inputs, dict) and '@type' not in inputs:
+        inputs['@type'] = 'JsonSchema'
+
+    outputs = tool.get('outputs')
+    if isinstance(outputs, dict) and '@type' not in outputs:
+        outputs['@type'] = 'JsonSchema'
+
+
+def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
 
     inp = inp or {}
 
@@ -131,9 +138,10 @@ def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp=None):
                 usage_str.append(arg if required(req, k, inp)
                                  else '[%s]' % arg)
             else:
-                arg = '--%s=<array_%s_separator(%s)>...' % (k, v.get(
-                    'items').get('type'), v.get('adapter').get(
-                    'itemSeparator'))
+                arg = '--%s=<array_%s_separator(%s)>...' % (
+                    k, v.get('items', {}).get('type'),
+                    v.get('adapter', {}).get('itemSeparator')
+                )
                 param_str.append(arg if required(req, k, inp)
                                  else '[%s]' % arg)
         elif v.get('type') == 'file':
@@ -146,13 +154,13 @@ def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp=None):
                              else '[%s]' % arg)
 
     def resolve_object(name, obj, usage_str, param_str, inp, root=False):
-        properties = obj.get('properties')
-        required = obj.get('required')
+        properties = obj.get('properties', {})
+        required = obj.get('required', [])
         for k, v in six.iteritems(properties):
             key = k if root else '.'.join([name, k])
             resolve(key, v, required, usage_str, param_str, inp)
 
-    inputs = tool.get('inputs')
+    inputs = app.inputs.schema
     usage_str = []
     param_str = []
 
@@ -162,36 +170,40 @@ def make_tool_usage_string(tool, template=TOOL_TEMPLATE, inp=None):
                            inputs=' '.join(usage_str))
 
 
-def resolve(k, v, nval, inp, startdir=None):
+def resolve_values(k, v, nval, inputs, startdir=None):
     if isinstance(nval, list):
         if v.get('type') != 'array':
             raise Exception('Too many values')
-        inp[k] = []
+        inputs[k] = []
         for nv in nval:
             if (v['items']['type'] == 'file' or v['items'][
                     'type'] == 'directory'):
                 if startdir:
                     nv = os.path.join(startdir, nv)
-                inp[k].append({'path': nv})
+                inputs[k].append({'path': nv})
             else:
-                inp[k].append(nv)
+                inputs[k].append(nv)
     else:
         if v['type'] == 'file' or v['type'] == 'directory':
             if startdir:
                 nval = os.path.join(startdir, nval)
-            inp[k] = {'path': nval}
+            inputs[k] = {'path': nval}
+        elif v['type'] == 'integer':
+            inputs[k] = int(nval)
+        elif v['type'] == 'number':
+            inputs[k] = float(nval)
         else:
-            inp[k] = nval
+            inputs[k] = nval
 
 
 def get_inputs_from_file(tool, args, startdir):
     inp = {}
     inputs = tool.get('inputs', {}).get('properties')  # for inputs
-    resolve_objects(inp, inputs, args, startdir)
+    resolve_nested_paths(inp, inputs, args, startdir)
     return {'inputs': inp}
 
 
-def resolve_objects(inp, inputs, args, startdir):
+def resolve_nested_paths(inp, inputs, args, startdir):
     for k, v in six.iteritems(inputs):
         nval = args.get(k)
         if nval:
@@ -200,20 +212,23 @@ def resolve_objects(inp, inputs, args, startdir):
                 inp[k] = []
                 for sk, sv in enumerate(nval):
                     inp[k].append({})
-                    resolve_objects(inp[k][sk], inputs[k].get('items').get(
-                        'properties'), sv, startdir)
+                    resolve_nested_paths(
+                        inp[k][sk],
+                        inputs[k].get('items').get('properties'),
+                        v, startdir
+                    )
             else:
-                resolve(k, v, nval, inp, startdir)
+                resolve_values(k, v, nval, inp, startdir)
 
 
-def get_inputs(tool, args):
-    inp = {}
-    inputs = tool.get('inputs', {}).get('properties')
-    for k, v in six.iteritems(inputs):
+def get_inputs(app, args):
+    inputs = {}
+    properties = app.inputs.schema['properties']
+    for k, v in six.iteritems(properties):
         nval = args.get('--' + k) or args.get(k)
         if nval:
-            resolve(k, v, nval, inp)
-    return {'inputs': inp}
+            resolve_values(k, v, nval, inputs)
+    return {'inputs': inputs}
 
 
 def update_paths(job, inputs):
@@ -229,7 +244,7 @@ def get_tool(args):
 
 def dry_run_parse(args=None):
     args = args or sys.argv[1:]
-    args = args + ['an_input']
+    args += ['an_input']
     usage = USAGE.format(resources=make_resources_usage_string(),
                          inputs='<inputs>')
     try:
@@ -246,7 +261,7 @@ def main():
 
     usage = USAGE.format(resources=make_resources_usage_string(),
                          inputs='<inputs>')
-    tool_usage = usage
+    app_usage = usage
 
     if len(sys.argv) == 2 and \
             (sys.argv[1] == '--help' or sys.argv[1] == '-h'):
@@ -268,8 +283,10 @@ def main():
         print("Couldn't find tool.")
         return
 
+    fix_types(tool)
+
     context = init_context()
-    app = docker_app.DockerApp.from_dict(context, tool)
+    app = context.from_dict(tool)
 
     if dry_run_args['--install']:
         app.install()
@@ -284,35 +301,38 @@ def main():
         if args['--inp-file']:
             startdir = os.path.dirname(args.get('--inp-file'))
             input_file = from_url(args.get('--inp-file'))
-            update_dict(
+            dot_update_dict(
                 job['inputs'],
                 get_inputs_from_file(tool, input_file, startdir)['inputs']
             )
 
-        tool_inputs_usage = make_tool_usage_string(
-            tool, template=TOOL_TEMPLATE, inp=job['inputs'])
-        tool_usage = make_tool_usage_string(tool, USAGE, job['inputs'])
+        app_inputs_usage = make_app_usage_string(
+            app, template=TOOL_TEMPLATE, inp=job['inputs'])
+        app_usage = make_app_usage_string(app, USAGE, job['inputs'])
 
-        tool_inputs = docopt.docopt(tool_inputs_usage, args['<inputs>'])
+        app_inputs = docopt.docopt(app_inputs_usage, args['<inputs>'])
 
         if args['--help']:
-            print(tool_usage)
+            print(app_usage)
             return
 
-        inp = get_inputs(tool, tool_inputs)
+        inp = get_inputs(app, app_inputs)
         job = update_paths(job, inp)
 
         if args['--print-cli']:
+            if not isinstance(app, CliApp):
+                print(dry_run_args['<tool>'] + " is not a command line app")
+                return
             adapter = CLIJob(job, tool)
             print(adapter.cmd_line())
             return
 
         job['@id'] = args.get('--dir')
         job['app'] = app.to_dict()
-        app.run(Job.from_dict(context, job))
+        print(app.run(Job.from_dict(context, job)))
 
     except docopt.DocoptExit:
-        print(tool_usage)
+        print(app_usage)
         return
 
 
