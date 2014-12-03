@@ -1,7 +1,7 @@
 import os
 from os.path import splitext
 
-from rabix.cliche.ref_resolver import from_url, resolve_pointer
+from rabix.common.ref_resolver import from_url, resolve_pointer
 
 # TODO: lists, transforms
 
