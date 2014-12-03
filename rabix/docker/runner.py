@@ -184,6 +184,7 @@ class DockerRunner(Runner):
                                             self.stderr]))
         if not container.is_success():
             raise RuntimeError("err %s" % container.get_stderr())
+
         with open(os.path.abspath(job_dir) + '/result.json', 'w') as f:
             outputs = adapter.get_outputs(os.path.abspath(job_dir))
             for k, v in six.iteritems(outputs):

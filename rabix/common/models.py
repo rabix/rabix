@@ -50,8 +50,9 @@ class App(object):
 
 class IO(object):
 
-    def __init__(self, port_id, depth=0, validator=None, required=False,
-                 annotations=None):
+    def __init__(self, port_id, depth=0, validator=None, constructor=None,
+                 required=False, annotations=None):
+
         self.id = port_id
         self.depth = depth
         self.validator = validator
