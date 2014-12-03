@@ -9,7 +9,8 @@ six==1.8.0
 PyExecJS==1.0.4
 Yapsy==1.10.423
 pyxdg==0.25
+altgraph==0.12
 
-nose==1.3.0
+nose
 pep8==1.5.7
 mock==1.0.1

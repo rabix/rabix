@@ -1,0 +1,243 @@
+{
+    "mixins": {
+        "global": {
+            "reads": {
+                "type": "file",
+                "required": true,
+                "adapter": {
+                    "streamable": true,
+                    "stdin": true
+                }
+            }
+        },
+        "algoCommon": {
+            "minSeqLen": {
+                "type": "integer",
+                "adapter": {
+                    "order": 2,
+                    "prefix": "--min-seq-length"
+                }
+            },
+            "maxSeqLen": {
+                "type": "integer",
+                "adapter": {
+                    "order": 2,
+                    "prefix": "--max-seq-length"
+                }
+            }
+        },
+        "map1": {
+            "$mixin": "#mixins/algoCommon",
+            "seedLength": {
+                "type": "integer",
+                "minimum": -1,
+                "adapter": {
+                    "prefix": "--seed-length",
+                    "order": 2
+                }
+            }
+        },
+        "map2": {
+            "$mixin": "#mixins/algoCommon",
+            "maxSeedHits": {
+                "type": "integer",
+                "minimum": -1,
+                "adapter": {
+                    "prefix": "--max-seed-hits",
+                    "order": 2
+                }
+            }
+        },
+        "map3": {
+            "$mixin": "#mixins/algoCommon",
+            "fwdSearch": {
+                "type": "boolean",
+                "adapter": {
+                    "prefix": "--fwd-search",
+                    "order": 2
+                }
+            }
+        },
+        "map4": {
+            "$mixin": "#mixins/algoCommon",
+            "seedStep": {
+                "type": "integer",
+                "minimum": -1,
+                "adapter": {
+                    "prefix": "--seed-step",
+                    "order": 2
+                }
+            }
+        }
+    },
+    "algos": {
+        "map1": {
+            "type": "object",
+            "required": [
+                "algo"
+            ],
+            "properties": {
+                "algo": {
+                    "type": "string",
+                    "enum": [
+                        "map1"
+                    ],
+                    "adapter": {
+                        "order": 0
+                    }
+                },
+                "$mixin": "#mixins/map1"
+            }
+        },
+        "map2": {
+            "type": "object",
+            "required": [
+                "algo"
+            ],
+            "properties": {
+                "algo": {
+                    "type": "string",
+                    "enum": [
+                        "map2"
+                    ],
+                    "adapter": {
+                        "order": 0
+                    }
+                },
+                "$mixin": "#mixins/map2"
+            }
+        },
+        "map3": {
+            "type": "object",
+            "required": [
+                "algo"
+            ],
+            "properties": {
+                "algo": {
+                    "type": "string",
+                    "enum": [
+                        "map3"
+                    ],
+                    "adapter": {
+                        "order": 0
+                    }
+                },
+                "$mixin": "#mixins/map3"
+            }
+        },
+        "map4": {
+            "type": "object",
+            "required": [
+                "algo"
+            ],
+            "properties": {
+                "algo": {
+                    "type": "string",
+                    "enum": [
+                        "map4"
+                    ],
+                    "adapter": {
+                        "order": 0
+                    }
+                },
+                "$mixin": "#mixins/map4"
+            }
+        }
+    },
+    "mapall": {
+        "requirements": {
+            "environment": {
+                "container": {
+                    "type": "docker",
+                    "uri": "docker://images.sbgenomics.com/rabix/bwa#9d3b9b0359cf",
+                    "imageId": "9d3b9b0359cf"
+                }
+            }
+        },
+        "inputs": {
+            "type": "object",
+            "required": [
+                "stages"
+            ],
+            "properties": {
+                "$mixin": "#mixins/global",
+                "stages": {
+                    "type": "array",
+                    "adapter": {
+                        "order": 2
+                    },
+                    "minItems": 1,
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "stageId",
+                            "algos"
+                        ],
+                        "properties": {
+                            "stageId": {
+                                "type": "integer",
+                                "adapter": {
+                                    "prefix": "stage",
+                                    "order": 0,
+                                    "separator": ""
+                                }
+                            },
+                            "stageOption1": {
+                                "type": "boolean",
+                                "adapter": {
+                                    "prefix": "-n",
+                                    "order": 1
+                                }
+                            },
+                            "algos": {
+                                "type": "array",
+                                "adapter": {
+                                    "order": 2
+                                },
+                                "minItems": 1,
+                                "items": {
+                                    "type": "object",
+                                    "oneOf": [
+                                        {
+                                            "$mixin": "#algos/map1"
+                                        },
+                                        {
+                                            "$mixin": "#algos/map2"
+                                        },
+                                        {
+                                            "$mixin": "#algos/map3"
+                                        },
+                                        {
+                                            "$mixin": "#algos/map4"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "outputs": {
+            "type": "object",
+            "required": [
+                "sam"
+            ],
+            "properties": {
+                "sam": {
+                    "type": "file",
+                    "adapter": {
+                        "glob": "output.sam"
+                    }
+                }
+            }
+        },
+        "adapter": {
+            "baseCmd": [
+                "tmap",
+                "mapall"
+            ],
+            "stdout": "output.sam"
+        }
+    }
+}

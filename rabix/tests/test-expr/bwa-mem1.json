@@ -78,11 +78,11 @@
                     "adapter": {
                         "order": 2,
                         "secondaryFiles": [
-                            "*.amb",
-                            "*.ann",
-                            "*.bwt",
-                            "*.pac",
-                            "*.sa"
+                            "amb",
+                            "ann",
+                            "bwt",
+                            "pac",
+                            "sa"
                         ]
                     }
                 },
@@ -91,11 +91,11 @@
                     "required": true,
                     "minItems": 1,
                     "maxItems": 2,
+                    "adapter": {
+                        "streamable": true
+                    },
                     "items": {
-                        "type": "file",
-                        "adapter": {
-                            "streamable": true
-                        }
+                        "type": "file"
                     }
                 },
                 "minimum_seed_length": {
@@ -132,7 +132,7 @@
                     "adapter": {
                         "stdout": true,
                         "glob": "output.sam",
-                        "streamable": "Yes",
+                        "streamable": true,
                         "meta": {
                             "file_type": "sam",
                             "expr_test": {

@@ -6,9 +6,9 @@ from os.path import isfile
 
 from rabix import __version__ as version
 from rabix.common.errors import RabixError
-from rabix.cliche.ref_resolver import Loader
+from rabix.common.ref_resolver import Loader
 from rabix.common.util import set_log_level
-from rabix.tools.steps import run_steps
+from rabix.tools.build import run_steps
 
 
 log = logging.getLogger(__name__)
