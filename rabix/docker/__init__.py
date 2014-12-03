@@ -1,4 +1,4 @@
-from .docker_app import DockerContainer
+from rabix.docker.docker_app import DockerContainer
 
 DOCKER_API_VERSION = '1.12'
 DEFAULT_TIMEOUT_SECONDS = 60

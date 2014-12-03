@@ -39,7 +39,6 @@ class InputRunner(object):
         input_values = self.job.get('inputs')
         if self.inputs:
             self._resolve(self.inputs, input_values, remaped_job['inputs'])
-        print(remaped_job)
         return remaped_job
 
     def _resolve(self, inputs, input_values, remaped_job):
@@ -105,7 +104,6 @@ class InputRunner(object):
             path = os.path.join([startdir, rbx.get('path')])
         else:
             path = rbx.get('path')
-        print(path)
         rbx['path'] = self._download(path)
         if rbx.get('secondaryFiles'):
             secFiles = self._get_secondary_files(
