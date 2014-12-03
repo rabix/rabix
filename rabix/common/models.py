@@ -50,13 +50,14 @@ class App(object):
 
 class IO(object):
 
-    def __init__(self, port_id, depth=0, validator=None, required=False,
-                 annotations=None):
+    def __init__(self, port_id, depth=0, validator=None, constructor=None,
+                 required=False, annotations=None):
         self.id = port_id
         self.depth = depth
         self.validator = validator
         self.required = required
         self.annotations = annotations
+        self.constructor = constructor or str
 
     def validate(self, value):
         return self.validator.validate(value)
@@ -73,9 +74,19 @@ class IO(object):
 
     @classmethod
     def from_dict(cls, context, d):
+        constructor_map = {
+            'integer': int,
+            'number': float,
+            'boolean': bool,
+            'array': list,
+            'object': dict,
+            'string': str
+        }
         return cls(d.get('@id', str(uuid4())),
                    depth=d.get('depth'),
                    validator=context.from_dict(d.get('schema')),
+                   constructor=constructor_map[
+                       d.get('schema', {}).get('type')],
                    required=d['required'],
                    annotations=d['annotations'])
 
