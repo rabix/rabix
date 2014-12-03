@@ -3,6 +3,55 @@ from uuid import uuid4
 from rabix.common.models import App
 
 
+class Resources(object):
+
+    def __init__(self, cpu, mem):
+        self.cpu = cpu
+        self.mem = mem
+
+    def to_dict(self):
+        return {
+            "@type": "Resources",
+            "cpu": self.cpu,
+            "mem": self.mem
+        }
+
+    @classmethod
+    def from_dict(cls, d):
+        cls(d.get('cpu', 0), d.get('mem', 0))
+
+
+class Container(object):
+
+    def __init__(self):
+        pass
+
+    def install(self):
+        pass
+
+
+class Requirements(object):
+
+    def __init__(self, container=None, resources=None, platform_features=None):
+        self.container = container
+        self.resources = resources
+        self.platform_features = platform_features
+
+    def to_dict(self):
+        return {
+            "@type": "Requirements",
+            "environment": {"container": self.container.to_dict()},
+            "resources": self.resources.to_dict(),
+            "platformFeatures": self.platform_features
+        }
+
+    @classmethod
+    def from_dict(cls, context, d):
+        cls(context.from_dict(d.get('environment', {}).get('container')),
+            context.from_dict(d['resources']),
+            context.from_dict(d['platformFeatures']))
+
+
 class CliApp(App):
 
     def __init__(self, app_id, inputs, outputs,
@@ -25,13 +74,20 @@ class CliApp(App):
     def run(self, job):
         pass
 
+    def install(self):
+        if self.requirements and self.requirements.container:
+            self.requirements.container.install()
+
     def to_dict(self):
         d = super(CliApp, self).to_dict()
         d.update({
-            "@type": "CliApp",
+            "@type": "CommandLineTool",
             'adapter': self.adapter,
             'annotations': self.annotations,
-            'platform_features': self.platform_features
+            'platform_features': self.platform_features,
+            'inputs': self.inputs.schema,
+            'outputs': self.inputs.schema
+
         })
         return d
 
