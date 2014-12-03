@@ -31,7 +31,7 @@ tool:
         minItems: 1
         maxItems: 2
         adapter:
-          streamable: Yes
+          streamable: true
         items:
           type: file
       minimum_seed_length:
