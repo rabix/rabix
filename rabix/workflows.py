@@ -8,6 +8,7 @@ from altgraph.Graph import Graph
 from rabix.common.errors import ValidationError, RabixError
 from rabix.common.util import wrap_in_list
 from rabix.common.models import App, IO, Job
+from rabix.schema import JsonSchema
 
 log = logging.getLogger(__name__)
 
@@ -63,8 +64,8 @@ class WorkflowApp(App):
         for step in steps:
             # inputs
             for input_port, input_val in six.iteritems(step.inputs):
-                inputs = wrap_in_list(input_val)
-                for item in inputs:
+                inp = wrap_in_list(input_val)
+                for item in inp:
                     self.add_edge_or_input(step, input_port, item)
 
             # outputs
@@ -82,8 +83,20 @@ class WorkflowApp(App):
             pass
             # raise ValidationError('Graph is not connected')
 
+        schema = {
+            "@type": "JsonSchema",
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+
+        for inp in self.inputs:
+            schema['properties'][inp.id] = inp.validator.schema
+            if inp.required:
+                schema['required'].append(inp.id)
+
         super(WorkflowApp, self).__init__(
-            app_id, self.inputs, self.outputs,
+            app_id, JsonSchema(None, schema), self.outputs,
             app_description=app_description,
             annotations=annotations,
             platform_features=platform_features
@@ -105,6 +118,7 @@ class WorkflowApp(App):
                     self.graph.add_edge(
                         inp, node_id, InputRelation(input_name)
                     )
+                    self.inputs.append(input)
 
         else:
             self.graph.node_data(node_id).inputs[input_name] = input_val

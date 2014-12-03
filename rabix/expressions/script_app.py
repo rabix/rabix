@@ -4,7 +4,6 @@ from uuid import uuid4
 
 from rabix.common.errors import RabixError
 from rabix.common.models import App
-from rabix.schema import IOSchema
 from rabix.expressions.evaluator import Evaluator
 
 
@@ -40,15 +39,17 @@ class ScriptApp(App):
         d = super(ScriptApp, self).to_dict()
         d.update({
             "@type": "Script",
-            "script": self.script
+            "script": self.script,
+            "inputs": self.inputs.schema,
+            "outputs": self.outputs.schema
         })
         return d
 
     @classmethod
     def from_dict(cls, context, d):
         return cls(d.get('@id', str(uuid4())),
-                   IOSchema(d['inputs']),
-                   IOSchema(d['outputs']),
+                   context.from_dict(d['inputs']),
+                   context.from_dict(d['outputs']),
                    d['script'],
                    app_description=d.get('appDescription'),
                    annotations=d.get('annotations'),

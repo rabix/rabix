@@ -1,28 +1,13 @@
-from uuid import uuid4
-
-from rabix.cli.cli_app import CliApp
+from rabix.cli.cli_app import Container
 from rabix.docker.runner import DockerRunner
-from rabix.schema import IOSchema
 
 
-class DockerApp(CliApp):
+class DockerContainer(Container):
 
-    def __init__(self, app_id, inputs, outputs,
-                 app_description=None,
-                 annotations=None,
-                 platform_features=None,
-                 adapter=None,
-                 software_description=None,
-                 requirements=None):
-        super(DockerApp, self).__init__(
-            app_id, inputs, outputs,
-            app_description=app_description,
-            annotations=annotations,
-            platform_features=platform_features,
-            adapter=adapter,
-            software_description=software_description,
-            requirements=requirements,
-        )
+    def __init__(self, uri, image_id):
+        super(DockerContainer, self).__init__()
+        self.uri = uri
+        self.image_id = image_id
 
     def install(self):
         runner = DockerRunner(self)
@@ -33,26 +18,13 @@ class DockerApp(CliApp):
         return runner.run_job(job.to_dict())
 
     def to_dict(self):
-        d = super(DockerApp, self).to_dict()
-        d.update({
+        return {
             "@type": "Docker",
-            "inputs": self.inputs.to_dict(),
-            "outputs": self.outputs.to_dict()
-        })
-        return d
+            "type": "docker",
+            "uri": self.uri,
+            "imageId": self.image_id
+        }
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d.get('@id', str(uuid4())),
-                   IOSchema(d['inputs']),
-                   IOSchema(d['outputs']),
-                   app_description=d.get('appDescription'),
-                   annotations=d.get('annotations'),
-                   platform_features=d.get('platform_features'),
-                   adapter=context.from_dict(d.get('adapter')),
-                   software_description=d.get('softwareDescription'),
-                   requirements=d.get('requirements'))
-
-
-def init(context):
-    context.add_type('Docker', DockerApp.from_dict)
+        return cls(d['uri'], d.get('imageId'))

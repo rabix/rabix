@@ -17,6 +17,7 @@ tools:
           type: integer
         b:
           type: integer
+      required: ['a', 'b']
     outputs:
       type: object
       properties:
@@ -33,6 +34,7 @@ tools:
           type: integer
         b:
           type: integer
+      required: ['a', 'b']
     outputs:
       type: object
       properties:
