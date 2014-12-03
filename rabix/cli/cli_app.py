@@ -47,9 +47,11 @@ class Requirements(object):
 
     @classmethod
     def from_dict(cls, context, d):
-        cls(context.from_dict(d.get('environment', {}).get('container')),
-            context.from_dict(d['resources']),
-            context.from_dict(d['platformFeatures']))
+        return cls(
+            context.from_dict(d.get('environment', {}).get('container')),
+            context.from_dict(d.get('resources')),
+            context.from_dict(d.get('platformFeatures'))
+        )
 
 
 class CliApp(App):
@@ -72,7 +74,8 @@ class CliApp(App):
         self.requirements = requirements
 
     def run(self, job):
-        pass
+        if self.requirements.container:
+            return self.requirements.container.run(self, job)
 
     def install(self):
         if self.requirements and self.requirements.container:
@@ -86,7 +89,7 @@ class CliApp(App):
             'annotations': self.annotations,
             'platform_features': self.platform_features,
             'inputs': self.inputs.schema,
-            'outputs': self.inputs.schema
+            'outputs': self.outputs.schema
 
         })
         return d
@@ -101,4 +104,5 @@ class CliApp(App):
                    platform_features=d.get('platform_features'),
                    adapter=context.from_dict(d.get('adapter')),
                    software_description=d.get('softwareDescription'),
-                   requirements=d.get('requirements'))
+                   requirements=Requirements.from_dict(
+                       context, d.get('requirements', {})))

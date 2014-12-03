@@ -92,13 +92,14 @@ def init_context():
 
 
 def fix_types(tool):
-    requirements = tool.get('requirements')
+    requirements = tool.get('requirements', {})
+    environment = requirements.get('environment')
 
     # container type
-    if (requirements and
-            isinstance(requirements.get('container'), dict) and
-            requirements['container'].get('type') == 'docker'):
-        requirements['container']['@type'] = 'Docker'
+    if (environment and
+            isinstance(environment.get('container'), dict) and
+            environment['container'].get('type') == 'docker'):
+        environment['container']['@type'] = 'Docker'
 
     # tool type
     if '@type' not in tool:
