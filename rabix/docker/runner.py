@@ -46,7 +46,6 @@ class Runner(object):
         if not os.path.isabs(working_dir):
             working_dir = os.path.abspath(working_dir)
         self.app = app
-        self.enviroment = (app.requirements or {}).get('environment')
         self.working_dir = working_dir
         self.stdout = stdout
         self.stderr = stderr
@@ -73,6 +72,7 @@ class DockerRunner(Runner):
         super(DockerRunner, self).__init__(app, working_dir, stdout)
         self.docker_client = dockr or docker.Client(os.getenv(
             "DOCKER_HOST", None), version='1.12')
+        self.container = app.requirements.container
 
     def _volumes(self, job):
         remaped_job = copy.deepcopy(job)
@@ -156,8 +156,8 @@ class DockerRunner(Runner):
         working_dir = work_dir or self.WORKING_DIR
         user = user or ':'.join([str(os.getuid()), str(os.getgid())])
         container = Container(self.docker_client,
-                              self.enviroment['container']['imageId'],
-                              self.enviroment['container']['uri'],
+                              self.container.image_id,
+                              self.container.uri,
                               command, user=user, volumes=volumes,
                               environment=env, working_dir=working_dir)
         binds = bind or {self.working_dir: self.WORKING_DIR}
@@ -197,8 +197,8 @@ class DockerRunner(Runner):
 
     def install(self):
         ensure_image(self.docker_client,
-                     self.enviroment['container']['imageId'],
-                     self.enviroment['container']['uri'])
+                     self.container.image_id,
+                     self.container.uri)
 
 
 class NativeRunner(Runner):
