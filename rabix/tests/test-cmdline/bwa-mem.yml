@@ -50,7 +50,7 @@ tool:
     properties:
       reference:
         type: file
-        required: Yes
+        required: true
         adapter:
           order: 2
   #        transform: self.path.split('.').reverse().splice(1).reverse().join('.')

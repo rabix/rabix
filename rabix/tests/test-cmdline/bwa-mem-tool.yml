@@ -20,18 +20,18 @@ tool:
     properties:
       reference:
         type: file
-        required: Yes
+        required: true
         adapter:
           order: 2
-          secondaryFiles: ['*.amb', '*.ann', '*.bwt', '*.pac', '*.sa']
+          secondaryFiles: ['amb', 'ann', 'bwt', 'pac', 'sa']
   #        transform: self.path.split('.').reverse().splice(1).reverse().join('.')
       reads:
         type: array
-        required: Yes
+        required: true
         minItems: 1
         maxItems: 2
         adapter:
-          streamable: Yes
+          streamable: true
         items:
           type: file
       minimum_seed_length:

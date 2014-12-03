@@ -18,11 +18,11 @@ setup(
     include_package_data=True,
     packages=find_packages(),
     entry_points={
-        'console_scripts': ['rabix = rabix.executors.cli:main',
+        'console_scripts': ['rabix = rabix.main:main',
                             'rabix-tools = rabix.tools.cli:main'],
     },
     install_requires=requires,
-    package_data={'rabix': ['models/schema/*.json', 'cliche/expressions/evaluators/*.expr-plugin']},
+    package_data={'rabix': ['expressions/evaluators/*.expr-plugin']},
     long_description=io.open('README.md').read(),
     zip_safe=False,
     test_suite='tests',

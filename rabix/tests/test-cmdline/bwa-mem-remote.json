@@ -74,25 +74,25 @@
             "properties": {
                 "reference": {
                     "type": "file",
-                    "required": "Yes",
+                    "required": true,
                     "adapter": {
                         "order": 2,
                         "secondaryFiles": [
-                            "*.amb",
-                            "*.ann",
-                            "*.bwt",
-                            "*.pac",
-                            "*.sa"
+                            "amb",
+                            "ann",
+                            "bwt",
+                            "pac",
+                            "sa"
                         ]
                     }
                 },
                 "reads": {
                     "type": "array",
-                    "required": "Yes",
+                    "required": true,
                     "minItems": 1,
                     "maxItems": 2,
                     "adapter": {
-                        "streamable": "Yes"
+                        "streamable": true
                     },
                     "items": {
                         "type": "file"

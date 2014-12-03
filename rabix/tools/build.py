@@ -1,118 +1,130 @@
-from os import makedirs, getenv, chmod
-from os.path import exists, join, basename, isdir
-
-import os
 import docker
-import subprocess
+import logging
 import re
-import keyword
-import stat
+import six
+import shlex
 
-from rabix import __version__
+from os import getenv
+from os.path import abspath
+from docker.utils.utils import parse_repository_tag
 
+from rabix.docker.container import Container, find_image, get_image
+from rabix.common.errors import RabixError
 
-DOCKER_FILE = """
-FROM {base}
+log = logging.getLogger(__name__)
 
-ENV HOME /root
-RUN mkdir /wrappers
-ADD . /wrappers
-RUN /wrappers/build/build.sh
-
-ENTRYPOINT /usr/local/bin/rabix-adapter
-"""
-
-SETUP = """
-from distutils.core import setup
+MOUNT_POINT = '/build'
 
 
-setup(
-    name="{name}",
-    version="0.1.0",
-    packages=["{name}"]
-)
+def build(client, from_img, **kwargs):
+    container = run_container(client, from_img, kwargs, {})
+    if container.is_success():
+        message = kwargs.pop('message', None)
+        register = kwargs.pop('register', {})
+        cfg = {"Cmd": []}
+        cfg.update(**kwargs)
 
-"""
-
-BUILD_SH = """
-#!/bin/sh -e
-
-cd /wrappers/build
-tar xzf rabix-lib-{version}.tar.gz
-cd rabix-lib-{version}
-
-PYTHON=$(which python || which python3 || which python2)
-
-$PYTHON setup-lib.py install
-
-cd /wrappers
-$PYTHON setup.py install
-
-rm -rf /tmp/* /var/tmp/*
-rm -rf /wrappers
-"""
+        container.commit(
+            message, cfg, repository=register.get('repo'),
+            tag=register.get('tag')
+        )
+    else:
+        raise RabixError("Build failed!")
+    return container.produced_image['Id']
 
 
-def init(work_dir, base_image, force=False):
-
-    name = sanitize_name(basename(work_dir))
-
-    build_dir = join(work_dir, "build")
-    build_sh_path = join(build_dir, "build.sh")
-    dockerfile_path = join(work_dir, "Dockerfile")
-    setup_path = join(work_dir, "setup.py")
-    package_dir = join(work_dir, name)
-    init_path = join(package_dir, "__init__.py")
-
-    paths = [dockerfile_path, setup_path, init_path, build_sh_path]
-
-    dirs = [build_dir, package_dir]
-
-    conflict = any(map(exists, paths)) or \
-        any(map(lambda dir: exists(dir) and not isdir(dir), dirs))
-
-    if conflict and not force:
-        raise RuntimeError("Build already initialized. Use the force.")
-
-    if not exists(build_dir):
-        makedirs(build_dir)
-
-    if not exists(package_dir):
-        makedirs(package_dir)
-
-    with open(dockerfile_path, "w") as dockerfile:
-        dockerfile.write(DOCKER_FILE.format(base=base_image))
-
-    with open(setup_path, "w") as setup:
-        setup.write(SETUP.format(name=name))
-
-    with open(init_path, "w") as init:
-        init.write("\n")
-
-    with open(build_sh_path, "w") as build_sh:
-        build_sh.write(BUILD_SH.format(version=__version__))
-    chmod_plus(build_sh_path, stat.S_IEXEC)
-    # TODO: materialize sdk-lib tarbal in build dir somehow
+def run(client, from_img, **kwargs):
+    container = run_container(client, from_img, kwargs, kwargs)
+    if not container.is_success():
+        raise RabixError(container.docker_client.logs(container.container))
 
 
-def build(work_dir, tag=None):
-    docker_host = getenv("DOCKER_HOST")
-    client = docker.Client(docker_host)
-    return client.build(work_dir, rm=True, tag=tag)
+def run_container(client, from_img, kwargs, container_kwargs):
+
+    cmd = kwargs.pop('cmd', None)
+    if not cmd:
+        raise RabixError("Commands ('cmd') not specified!")
+
+    repo, tag = parse_repository_tag(from_img)
+    img = find_image(client, from_img)
+    if not img:
+        img = get_image(client, repo=repo, tag=tag)
+
+    mount_point = kwargs.pop('mount_point', MOUNT_POINT)
+    run_cmd = make_cmd(cmd, join=True)
+
+    container = Container(client, img['Id'],
+                          "docker://{}#{}".format(repo, tag),
+                          run_cmd, volumes={mount_point: {}},
+                          working_dir=mount_point, **container_kwargs)
+
+    container.start({abspath('.'): mount_point})
+    container.get_stdout()
+    return container
 
 
-def sanitize_name(name):
-    sanitized = name.replace('-', '_').lower()
-
-    valid = (not keyword.iskeyword(sanitized)) and \
-        re.match('^[a-z][a-z0-9_]*$', sanitized)
-
-    if not valid:
-        raise RuntimeError("Invalid name. " +
-                           "Project name must be a valid Python identifier")
-    return sanitized
+def make_cmd(cmd, join=False):
+    if isinstance(cmd, six.string_types):
+        return shlex.split(cmd)
+    elif isinstance(cmd, list) and len(cmd) > 1 and join:
+        return ['/bin/sh', '-c', ' && '.join(cmd)]
+    return cmd
 
 
-def chmod_plus(path, mod):
-    st = os.stat(path)
-    chmod(path, st.st_mode | mod)
+class Runner(object):
+
+    def __init__(self, docker, steps=None, context=None):
+        self.types = {
+            "run": run,
+            "build": build
+        }
+        self.types.update(steps or {})
+
+        self.context = context or {}
+
+        self.docker = docker
+        pass
+
+    def run(self, config):
+        steps = config['steps']
+        for step in steps:
+            step_name, step_conf = step.popitem()
+            type_name = step_conf.pop('type', None)
+            if not type_name:
+                raise RabixError("Step type not specified!")
+
+            step_type = self.types.get(type_name)
+            if not step_type:
+                raise RabixError("Unknown step type: %" % type_name)
+
+            resolved = {k: self.resolve(v) for k, v
+                        in six.iteritems(step_conf)}
+
+            img = resolved.pop('from', None)
+            if not img:
+                raise RabixError("Base image ('from') not specified!")
+
+            log.info("Running step: %s" % step_name)
+            self.context[step_name] = \
+                step_type(self.docker, img, **resolved)
+        pass
+
+    def resolve(self, val):
+        if isinstance(val, list):
+            return [self.resolve(item) for item in val]
+        elif isinstance(val, dict):
+            return {k: self.resolve(v) for k, v in six.iteritems(val)}
+        elif isinstance(val, six.string_types):
+            resolved = re.sub("\$\{([a-zA-Z0-9_]+)\}",
+                              lambda x: self.context[x.group(1)],
+                              val)
+
+            return resolved
+        else:
+            return val
+
+
+def run_steps(config, docker_host=None, steps=None, context=None):
+    docker_host = docker_host or getenv("DOCKER_HOST", None)
+    r = Runner(docker.Client(docker_host, version="1.12"), steps, context)
+    r.run(config)
