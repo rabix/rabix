@@ -9,7 +9,9 @@ class JsonSchema(object):
         self.schema = schema
         self.schema['@type'] = 'JsonSchema'
         required = schema.get('required', [])
-        self.io = [IO(k, 0, Draft4Validator(v), k in required)
+        self.io = [IO(context, k, 0, v, constructor=v['type'],
+                      required=k in required, annotations=v.get('adapter'),
+                      items=v.get('items'))
                    for k, v in six.iteritems(schema['properties'])]
 
     def __iter__(self, *args, **kwargs):

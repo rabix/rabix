@@ -1,6 +1,9 @@
+import copy
+
 from uuid import uuid4
 
 from rabix.common.models import App
+from rabix.common.io import InputCollector
 
 
 class Resources(object):
@@ -27,6 +30,12 @@ class Container(object):
         pass
 
     def install(self):
+        pass
+
+    def ensure_files(self, job):
+        pass
+
+    def _resolve(self):
         pass
 
 
@@ -74,6 +83,7 @@ class CliApp(App):
         self.requirements = requirements
 
     def run(self, job):
+        # self.get_inputs(job)
         if self.requirements.container:
             return self.requirements.container.run(self, job)
 
@@ -90,7 +100,6 @@ class CliApp(App):
             'platform_features': self.platform_features,
             'inputs': self.inputs.schema,
             'outputs': self.outputs.schema
-
         })
         return d
 

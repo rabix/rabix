@@ -72,17 +72,6 @@
                 "reads"
             ],
             "properties": {
-                "bla": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "blu": {
-                                "type": "file"
-                            }
-                        }
-                    }
-                },
                 "reference": {
                     "type": "file",
                     "adapter": {

@@ -13,7 +13,7 @@ class DockerContainer(Container):
         runner = DockerRunner(self)
         runner.install()
 
-    def run(self, app, job):
+    def run(self, app, job):  # should be run(self, cmd_line, job)
         runner = DockerRunner(app)
         return runner.run_job(job.to_dict())
 

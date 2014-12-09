@@ -281,3 +281,14 @@ class InputRunner(object):
             return self._prompt_files(input, prompt, secFiles=secFiles)
         else:
             return prompt
+
+
+class InputCollector(object):
+
+    def __init__(self):
+        self.downloader = self.detect_downloader()
+        pass
+
+    @staticmethod
+    def detect_downloader():
+        pass

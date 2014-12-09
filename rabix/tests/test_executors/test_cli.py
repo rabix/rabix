@@ -93,7 +93,15 @@ def test_params_from_input_file():
 def test_override_input():
     sys.argv = ['rabix', '-i', 'rabix/tests/test-cmdline/inputs.json', '--d',
                 'testdir', 'rabix/tests/test-expr/bwa-mem1.json#tool', '--',
-                '--reference', 'rabix/tests/test-files/chr20.fa']
+                '--reference', 'rabix/tests/test-files/chr20.fa.rbx.json']
     main()
     assert os.path.exists(os.path.abspath('./testdir') + '/output.sam')
     shutil.rmtree(os.path.abspath('./testdir'))
+
+
+if __name__ == '__main__':
+    sys.argv = ['rabix', '-i', 'rabix/tests/test-cmdline/inputs.json', '--d',
+                'testdir', 'rabix/tests/test-cmdline/bwa-object-param.json', '--',
+                '--reference', 'rabix/tests/test-files/chr20.fa']
+    main()
+    # shutil.rmtree(os.path.abspath('./testdir'))
