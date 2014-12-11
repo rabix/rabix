@@ -9,7 +9,7 @@ class JsonSchema(object):
         self.schema = schema
         self.schema['@type'] = 'JsonSchema'
         required = schema.get('required', [])
-        self.io = [IO(context, k, 0, v, constructor=v['type'],
+        self.io = [IO(context, k, v, constructor=v['type'],
                       required=k in required, annotations=v.get('adapter'),
                       items=v.get('items'))
                    for k, v in six.iteritems(schema['properties'])]

@@ -33,9 +33,40 @@ class Container(object):
         pass
 
     def ensure_files(self, job):
+        inputs = job.app.inputs.io
+        input_values = job.inputs
+        remaped_job = copy.deepcopy(job)
+        self._resolve(inputs, input_values, remaped_job)
         pass
 
-    def _resolve(self):
+    def _resolve(self, inputs, input_values, remaped_job):
+        is_single = lambda i: i.constructor in ['directory', 'file']
+        is_array = lambda i: i.constructor == 'array' and any([i.itemType == 'directory', i.itemType == 'file'])
+        is_object = lambda i: i.constructor == 'array' and i.itemType == 'object'
+
+        if inputs:
+            single = filter(is_single, [i for i in inputs])
+            lists = filter(is_array, [i for i in inputs])
+            objects = filter(is_object, [i for i in inputs])
+            for inp in single:
+                self._resolve_single(inp, inputs[inp], input_values.get(
+                    inp), remaped_job)
+            for inp in lists:
+                self._resolve_list(inp, inputs[inp], input_values.get(
+                    inp), remaped_job)
+            for obj in objects:
+                if input_values.get(obj):
+                    for num, o in enumerate(input_values[obj]):
+                        self._resolve(inputs[obj]['items']['properties'], o,
+                                      remaped_job[obj][num])
+
+    def _resolve_single(self, inp, input, input_value, remaped_job):
+        pass
+
+    def _resolve_list(self, inp, input, input_value, remaped_job):
+        pass
+
+    def _run(self):
         pass
 
 

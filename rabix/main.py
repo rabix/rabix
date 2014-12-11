@@ -204,6 +204,7 @@ def resolve_nested_paths(inp, inputs, args, startdir):
                     resolve_nested_paths(
                         inp[input.id][sk],
                         input.objects,
+                        args[input.id],
                         startdir
                     )
             else:

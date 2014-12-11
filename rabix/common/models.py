@@ -62,26 +62,33 @@ class File(object):
 
 class IO(object):
 
-    def __init__(self, context, port_id, depth=0, validator=None, constructor=None,
+    def __init__(self, context, port_id, validator=None, constructor=None,
                  required=False, annotations=None, items=None):
         self.id = port_id
-        self.depth = depth
         self.validator = Draft4Validator(validator)
         self.required = required
         self.annotations = annotations
         self.constructor = constructor or str
         if self.constructor == 'array':
-            self.depth = self.depth + 1
             self.itemType = items['type']
             if self.itemType == 'object':
                 required = items.get('required', [])
-                self.objects = [IO(context, k, self.depth, v,
+                self.objects = [IO(context, k, v,
                                    constructor=v['type'],
                                    required=k in required,
                                    annotations=v['adapter'],
                                    items=v.get('items'))
                                 for k, v in
                                 six.iteritems(items['properties'])]
+
+    @property
+    def depth(self):
+        if self.constructor != 'array':
+            return 0
+        elif self.itemType != 'object':
+            return 1
+        else:
+            return 1 + max([k.depth for k in self.objects])
 
     def validate(self, value):
         return self.validator.validate(value)
@@ -108,7 +115,6 @@ class IO(object):
             'file': File
         }
         return cls(d.get('@id', str(uuid4())),
-                   depth=d.get('depth'),
                    validator=context.from_dict(d.get('schema')),
                    constructor=constructor_map[
                        d.get('schema', {}).get('type')],
