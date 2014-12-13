@@ -14,6 +14,7 @@ class DockerContainer(Container):
         runner.install()
 
     def run(self, app, job):  # should be run(self, cmd_line, job)
+        self.ensure_files(job)
         runner = DockerRunner(app)
         return runner.run_job(job.to_dict())
 

@@ -221,12 +221,6 @@ def get_inputs(app, args):
     return {'inputs': inputs}
 
 
-def update_paths(job, inputs):
-    for inp in inputs['inputs'].keys():
-        job['inputs'][inp] = inputs['inputs'][inp]
-    return job
-
-
 def get_tool(args):
     if args['<tool>']:
         return from_url(args['<tool>'])
@@ -308,7 +302,7 @@ def main():
             return
 
         inp = get_inputs(app, app_inputs)
-        job = update_paths(job, inp)
+        job['inputs'].update(inp['inputs'])
 
         if args['--print-cli']:
             if not isinstance(app, CliApp):

@@ -1,8 +1,10 @@
+import os
 import copy
 
 from uuid import uuid4
 
 from rabix.common.models import App
+from rabix.common.ref_resolver import from_url
 from rabix.common.io import InputCollector
 
 
@@ -27,21 +29,25 @@ class Resources(object):
 class Container(object):
 
     def __init__(self):
+        self.inputCollector = InputCollector()
         pass
 
     def install(self):
         pass
 
     def ensure_files(self, job):
+        '''
+        Resolve paths of all input files
+        '''
         inputs = job.app.inputs.io
         input_values = job.inputs
-        remaped_job = copy.deepcopy(job)
-        self._resolve(inputs, input_values, remaped_job)
+        self._resolve(inputs, input_values, job)
         pass
 
-    def _resolve(self, inputs, input_values, remaped_job):
+    def _resolve(self, inputs, input_values, job):
         is_single = lambda i: i.constructor in ['directory', 'file']
-        is_array = lambda i: i.constructor == 'array' and any([i.itemType == 'directory', i.itemType == 'file'])
+        is_array = lambda i: i.constructor == 'array' and any([
+            i.itemType == 'directory', i.itemType == 'file'])
         is_object = lambda i: i.constructor == 'array' and i.itemType == 'object'
 
         if inputs:
@@ -49,22 +55,36 @@ class Container(object):
             lists = filter(is_array, [i for i in inputs])
             objects = filter(is_object, [i for i in inputs])
             for inp in single:
-                self._resolve_single(inp, inputs[inp], input_values.get(
-                    inp), remaped_job)
+                self._resolve_single(inp, input_values.get(inp.id), job)
             for inp in lists:
-                self._resolve_list(inp, inputs[inp], input_values.get(
-                    inp), remaped_job)
+                self._resolve_list(inp, input_values.get(inp.id), job)
             for obj in objects:
-                if input_values.get(obj):
-                    for num, o in enumerate(input_values[obj]):
-                        self._resolve(inputs[obj]['items']['properties'], o,
-                                      remaped_job[obj][num])
+                if input_values.get(obj.id):
+                    for num, o in enumerate(input_values[obj.id]):
+                        self._resolve(inputs.objects, o, job[obj][num])
 
-    def _resolve_single(self, inp, input, input_value, remaped_job):
-        pass
+    def _resolve_single(self, inp, input_value, job):
 
-    def _resolve_list(self, inp, input, input_value, remaped_job):
-        pass
+        if input_value:
+            if input_value['path'].endswith('.rbx.json'):
+                job[inp.id] = from_url(input_value['path'])
+            else:
+                secondaryFiles = inp.annotations.get(
+                    'secondaryFiles')
+                job.inputs[inp.id] = self.inputCollector.download(
+                    input_value['path'], secondaryFiles)
+
+    def _resolve_list(self, inp, input_value, job):
+        if input_value:
+            secondaryFiles = inp.annotations.get(
+                'secondaryFiles')
+            for num, inv in enumerate(input_value):
+                if input_value[num]['path'].endswith('.rbx.json'):
+                    job.inputs[inp.id][num] = from_url(input_value[num][
+                        'path'])
+                else:
+                    job.inputs[inp.id][num] = self.inputCollector.download(
+                        input_value[num]['path'], secondaryFiles)
 
     def _run(self):
         pass
