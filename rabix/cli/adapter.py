@@ -17,7 +17,11 @@ log = logging.getLogger(__name__)
 
 
 def evaluate(expr_object, job, context=None, *args, **kwargs):
-    return ev.evaluate(expr_object.get('lang', 'javascript'), expr_object.get('value'), job, context, *args, **kwargs)
+    if isinstance(expr_object, dict):
+        return ev.evaluate(expr_object.get('lang', 'javascript'), expr_object.get(
+            'value'), job, context, *args, **kwargs)
+    else:
+        return ev.evaluate('javascript', expr_object, job, context, *args, **kwargs)
 
 
 def intersect_dicts(d1, d2):
@@ -27,20 +31,11 @@ def intersect_dicts(d1, d2):
 def eval_resolve(val, job, context=None):
     if not isinstance(val, dict):
         return val
-    if 'expr' in val:
-        return evaluate(val['expr'], job, context)
+    if '$expr' in val:
+        return evaluate(val['$expr'], job, context)
     if 'job' in val:
         return resolve_pointer(job, val['job'], default=None)
     return val
-#
-# def eval_resolve(val, job, context=None):
-#     if not isinstance(val, dict):
-#         return val
-#     if '$expr' in val:
-#         return evaluate(val['$expr'], job, context)
-#     if '$job' in val:
-#         return resolve_pointer(job, val['$job'], default=None)
-#     return val
 
 
 class InputAdapter(object):
@@ -68,7 +63,7 @@ class InputAdapter(object):
     __str__ = lambda self: str(self.value)
     __repr__ = lambda self: 'InputAdapter(%s)' % self
     position = property(lambda self: (self.adapter.get('order', 9999999), self.key))
-    transform = property(lambda self: self.adapter.get('transform'))
+    transform = property(lambda self: self.adapter.get('value'))
     prefix = property(lambda self: self.adapter.get('prefix'))
     item_separator = property(lambda self: self.adapter.get('itemSeparator', ','))
 
@@ -175,7 +170,7 @@ class CLIJob(object):
         result, outs = {}, self.output_schema.get('properties', {})
         for k, v in six.iteritems(outs):
             adapter = v['adapter']
-            files = glob.glob(os.path.join(job_dir, adapter['glob']))
+            files = glob.glob(os.path.join(job_dir, eval_resolve(adapter['glob'], self.job)))
             result[k] = [{'path': p, 'meta': self._meta(p, adapter)} for p in files]
             if v['type'] != 'array':
                 result[k] = result[k][0] if result[k] else None
