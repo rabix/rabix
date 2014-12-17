@@ -55,3 +55,6 @@ In the case where multiple process ports receive nested data, Process will be ex
 For basic manipulation of (meta)data, we are using another Process type which simply evaluates an expression or script.
  This allows us to implement control structures such as GroupBy or Filter without running an external process in a container.
 
+## Examples
+
+See rabix/tests/wf_tests.yaml for example workflows and script tools.
