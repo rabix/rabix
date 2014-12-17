@@ -30,10 +30,20 @@ steps:
       variants: vcf  # expose as "vcf" output
 ```
 
+Apart from the above "steps" array, workflows include the same input/output schema as CommandLineTools.
+This schema can be automatically generated, so it is not required.
+
+Each element of the "steps" array has the following fields:
+- id: String - STEP_ID, unique to the workflow
+- app: App - URL to CommandLineTool, ScriptTool or Workflow
+- inputs: Object - object whose fields match inputs in the schema of the referenced app.
+Values for these fields are either literals (2, “hello”) or objects in the form of ```{“$from”: “[<STEP_ID>.<OUTPUT_ID>] or [WORKFLOW_INPUT_ID]”}```
+- outputs: Object - object whose fields match outputs defined in the schema of the referenced app and values with form of ```{“$to”: [WORKFLOW_OUTPUT_ID]”}```, which signifies that these outputs should be recorded.
+
 Data flowing through links can be of any JSON-compatible type.
  Most commonly, these are files, which are just JSON objects of certain structure with URLs pointing to actual files and their indices.
 
-If there are multiple incoming links to same input port, a list of all incoming items will be automatically created.
+If there are multiple incoming links to same input port (i.e. the value of $from is an array), a list of all incoming items will be automatically created.
 
 
 ## Parallel for-each
