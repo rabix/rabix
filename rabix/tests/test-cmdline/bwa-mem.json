@@ -39,10 +39,7 @@
         "platform": "http://example.org/my_platform/v1",
         "allocatedResources": {
             "cpu": 4,
-            "mem": 5000,
-            "ports": [],
-            "diskSpace": 20000,
-            "network": false
+            "mem": 5000
         }
     },
     "tool": {
@@ -58,8 +55,7 @@
             },
             "resources": {
                 "cpu": 0,
-                "mem": 5000,
-                "network": false
+                "mem": 5000
             },
             "platformFeatures": [
                 "http://example.org/transforms#strip_ext"
@@ -72,17 +68,6 @@
                 "reads"
             ],
             "properties": {
-                "bla": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "blu": {
-                                "type": "file"
-                            }
-                        }
-                    }
-                },
                 "reference": {
                     "type": "file",
                     "adapter": {
@@ -156,18 +141,12 @@
                 "mem"
             ],
             "stdout": "output.sam",
-            "environment": {
-                "ENVVAR1": "/home/envvar1"
-            },
             "args": [
                 {
                     "order": 1,
                     "prefix": "-t",
                     "value": {
-                        "expr": {
-                            "lang": "javascript",
-                            "value": "$job['allocatedResources']['cpu']"
-                        }
+                        "$expr": "$job['allocatedResources']['cpu']"
                     }
                 }
             ]

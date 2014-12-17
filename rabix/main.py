@@ -123,119 +123,102 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
 
     inp = inp or {}
 
-    def required(req, arg, inputs):
-        inp = inputs.keys()
-        if (arg in req) and (arg not in inp):
-            return True
-        return False
-
-    def resolve(k, v, req, usage_str, param_str, inp):
-        if v.get('type') == 'array':
-            if v.get('items').get('type') == 'object':
+    def resolve(k, v, usage_str, param_str, inp):
+        if v.constructor == 'array':
+            if v.itemType == 'object':
                 pass
-            elif ((v.get('items').get('type') == 'file' or v.get(
-                    'items').get('type') == 'directory')):
+            elif (v.itemType in ['file', 'directory']):
                 arg = '--%s=<file>...' % k
-                usage_str.append(arg if required(req, k, inp)
-                                 else '[%s]' % arg)
+                usage_str.append(arg if (v.required and v.id not in inp) else
+                                 '[%s]' % arg)
             else:
                 arg = '--%s=<array_%s_separator(%s)>...' % (
-                    k, v.get('items', {}).get('type'),
-                    v.get('adapter', {}).get('itemSeparator')
+                    k, v.itemType, v.annotations.get('itemSeparator')
                 )
-                param_str.append(arg if required(req, k, inp)
-                                 else '[%s]' % arg)
-        elif v.get('type') == 'file':
+                param_str.append(arg if (v.required and v.id not in inp) else
+                                 '[%s]' % arg)
+        elif v.constructor == 'file':
             arg = '--%s=<file>' % k
-            usage_str.append(arg if required(req, k, inp)
-                             else '[%s]' % arg)
+            usage_str.append(arg if (v.required and v.id not in inp) else
+                             '[%s]' % arg)
         else:
-            arg = '--%s=<%s>' % (k, v.get('type'))
-            param_str.append(arg if required(req, k, inp)
-                             else '[%s]' % arg)
+            arg = '--%s=<%s>' % (k, v.constructor)
+            param_str.append(arg if (v.required and v.id not in inp) else
+                             '[%s]' % arg)
 
-    def resolve_object(name, obj, usage_str, param_str, inp, root=False):
-        properties = obj.get('properties', {})
-        required = obj.get('required', [])
-        for k, v in six.iteritems(properties):
-            key = k if root else '.'.join([name, k])
-            resolve(key, v, required, usage_str, param_str, inp)
+    def resolve_object(obj, usage_str, param_str, inp, root=False):
+        properties = obj.inputs.io if root else obj.objects
+        for input in properties:
+            key = input.id if root else '.'.join([obj.id, input.id])
+            resolve(key, input, usage_str, param_str, inp.keys())
 
-    inputs = app.inputs.schema
     usage_str = []
     param_str = []
 
-    resolve_object('inputs', inputs, usage_str, param_str, inp, root=True)
+    resolve_object(app, usage_str, param_str, inp, root=True)
     usage_str.extend(param_str)
     return template.format(resources=make_resources_usage_string(),
                            inputs=' '.join(usage_str))
 
 
-def resolve_values(k, v, nval, inputs, startdir=None):
+def resolve_values(inp, nval, inputs, startdir=None):
     if isinstance(nval, list):
-        if v.get('type') != 'array':
+        if inp.constructor != 'array':
             raise Exception('Too many values')
-        inputs[k] = []
+        inputs[inp.id] = []
         for nv in nval:
-            if (v['items']['type'] == 'file' or v['items'][
-                    'type'] == 'directory'):
+            if (inp.itemType in ['file', 'directory']):
                 if startdir:
                     nv = os.path.join(startdir, nv)
-                inputs[k].append({'path': nv})
+                inputs[inp.id].append({'path': nv})
             else:
-                inputs[k].append(nv)
+                inputs[inp.id].append(nv)
     else:
-        if v['type'] == 'file' or v['type'] == 'directory':
+        if inp.constructor in ['file', 'directory']:
             if startdir:
                 nval = os.path.join(startdir, nval)
-            inputs[k] = {'path': nval}
-        elif v['type'] == 'integer':
-            inputs[k] = int(nval)
-        elif v['type'] == 'number':
-            inputs[k] = float(nval)
+            inputs[inp.id] = {'path': nval}
+        elif inp.constructor == 'integer':
+            inputs[inp.id] = int(nval)
+        elif inp.constructor == 'number':
+            inputs[inp.id] = float(nval)
         else:
-            inputs[k] = nval
+            inputs[inp.id] = nval
 
 
-def get_inputs_from_file(tool, args, startdir):
+def get_inputs_from_file(app, args, startdir):
     inp = {}
-    inputs = tool.get('inputs', {}).get('properties')  # for inputs
+    inputs = app.inputs.io
     resolve_nested_paths(inp, inputs, args, startdir)
     return {'inputs': inp}
 
 
 def resolve_nested_paths(inp, inputs, args, startdir):
-    for k, v in six.iteritems(inputs):
-        nval = args.get(k)
+    for input in inputs:
+        nval = args.get(input.id)
         if nval:
-            if (v.get('type') == 'array' and
-                    v.get('items', {}).get('type') == 'object'):  # for inner objects
-                inp[k] = []
+            if input.constructor == 'array' and input.itemType == 'object':
+                inp[input.id] = []
                 for sk, sv in enumerate(nval):
-                    inp[k].append({})
+                    inp[input.id].append({})
                     resolve_nested_paths(
-                        inp[k][sk],
-                        inputs[k].get('items').get('properties'),
-                        v, startdir
+                        inp[input.id][sk],
+                        input.objects,
+                        args[input.id],
+                        startdir
                     )
             else:
-                resolve_values(k, v, nval, inp, startdir)
+                resolve_values(input, nval, inp, startdir)
 
 
 def get_inputs(app, args):
     inputs = {}
-    properties = app.inputs.schema['properties']
-    for k, v in six.iteritems(properties):
-        nval = args.get('--' + k) or args.get(k)
+    properties = app.inputs.io
+    for input in properties:
+        nval = args.get('--' + input.id) or args.get(input.id)
         if nval:
-            resolve_values(k, v, nval, inputs)
+            resolve_values(input, nval, inputs)
     return {'inputs': inputs}
-
-
-def update_paths(job, inputs):
-    for inp in inputs['inputs'].keys():
-        job['inputs'][inp] = inputs['inputs'][inp]
-    return job
 
 
 def get_tool(args):
@@ -304,11 +287,12 @@ def main():
             input_file = from_url(args.get('--inp-file'))
             dot_update_dict(
                 job['inputs'],
-                get_inputs_from_file(tool, input_file, startdir)['inputs']
+                get_inputs_from_file(app, input_file, startdir)['inputs']
             )
 
         app_inputs_usage = make_app_usage_string(
             app, template=TOOL_TEMPLATE, inp=job['inputs'])
+
         app_usage = make_app_usage_string(app, USAGE, job['inputs'])
 
         app_inputs = docopt.docopt(app_inputs_usage, args['<inputs>'])
@@ -318,7 +302,7 @@ def main():
             return
 
         inp = get_inputs(app, app_inputs)
-        job = update_paths(job, inp)
+        job['inputs'].update(inp['inputs'])
 
         if args['--print-cli']:
             if not isinstance(app, CliApp):

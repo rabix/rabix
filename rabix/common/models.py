@@ -1,4 +1,7 @@
+import six
+from copy import copy
 from uuid import uuid4
+from jsonschema.validators import Draft4Validator
 
 
 class App(object):
@@ -14,7 +17,7 @@ class App(object):
         self._inputs = {io.id: io for io in inputs}
         self._outputs = {io.id: io for io in outputs}
 
-    def install(self):
+    def install(self, *args, **kwargs):
         pass
 
     def run(self, job):
@@ -48,16 +51,44 @@ class App(object):
         }
 
 
+class File(object):
+
+    def __init__(self, path, size=None, meta=None, secondaryFiles=None):
+        self.path = path
+        self.size = size
+        self.meta = meta
+        self.secondaryFiles = secondaryFiles
+
+
 class IO(object):
 
-    def __init__(self, port_id, depth=0, validator=None, constructor=None,
-                 required=False, annotations=None):
+    def __init__(self, context, port_id, validator=None, constructor=None,
+                 required=False, annotations=None, items=None):
         self.id = port_id
-        self.depth = depth
-        self.validator = validator
+        self.validator = Draft4Validator(validator)
         self.required = required
         self.annotations = annotations
         self.constructor = constructor or str
+        if self.constructor == 'array':
+            self.itemType = items['type']
+            if self.itemType == 'object':
+                required = items.get('required', [])
+                self.objects = [IO(context, k, v,
+                                   constructor=v['type'],
+                                   required=k in required,
+                                   annotations=v['adapter'],
+                                   items=v.get('items'))
+                                for k, v in
+                                six.iteritems(items['properties'])]
+
+    @property
+    def depth(self):
+        if self.constructor != 'array':
+            return 0
+        elif self.itemType != 'object':
+            return 1
+        else:
+            return 1 + max([k.depth for k in self.objects])
 
     def validate(self, value):
         return self.validator.validate(value)
@@ -80,10 +111,10 @@ class IO(object):
             'boolean': bool,
             'array': list,
             'object': dict,
-            'string': str
+            'string': str,
+            'file': File
         }
         return cls(d.get('@id', str(uuid4())),
-                   depth=d.get('depth'),
                    validator=context.from_dict(d.get('schema')),
                    constructor=constructor_map[
                        d.get('schema', {}).get('type')],
@@ -122,7 +153,7 @@ class Job(object):
     def from_dict(cls, context, d):
         return cls(
             d.get('@id', str(uuid4())), context.from_dict(d['app']),
-            d['inputs'], d.get('allocatedResources')
+            context.from_dict(d['inputs']), d.get('allocatedResources')
         )
 
 

@@ -24,102 +24,17 @@ def to_json(obj, fp=None):
     return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
 
 
-class InputRunner(object):
+class InputCollector(object):
     """
     Will handle local files, 'data:,' URLs (for tests) and delegate other
     URLs to requests.get()
     """
-    def __init__(self, job, inputs, dir=None):
-        self.inputs = inputs
-        self.job = job
-        self.dir = dir
+    def __init__(self):
+        self.downloader = self.detect_downloader()
 
-    def __call__(self, *args, **kwargs):
-        remaped_job = copy.deepcopy(self.job)
-        input_values = self.job.get('inputs')
-        if self.inputs:
-            self._resolve(self.inputs, input_values, remaped_job['inputs'])
-        return remaped_job
-
-    def _resolve(self, inputs, input_values, remaped_job):
-        is_single = lambda i: any([inputs[i]['type'] == 'directory',
-                                   inputs[i]['type'] == 'file'])
-        is_array = lambda i: inputs[i]['type'] == 'array' and any([
-            inputs[i]['items']['type'] == 'directory',
-            inputs[i]['items']['type'] == 'file'])
-        is_object = lambda i: inputs[i]['type'] == 'array' and inputs[i]['items']['type'] == 'object'
-        if inputs:
-            single = filter(is_single, [i for i in inputs])
-            lists = filter(is_array, [i for i in inputs])
-            objects = filter(is_object, [i for i in inputs])
-            for inp in single:
-                self._resolve_single(inp, inputs[inp], input_values.get(
-                    inp), remaped_job)
-            for inp in lists:
-                self._resolve_list(inp, self.inputs[inp], input_values.get(
-                    inp), remaped_job)
-            for obj in objects:
-                if input_values.get(obj):
-                    for num, o in enumerate(input_values[obj]):
-                        self._resolve(inputs[obj]['items']['properties'], o,
-                                      remaped_job[obj][num])
-
-    def _resolve_single(self, inp, input, input_value, remaped_job):
-        if input_value:
-            if input_value['path'].endswith('.rbx.json'):
-                remaped_job[inp] = self._resolve_rbx(input_value['path'])
-            else:
-                secondaryFiles = copy.deepcopy(input.get(
-                    'adapter', {}).get('secondaryFiles'))
-                remaped_job[inp]['path'] = self._download(input_value['path'])
-                remaped_job[inp]['meta'] = self._meta(remaped_job[inp])
-                secFiles = self._get_secondary_files(
-                    secondaryFiles, input_value['path'])
-                if secFiles:
-                    remaped_job[inp]['secondaryFiles'] = secFiles
-                self._rbx_dump(remaped_job[inp])
-
-    def _resolve_list(self, inp, input, input_value, remaped_job):
-        if input_value:
-            secondaryFiles = copy.deepcopy(input.get(
-                'adapter', {}).get('secondaryFiles'))
-            for num, inv in enumerate(input_value):
-                if input_value[num]['path'].endswith('.rbx.json'):
-                    remaped_job[inp][num] = self._resolve_rbx(input_value[num]['path'])
-                else:
-                    remaped_job[inp][num]['path'] = self._download(
-                        input_value[num]['path'])
-                    remaped_job[inp][num]['meta'] = self._meta(remaped_job[
-                        inp][num])
-                    secFiles = self._get_secondary_files(
-                        secondaryFiles, input_value[num]['path'])
-                    if secFiles:
-                        remaped_job[inp][num]['secondaryFiles'] = secFiles
-                    self._rbx_dump(remaped_job[inp][num])
-
-    def _resolve_rbx(self, rbx_file):
-        rbx = from_url(rbx_file)
-        startdir = os.path.dirname(rbx_file)
-        if not os.path.isabs(rbx.get('path')):
-            path = os.path.join([startdir, rbx.get('path')])
-        else:
-            path = rbx.get('path')
-        rbx['path'] = self._download(path)
-        if rbx.get('secondaryFiles'):
-            secFiles = self._get_secondary_files(
-                rbx['secondaryFiles'], rbx['path'],
-                autodetect=False, prompt=False)
-            if secFiles:
-                rbx['secondaryFiles'] = secFiles
-        return rbx
-
-    def _rbx_dump(self, input):
-        cont = raw_input('Do you want to create rbx.json for file %s? [Y/n] ' % input['path']).lower().strip()
-        if cont == 'y' or cont == '':
-            filename = input['path'] + '.rbx.json'
-            with open(filename, 'w') as f:
-                json.dump(input, f)
-                log.info('File %s created.', filename)
+    @staticmethod
+    def detect_downloader():
+        pass
 
     @property
     def task_dir(self):
@@ -128,6 +43,18 @@ class InputRunner(object):
         if not os.path.exists(self.dir):
             os.mkdir(self.dir)
         return self.dir
+
+    def download(self, path, secondaryFiles=None, prompt=True):
+        file = {}
+        file['path'] = self._download(path, metasearch=True)
+        file['meta'] = self._meta(path, prompt=prompt)
+        if secondaryFiles:
+            file['secondaryFiles'] = self._get_secondary_files(secondaryFiles,
+                                                               path,
+                                                               prompt=prompt)
+        if prompt:
+            self._rbx_dump(file)
+        return file
 
     def _download(self, url, metasearch=True):
         if url.startswith('data:,'):
@@ -173,35 +100,13 @@ class InputRunner(object):
             return
         return meta
 
-    def _data_url(self, url):
-        data = url[len('data:,'):]
-        dest = tempfile.mktemp(dir=self.task_dir)
-        with open(dest, 'w') as fp:
-            fp.write(data)
-        return os.path.abspath(dest)
-
-    def _get_dest_for_url(self, url):
-        path = urlparse.urlparse(url).path
-        name = path.split('/')[-1]
-        tgt = os.path.join(self.task_dir, name)
-        if os.path.exists(tgt) or not name:
-            return tempfile.mktemp(dir=self.task_dir)
-        return tgt
-
-    def _local(self, url):
-        path = url[len('file://'):]
-        if not os.path.isfile(path):
-            raise ResourceUnavailable('Not a file: %s' % path)
-        return os.path.abspath(path)
-
-    def _meta(self, input):
-        if os.path.exists(input['path'] + '.meta'):
-            with open(input['path'] + '.meta') as m:
+    def _meta(self, path, prompt=True):
+        file_meta = {}
+        if os.path.exists(path + '.meta'):
+            with open(path + '.meta') as m:
                 file_meta = json.load(m)
-        else:
-            file_meta = self._metadata_prompt(os.path.basename(input['path']))
-        job_meta = input.get('meta', {})
-        file_meta.update(job_meta)
+        elif prompt:
+            file_meta = self._metadata_prompt(os.path.basename(path))
         return file_meta
 
     def _metadata_prompt(self, input, metadata=None):
@@ -232,13 +137,16 @@ class InputRunner(object):
         def secondary_files_autodetect(path):
             log.info('Searching for additional files for file: %s', path)
             return [fn for fn in glob.glob(path + '.*')
-                    if not os.path.basename(fn).endswith('.meta')]
+                    if not (os.path.basename(fn).endswith('.meta') or
+                            os.path.basename(fn).endswith('.rbx.json'))
+                    ]
 
+        secFiles = []
         if secondaryFiles:
             for n, sf in enumerate(secondaryFiles):
                 path = get_file_path(input, sf)
                 log.info('Downloading: %s', path)
-                self._download(path, metasearch=False)
+                secFiles.append(self.download(path, prompt=False))
         if autodetect:
             if not secondaryFiles:
                 secondaryFiles = []
@@ -255,21 +163,43 @@ class InputRunner(object):
                                  % (input, str(ad))).lower().strip()
                 if cont == 'y' or cont == '':
                     log.info("Additional files %s included" % str(ad))
-                    secondaryFiles.extend(ad)
+                    secFiles.extend(self._get_secondary_files(
+                        ad, input, autodetect=False, prompt=False))
         if prompt:
             prompt = self._prompt_files(input, secFiles=secondaryFiles)
-            self._get_secondary_files(prompt, input, autodetect=False,
-                                      prompt=False)
-        return secondaryFiles
+            secFiles.extend(self._get_secondary_files(
+                prompt, input, autodetect=False, prompt=False))
+        return secFiles
+
+    def _data_url(self, url):
+        data = url[len('data:,'):]
+        dest = tempfile.mktemp(dir=self.task_dir)
+        with open(dest, 'w') as fp:
+            fp.write(data)
+        return os.path.abspath(dest)
+
+    def _get_dest_for_url(self, url):
+        path = urlparse.urlparse(url).path
+        name = path.split('/')[-1]
+        tgt = os.path.join(self.task_dir, name)
+        if os.path.exists(tgt) or not name:
+            return tempfile.mktemp(dir=self.task_dir)
+        return tgt
+
+    def _local(self, url):
+        path = url[len('file://'):]
+        if not os.path.isfile(path):
+            raise ResourceUnavailable('Not a file: %s' % path)
+        return os.path.abspath(path)
 
     def _prompt_files(self, input, prompt=None, secFiles=None):
         cont = ''
         if prompt is None:
             prompt = []
             cont = raw_input('Do you want to include some additional '
-                             'files for file %s %s? [Y/n] '
+                             'files for file %s %s? [y/N] '
                              % (input, str(secFiles))).lower().strip()
-        if cont == 'y' or cont == '':
+        if cont == 'y':
             ext = raw_input('Extension: ')
             if ext == '':
                 return prompt
@@ -281,3 +211,11 @@ class InputRunner(object):
             return self._prompt_files(input, prompt, secFiles=secFiles)
         else:
             return prompt
+
+    def _rbx_dump(self, input):
+        cont = raw_input('Do you want to create rbx.json for file %s? [Y/n] ' % input['path']).lower().strip()
+        if cont == 'y' or cont == '':
+            filename = input['path'] + '.rbx.json'
+            with open(filename, 'w') as f:
+                json.dump(input, f)
+                log.info('File %s created.', filename)

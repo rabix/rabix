@@ -136,10 +136,7 @@
                         "meta": {
                             "file_type": "sam",
                             "expr_test": {
-                                "expr": {
-                                    "lang": "javascript",
-                                    "value": "{return ($job.inputs.minimum_seed_length > 2) ? 'successful' : 'unsuccessful'}"
-                                }
+                                "$expr": "{return ($job.inputs.minimum_seed_length > 2) ? 'successful' : 'unsuccessful'}"
                             },
                             "__inherit__": "reads"
                         }
@@ -162,10 +159,7 @@
                     "order": 1,
                     "prefix": "-t",
                     "value": {
-                        "expr": {
-                            "lang": "javascript",
-                            "value": "$job['allocatedResources']['cpu']"
-                        }
+                        "$expr": "$job['allocatedResources']['cpu']"
                     }
                 }
             ]
