@@ -338,10 +338,7 @@
             "order": 1,
             "prefix": "-t",
             "value": {
-                "expr": {
-                    "value": "$job['allocatedResources']['cpu']",
-                    "lang": "javascript"
-                }
+                "$expr": "$job['allocatedResources']['cpu']"
             }
         }
     ]

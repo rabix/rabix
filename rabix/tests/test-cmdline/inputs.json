@@ -1,5 +1,5 @@
 {
-"reference": "/home/sinisa/devel/CWL/rabix/rabix/tests/test-files/chr20.fa.rbx.json",
-"reads": ["../test-files/example_human_Illumina.pe_1.fastq.rbx.json", "../test-files/example_human_Illumina.pe_2.fastq.rbx.json"],
+"reference": "/home/sinisa/devel/CWL/rabix/rabix/tests/test-files/chr20.fa",
+"reads": ["../test-files/example_human_Illumina.pe_1.fastq", "../test-files/example_human_Illumina.pe_2.fastq"],
 "minimum_seed_length": 4
 }
