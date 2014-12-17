@@ -33,9 +33,7 @@ steps:
 Data flowing through links can be of any JSON-compatible type.
  Most commonly, these are files, which are just JSON objects of certain structure with URLs pointing to actual files and their indices.
 
-For simplicity, lists are given special treatment:
- - Data is automatically wrapped in lists to meet the expectations of an input port.
- - Lists are automatically concatenated when piped to same port from different sources.
+If there are multiple incoming links to same input port, a list of all incoming items will be automatically created.
 
 
 ## Parallel for-each
@@ -44,9 +42,9 @@ If a process receives a ```List<T>``` on a port which accepts ```T```, it is aut
 Likewise for nested lists of any depth (the structure is preserved on the output).
 
 Port nesting level is determined by checking the innermost lists first (against the JSON-Schema definition of the port).
- It will be possible to change this to outermost-first in the workflow description.
+ It will be possible to change this to outermost-first in the workflow description in the next iteration.
 
-In the case where multiple process ports receive nested data, Process will be executed for each combination.
+In the case where multiple process ports receive nested data, exception is raised.
  This will be changed to allow different strategies.
 
 
