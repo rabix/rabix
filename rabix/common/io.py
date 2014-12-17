@@ -23,6 +23,7 @@ def to_json(obj, fp=None):
     kwargs = dict(default=default, indent=2, sort_keys=True)
     return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
 
+
 class InputCollector(object):
     """
     Will handle local files, 'data:,' URLs (for tests) and delegate other
@@ -42,7 +43,6 @@ class InputCollector(object):
         if not os.path.exists(self.dir):
             os.mkdir(self.dir)
         return self.dir
-
 
     def download(self, path, secondaryFiles=None, prompt=True):
         file = {}

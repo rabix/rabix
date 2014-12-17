@@ -90,7 +90,6 @@ class Container(object):
                         input_value[num]['path'], secondaryFiles)
 
 
-
 class Requirements(object):
 
     def __init__(self, container=None, resources=None, platform_features=None):
@@ -172,7 +171,6 @@ class CliApp(App):
     def set_config(self, *args, **kwargs):
         if self.requirements and self.requirements.container:
             self.requirements.container.set_config(*args, **kwargs)
-
 
     def to_dict(self):
         d = super(CliApp, self).to_dict()

@@ -201,7 +201,6 @@ class DockerContainer(Container):
         if not self.is_success():
             raise RuntimeError("err %s" % self.get_stderr())
 
-
     def remove(self, success_only=False):
         self.wait()
         if not success_only or self.is_success():
@@ -257,7 +256,6 @@ class DockerContainer(Container):
         else:
             print(self.docker_client.logs(self.container))
         return self
-
 
     def to_dict(self):
         return {
