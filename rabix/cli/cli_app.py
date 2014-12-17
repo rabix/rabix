@@ -1,8 +1,10 @@
 import os
-import copy
-
+import six
+import json
+import stat
+import uuid
 from uuid import uuid4
-
+from rabix.cli.adapter import CLIJob
 from rabix.common.models import App
 from rabix.common.ref_resolver import from_url
 from rabix.common.io import InputCollector
@@ -30,9 +32,11 @@ class Container(object):
 
     def __init__(self):
         self.inputCollector = InputCollector()
+
+    def install(self, job):
         pass
 
-    def install(self):
+    def set_config(self, *args, **kwargs):
         pass
 
     def ensure_files(self, job):
@@ -41,8 +45,7 @@ class Container(object):
         '''
         inputs = job.app.inputs.io
         input_values = job.inputs
-        self._resolve(inputs, input_values, job)
-        pass
+        self._resolve(inputs, input_values, job.inputs)
 
     def _resolve(self, inputs, input_values, job):
         is_single = lambda i: i.constructor in ['directory', 'file']
@@ -61,7 +64,7 @@ class Container(object):
             for obj in objects:
                 if input_values.get(obj.id):
                     for num, o in enumerate(input_values[obj.id]):
-                        self._resolve(inputs.objects, o, job[obj][num])
+                        self._resolve(obj.objects, o, job[obj.id][num])
 
     def _resolve_single(self, inp, input_value, job):
 
@@ -71,7 +74,7 @@ class Container(object):
             else:
                 secondaryFiles = inp.annotations.get(
                     'secondaryFiles')
-                job.inputs[inp.id] = self.inputCollector.download(
+                job[inp.id] = self.inputCollector.download(
                     input_value['path'], secondaryFiles)
 
     def _resolve_list(self, inp, input_value, job):
@@ -80,14 +83,12 @@ class Container(object):
                 'secondaryFiles')
             for num, inv in enumerate(input_value):
                 if input_value[num]['path'].endswith('.rbx.json'):
-                    job.inputs[inp.id][num] = from_url(input_value[num][
+                    job[inp.id][num] = from_url(input_value[num][
                         'path'])
                 else:
-                    job.inputs[inp.id][num] = self.inputCollector.download(
+                    job[inp.id][num] = self.inputCollector.download(
                         input_value[num]['path'], secondaryFiles)
 
-    def _run(self):
-        pass
 
 
 class Requirements(object):
@@ -115,6 +116,7 @@ class Requirements(object):
 
 
 class CliApp(App):
+    WORKING_DIR = '/work'
 
     def __init__(self, app_id, inputs, outputs,
                  app_description=None,
@@ -133,14 +135,44 @@ class CliApp(App):
         self.software_description = software_description
         self.requirements = requirements
 
-    def run(self, job):
-        # self.get_inputs(job)
-        if self.requirements.container:
-            return self.requirements.container.run(self, job)
+    def rnd_name(self):
+        return str(uuid.uuid4())
 
-    def install(self):
+    def run(self, job, job_dir=None):
+        job_dir = job_dir or self.rnd_name()
+        if not os.path.exists(job_dir):
+            os.mkdir(job_dir)
+        os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
+                 stat.S_IWOTH)
+        if self.requirements.container:
+            self.ensure_files(job)
+            self.install(job=job)
+            self.set_config(job=job, job_dir=job_dir)
+            adapter = CLIJob(job.to_dict(), job.app)
+            cmd_line = adapter.cmd_line()
+            self.requirements.container.run(cmd_line)
+            with open(os.path.abspath(job_dir) + '/result.json', 'w') as f:
+                outputs = adapter.get_outputs(os.path.abspath(job_dir))
+                for k, v in six.iteritems(outputs):
+                    if v:
+                        meta = v.pop('meta', {})
+                        with open(v['path'] + '.meta', 'w') as m:
+                            json.dump(meta, m)
+                json.dump(outputs, f)
+                return outputs
+
+    def install(self, *args, **kwargs):
         if self.requirements and self.requirements.container:
-            self.requirements.container.install()
+            self.requirements.container.install(*args, **kwargs)
+
+    def ensure_files(self, job):
+        if self.requirements and self.requirements.container:
+            self.requirements.container.ensure_files(job)
+
+    def set_config(self, *args, **kwargs):
+        if self.requirements and self.requirements.container:
+            self.requirements.container.set_config(*args, **kwargs)
+
 
     def to_dict(self):
         d = super(CliApp, self).to_dict()

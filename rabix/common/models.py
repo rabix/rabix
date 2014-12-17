@@ -17,7 +17,7 @@ class App(object):
         self._inputs = {io.id: io for io in inputs}
         self._outputs = {io.id: io for io in outputs}
 
-    def install(self):
+    def install(self, *args, **kwargs):
         pass
 
     def run(self, job):
