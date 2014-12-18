@@ -65,7 +65,7 @@ class InputAdapter(object):
     position = property(lambda self: (self.adapter.get('order', 9999999), self.key))
     transform = property(lambda self: self.adapter.get('value'))
     prefix = property(lambda self: self.adapter.get('prefix'))
-    item_separator = property(lambda self: self.adapter.get('itemSeparator', ','))
+    item_separator = property(lambda self: self.adapter.get('listSeparator', ','))
 
     @property
     def separator(self):
@@ -122,7 +122,7 @@ class InputAdapter(object):
         if not as_arg_list:
             return None
         if len(as_arg_list) > 1 or isinstance(as_arg_list[0], (dict, list)):
-            raise ValueError('Only lists of primitive values can use itemSeparator.')
+            raise ValueError('Only lists of primitive values can use listSeparator.')
         return six.text_type(as_arg_list[0])
 
 
@@ -171,21 +171,21 @@ class CLIJob(object):
         for k, v in six.iteritems(outs):
             adapter = v['adapter']
             files = glob.glob(os.path.join(job_dir, eval_resolve(adapter['glob'], self.job)))
-            result[k] = [{'path': p, 'meta': self._meta(p, adapter)} for p in files]
+            result[k] = [{'path': p, 'metadata': self._meta(p, adapter)} for p in files]
             if v['type'] != 'array':
                 result[k] = result[k][0] if result[k] else None
         return result
 
     def _meta(self, path, adapter):
-        meta, result = adapter.get('meta', {}), {}
+        meta, result = adapter.get('metadata', {}), {}
         inherit = meta.pop('__inherit__', None)
         if inherit:
             src = self.job['inputs'].get(inherit)
             if isinstance(src, list):
-                result = reduce(intersect_dicts, [x.get('meta', {}) for x in src]) \
-                    if len(src) > 1 else src[0].get('meta', {})
+                result = reduce(intersect_dicts, [x.get('metadata', {}) for x in src]) \
+                    if len(src) > 1 else src[0].get('metadata', {})
             elif isinstance(src, dict):
-                result = src.get('meta', {})
+                result = src.get('metadata', {})
         result.update(**meta)
         for k, v in six.iteritems(result):
             result[k] = eval_resolve(v, self.job, context=path)
