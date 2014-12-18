@@ -1,4 +1,5 @@
 import six
+import copy
 import logging
 
 from uuid import uuid4
@@ -118,7 +119,9 @@ class WorkflowApp(App):
                     self.graph.add_edge(
                         inp, node_id, InputRelation(input_name)
                     )
-                    self.inputs.append(input)
+                    wf_input = copy.deepcopy(input)
+                    wf_input.id = inp
+                    self.inputs.append(wf_input)
 
         else:
             self.graph.node_data(node_id).inputs[input_name] = input_val
@@ -139,6 +142,7 @@ class WorkflowApp(App):
         eg = ExecutionGraph(self, job)
         while eg.has_next():
             next = eg.next_job()
+
             self.executor.execute(next, eg.job_done)
         return eg.outputs
 
@@ -285,7 +289,6 @@ class ExecutionGraph(object):
             head = self.graph.head(in_edge)
             if (isinstance(rel, InputRelation) and
                     head in self.job.inputs):
-
                 executable.resolve_input(
                     rel.dst_port, self.job.inputs[head]
                 )
@@ -324,9 +327,10 @@ if __name__ == '__main__':
     from rabix.common.ref_resolver import from_url
 
     def root_relative(path):
+        p = abspath(join(__file__, '../', path))
         return abspath(join(__file__, '../../../', path))
 
-    doc = from_url(root_relative('examples/workflow.yml'))
+    doc = from_url(root_relative('tests/workflow.yml'))
 
     wf = WorkflowApp(doc['workflows']['add_one_mul_two']['steps'])
     print(wf.graph.forw_topo_sort())
