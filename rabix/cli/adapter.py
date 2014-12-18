@@ -31,8 +31,9 @@ def intersect_dicts(d1, d2):
 def eval_resolve(val, job, context=None):
     if not isinstance(val, dict):
         return val
-    if '$expr' in val:
-        return evaluate(val['$expr'], job, context)
+    if 'expr' in val or '$expr' in val:
+        v = val.get('expr') or val.get('$expr')
+        return evaluate(v, job, context)
     if 'job' in val:
         return resolve_pointer(job, val['job'], default=None)
     return val
@@ -57,7 +58,7 @@ class InputAdapter(object):
         self.value = eval_resolve(value, self.job)
         if self.transform:
             self.value = eval_resolve(self.transform, self.job, self.value)
-        elif self.is_file():
+        if self.is_file():
             self.value = self.value['path']
 
     __str__ = lambda self: str(self.value)

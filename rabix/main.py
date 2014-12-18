@@ -22,9 +22,7 @@ import rabix.schema
 
 TEMPLATE_RESOURCES = {
     "cpu": 4,
-    "mem": 5000,
-    "diskSpace": 20000,
-    "network": False
+    "mem": 5000
 }
 
 
@@ -32,9 +30,7 @@ TEMPLATE_JOB = {
     'app': 'http://example.com/app.json',
     'inputs': {},
     'platform': 'http://example.org/my_platform/v1',
-    'allocatedResources': {
-
-    }
+    'allocatedResources': TEMPLATE_RESOURCES
 }
 
 USAGE = '''
@@ -308,7 +304,10 @@ def main():
             if not isinstance(app, CliApp):
                 print(dry_run_args['<tool>'] + " is not a command line app")
                 return
-            adapter = CLIJob(job, tool)
+            job['@id'] = args.get('--dir')
+            job['app'] = app.to_dict()
+            j = Job.from_dict(context, job)
+            adapter = CLIJob(j.to_dict(), j.app)
             print(adapter.cmd_line())
             return
 
