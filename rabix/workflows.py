@@ -1,5 +1,6 @@
 import six
 import logging
+import copy
 
 from uuid import uuid4
 from collections import namedtuple, defaultdict
@@ -138,7 +139,7 @@ class WorkflowApp(App):
     def run(self, job):
         eg = ExecutionGraph(self, job)
         while eg.has_next():
-            next = eg.next_job()
+            next = eg.next_jobs()
             self.executor.execute(next, eg.job_done)
         return eg.outputs
 
@@ -213,8 +214,44 @@ class PartialJob(object):
             log.debug("Propagating result: %s, %s" % (k, v))
             self.outputs[k].resolve_input(v)
 
-    def job(self):
-        return Job(self.node_id, self.app, self.inputs, {})
+    @staticmethod
+    def depth(val):
+        d = 0
+        cur = val
+        while isinstance(cur, list):
+            if not cur:
+                break
+            cur = cur[0]
+            d += 1
+
+        return d
+
+    def jobs(self):
+
+        parallel_input = None
+        for input_name, input_val in six.iteritems(self.inputs):
+            io = self.app.get_input(input_name)
+            val_d = self.depth(input_val)
+            if val_d == io.depth:
+                continue
+            if val_d > io.depth + 1:
+                raise RabixError("Depth difference to large")
+            if val_d < io.depth:
+                raise RabixError("Insufficient dimensionality")
+            if parallel_input:
+                raise RabixError("Already parallelized by input '%%s'" % parallel_input)
+
+            parallel_input = input_name
+
+        if parallel_input:
+            jobs = []
+            for i, val in enumerate(self.inputs[parallel_input]):
+                inputs = copy.deepcopy(self.inputs)
+                inputs[parallel_input] = val
+                jobs.append(Job(self.node_id+"_"+str(i), self.app, inputs, {}))
+            return jobs
+        else:
+            return Job(self.node_id, self.app, self.inputs, {})
 
 
 class ExecRelation(object):
@@ -305,10 +342,10 @@ class ExecutionGraph(object):
         ex = self.executables[node_id]
         ex.propagate_result(results)
 
-    def next_job(self):
+    def next_jobs(self):
         if not self.order:
             return None
-        return self.executables[self.order.pop()].job()
+        return self.executables[self.order.pop()].jobs()
 
     def has_next(self):
         return len(self.order) > 0
