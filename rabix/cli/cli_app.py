@@ -154,7 +154,7 @@ class CliApp(App):
                 outputs = adapter.get_outputs(os.path.abspath(job_dir))
                 for k, v in six.iteritems(outputs):
                     if v:
-                        meta = v.pop('metadata', {})
+                        meta = v.get('metadata', {})
                         with open(v['path'] + '.meta', 'w') as m:
                             json.dump(meta, m)
                 json.dump(outputs, f)
