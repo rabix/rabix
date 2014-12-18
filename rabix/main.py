@@ -160,15 +160,27 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
 def resolve_values(inp, nval, inputs, startdir=None):
     if isinstance(nval, list):
         if inp.constructor != 'array':
-            raise Exception('Too many values')
-        inputs[inp.id] = []
-        for nv in nval:
-            if (inp.itemType in ['file', 'directory']):
-                if startdir:
-                    nv = os.path.join(startdir, nv)
-                inputs[inp.id].append({'path': nv})
-            else:
-                inputs[inp.id].append(nv)
+            inputs[inp.id] = []
+            for nv in nval:
+                if inp.constructor in ['file', 'directory']:
+                    if startdir:
+                        nval = os.path.join(startdir, nv)
+                    inputs[inp.id].append({'path': nval})
+                elif inp.constructor == 'integer':
+                    inputs[inp.id].append(int(nval))
+                elif inp.constructor == 'number':
+                    inputs[inp.id].append(float(nval))
+                else:
+                    inputs[inp.id].append(nval)
+        else:
+            inputs[inp.id] = []
+            for nv in nval:
+                if (inp.itemType in ['file', 'directory']):
+                    if startdir:
+                        nv = os.path.join(startdir, nv)
+                    inputs[inp.id].append({'path': nv})
+                else:
+                    inputs[inp.id].append(nv)
     else:
         if inp.constructor in ['file', 'directory']:
             if startdir:

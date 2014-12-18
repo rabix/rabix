@@ -1,0 +1,144 @@
+{   "@type": "Workflow",
+    "steps": [
+    {
+        "id": "BWA MEM",
+        "app": {
+            "name": "BWA MEM",
+            "schema": "https://github.com/common-workflow-language/common-workflow-language/blob/draft-1/specification/tool-description.md",
+            "description": "",
+            "documentAuthor": "sinisa88",
+            "requirements": {
+                "environment": {
+                    "container": {
+                        "type": "docker",
+                        "uri": "docker://images.sbgenomics.com/rabix/bwa#9d3b9b0359cf",
+                        "imageId": "9d3b9b0359cf"
+                    }
+                },
+                "resources": {
+                    "cpu": 0,
+                    "mem": 5000,
+                    "ports": [],
+                    "diskSpace": 0,
+                    "network": false
+                }
+            },
+            "inputs": {
+                "type": "object",
+                "required": ["reference", "reads"],
+                "properties": {
+                    "reference": {
+                        "type": "file",
+                        "adapter": {
+                            "order": 2,
+                            "secondaryFiles": ["amb", "ann", "bwt", "pac", "sa"]
+                        }
+                    },
+                    "reads": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 2,
+                        "items": {
+                            "type": "file"
+                        },
+                        "adapter": {
+                            "order": 3,
+                            "streamable": true
+                        }
+                    },
+                    "minimum_seed_length": {
+                        "type": "integer",
+                        "adapter": {
+                            "order": 1,
+                            "prefix": "-m",
+                            "separator": " "
+                        }
+                    },
+                    "min_std_max_min": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 4,
+                        "items": {
+                            "type": "number"
+                        },
+                        "adapter": {
+                            "order": 1,
+                            "prefix": "-I",
+                            "listSeparator": ","
+                        }
+                    }
+                }
+            },
+            "outputs": {
+                "type": "object",
+                "required": ["sam"],
+                "properties": {
+                    "sam": {
+                        "type": "file",
+                        "adapter": {
+                            "streamable": true,
+                            "glob": "output.sam",
+                            "metadata": {
+                                "__inherit__": "",
+                                "file_type": "sam"
+                            },
+                            "secondaryFiles": []
+                        }
+                    }
+                }
+            },
+            "adapter": {
+                "baseCmd": ["bwa", "mem"],
+                "stdout": "output.sam",
+                "args": [
+                    {
+                        "separator": " ",
+                        "prefix": "-t",
+                        "order": 1,
+                        "value": {
+                            "expr": "$job['allocatedResources']['cpu']"
+                        }
+                    }
+                ]
+            },
+            "script": ""
+        },
+        "inputs": {
+            "reference": {
+                "$from": "input_1"
+            },
+            "reads": {
+                "$from": "input_2"
+            }
+        },
+        "outputs": {
+            "sam": {
+                "$to": "output_1"
+            }
+        }
+    }
+], "inputs": {
+    "properties": {
+        "Input_1": {
+            "name": "Input_1",
+            "id": "input_1",
+            "required": false,
+            "type": "file"
+        },
+        "Input_2": {
+            "name": "Input_2",
+            "id": "input_2",
+            "required": false,
+            "type": "file"
+        }
+    }
+}, "outputs": {
+    "properties": {
+        "Output_1": {
+            "name": "Output_1",
+            "id": "output_1",
+            "required": false,
+            "type": "file"
+        }
+    }
+}}
