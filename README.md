@@ -19,7 +19,7 @@ This repo includes a local python executor and some utilities for building docke
 
 Rabix requires Python 2.7 or 3.x to run.
 
-There are several external dependencies for Rabix.
+There are several external dependencies for rabix.
 The first one is [Docker](https://docs.docker.com/installation/#installation)
 for running command line bioinformatics tools.
 Second one is a JavaScript interpreter: 
@@ -29,13 +29,15 @@ but probably the easiest  way is to install something like PhantomJS or NodeJS
 from your distro's repo.
 Finally you should install `libyaml` development package.
 
-If you are on Debian-based ditro, the following should work:
+If you are running Ubuntu, the following should setup your system:
 
 ```
-$ sudo apt-get install phantomjs libyaml-dev
+$ sudo apt-get install python-dev python-pip docker.io phantomjs libyaml-dev
 ```
+
+although you'll probably want to install newer version of Docker from the above link.
  
-Second, install rabix via `pip`:
+Now we can install rabix via `pip`:
 
 ```
 $ pip install git+https://github.com/rabix/rabix
