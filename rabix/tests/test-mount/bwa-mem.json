@@ -1,5 +1,6 @@
 {
     "tool": {
+        "name": "BWA_MEM",
         "softwareDescription": {},
         "documentAuthor": "boysha",
         "requirements": {
