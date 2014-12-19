@@ -25,11 +25,12 @@ for running command line bioinformatics tools.
 Second one is a JavaScript interpreter: 
 you can look for available options on
 [PyExecJS](https://github.com/doloopwhile/PyExecJS),
-but probably the easiest  way is to install something like PhantomJS or NodeJS
+but the easiest way is probably to install something like PhantomJS or NodeJS
 from your distro's repo.
 Finally you should install `libyaml` development package.
 
-If you are running Ubuntu, the following should setup your system:
+If you are running recent Ubuntu (14.04 or newer),
+the following should setup your system:
 
 ```
 $ sudo apt-get install python-dev python-pip docker.io phantomjs libyaml-dev
