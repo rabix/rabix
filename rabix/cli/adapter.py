@@ -10,6 +10,7 @@ import jsonschema.exceptions
 
 from six.moves import reduce
 from rabix.common.ref_resolver import resolve_pointer
+from rabix.common.util import sec_files_naming_conv
 from rabix.expressions import Evaluator
 
 ev = Evaluator()
@@ -171,8 +172,10 @@ class CLIJob(object):
         result, outs = {}, self.output_schema.get('properties', {})
         for k, v in six.iteritems(outs):
             adapter = v['adapter']
+
             files = glob.glob(os.path.join(job_dir, eval_resolve(adapter['glob'], self.job)))
-            result[k] = [{'path': p, 'metadata': self._meta(p, adapter)} for p in files]
+            result[k] = [{'path': p, 'metadata': self._meta(p, adapter),
+                          'secondaryFiles': self._secondaryFiles(p, adapter)} for p in files]
             if v['type'] != 'array':
                 result[k] = result[k][0] if result[k] else None
         return result
@@ -191,3 +194,11 @@ class CLIJob(object):
         for k, v in six.iteritems(result):
             result[k] = eval_resolve(v, self.job, context=path)
         return result
+
+    def _secondaryFiles(self, p, adapter):
+        secondaryFiles = []
+        secFiles = adapter.get('secondaryFiles')
+        for s in secFiles:
+            path = sec_files_naming_conv(p, s)
+            secondaryFiles.append({'path': path})
+        return secondaryFiles

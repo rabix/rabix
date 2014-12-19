@@ -1,7 +1,13 @@
+import os
 import six
+import json
+import logging
 from copy import copy
 from uuid import uuid4
 from jsonschema.validators import Draft4Validator
+
+
+log = logging.getLogger(__name__)
 
 
 class App(object):
@@ -38,6 +44,20 @@ class App(object):
             elif inp.required:
                 return False
         return True
+
+    def mk_work_dir(self, path):
+        if os.path.exists(path):
+            num = 0
+            while os.path.exists(path):
+                path = '_'.join([path, str(num)])
+                num = num + 1
+        os.mkdir(path)
+        return path
+
+    def job_dump(self, job, dirname):
+        with open(os.path.join(dirname, 'job.cwl.json'), 'w') as f:
+            json.dump(job.to_dict(), f)
+            log.info('File %s created.', job.id)
 
     def to_dict(self):
         return {

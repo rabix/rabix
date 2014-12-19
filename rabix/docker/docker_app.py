@@ -31,7 +31,7 @@ def ensure_image(docker_client, image_id, uri):
 
 
 def parse_docker_uri(uri):
-    repo, tag = uri.split('#')
+    repo, tag = uri.split(':')
     repo = repo.lstrip('docker://')
     return repo, tag
 

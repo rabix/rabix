@@ -1,4 +1,4 @@
-{   "name": "BWA MEM",
+{   "name": "BWA_MEM",
     "schema": "https://github.com/common-workflow-language/common-workflow-language/blob/draft-1/specification/tool-description.md",
     "description": "",
     "documentAuthor": "sinisa88",
@@ -85,7 +85,7 @@
                         },
                         "__inherit__": "reads"
                     },
-                    "secondaryFiles": []
+                    "secondaryFiles": ["bla"]
                 }
             }
         }

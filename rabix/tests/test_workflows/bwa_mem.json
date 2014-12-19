@@ -1,9 +1,9 @@
 {   "@type": "Workflow",
     "steps": [
     {
-        "id": "BWA MEM",
+        "id": "BWA_MEM",
         "app": {
-            "name": "BWA MEM",
+            "name": "BWA_MEM",
             "schema": "https://github.com/common-workflow-language/common-workflow-language/blob/draft-1/specification/tool-description.md",
             "description": "",
             "documentAuthor": "sinisa88",
@@ -101,7 +101,6 @@
                     }
                 ]
             },
-            "script": ""
         },
         "inputs": {
             "reference": {

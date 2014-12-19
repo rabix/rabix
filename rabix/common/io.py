@@ -11,7 +11,9 @@ import glob
 from six.moves.urllib import parse as urlparse
 from six.moves import input as raw_input
 from rabix.common.errors import ResourceUnavailable
+from rabix.common.util import sec_files_naming_conv
 from rabix.common.ref_resolver import from_url
+
 
 log = logging.getLogger(__name__)
 
@@ -130,10 +132,6 @@ class InputCollector(object):
     def _get_secondary_files(self, secondaryFiles, input, autodetect=True,
                              prompt=True):
 
-        def get_file_path(path, ext):
-            return ''.join(['.'.join(path.split('.')[:-1]), ext]) if \
-                ext.startswith('.') else ''.join([path, '.', ext])
-
         def secondary_files_autodetect(path):
             log.info('Searching for additional files for file: %s', path)
             return [fn for fn in glob.glob(path + '.*')
@@ -144,7 +142,7 @@ class InputCollector(object):
         secFiles = []
         if secondaryFiles:
             for n, sf in enumerate(secondaryFiles):
-                path = get_file_path(input, sf)
+                path = sec_files_naming_conv(input, sf)
                 log.info('Downloading: %s', path)
                 secFiles.append(self.download(path, prompt=False))
         if autodetect:

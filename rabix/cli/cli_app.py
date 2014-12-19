@@ -2,12 +2,18 @@ import os
 import six
 import json
 import stat
-import uuid
+import time
+import datetime
 from uuid import uuid4
 from rabix.cli.adapter import CLIJob
 from rabix.common.models import App
 from rabix.common.ref_resolver import from_url
 from rabix.common.io import InputCollector
+
+
+def job_id(name):
+    ts = time.time()
+    return '_'.join([name, datetime.datetime.fromtimestamp(ts).strftime('%H%M%S')])
 
 
 class Resources(object):
@@ -134,29 +140,28 @@ class CliApp(App):
         self.software_description = software_description
         self.requirements = requirements
 
-    def rnd_name(self):
-        return str(uuid.uuid4())
-
     def run(self, job, job_dir=None):
-        job_dir = job_dir or self.rnd_name()
-        if not os.path.exists(job_dir):
-            os.mkdir(job_dir)
+        job_dir = job_dir or job.app.id
+        job_dir = self.mk_work_dir(job_dir)
         os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
                  stat.S_IWOTH)
         if self.requirements.container:
             self.ensure_files(job)
             self.install(job=job)
+            self.job_dump(job, job_dir)
             self.set_config(job=job, job_dir=job_dir)
             adapter = CLIJob(job.to_dict(), job.app)
             cmd_line = adapter.cmd_line()
             self.requirements.container.run(cmd_line)
-            with open(os.path.abspath(job_dir) + '/result.json', 'w') as f:
+            with open(os.path.abspath(job_dir) + '/result.cwl.json', 'w') as f:
                 outputs = adapter.get_outputs(os.path.abspath(job_dir))
                 for k, v in six.iteritems(outputs):
                     if v:
                         meta = v.get('metadata', {})
                         with open(v['path'] + '.meta', 'w') as m:
                             json.dump(meta, m)
+                    with open(v['path'] + '.rbx.json', 'w') as rx:
+                        json.dump(v, rx)
                 json.dump(outputs, f)
                 return outputs
 
@@ -175,7 +180,7 @@ class CliApp(App):
     def to_dict(self):
         d = super(CliApp, self).to_dict()
         d.update({
-            "@type": "CommandLineTool",
+            "@type": "CommandLine",
             'adapter': self.adapter,
             'annotations': self.annotations,
             'platform_features': self.platform_features,
@@ -186,7 +191,7 @@ class CliApp(App):
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d.get('@id', str(uuid4())),
+        return cls(d.get('@id', d.get('@id') if d.get('@id') else job_id(d.get('name'))),
                    context.from_dict(d['inputs']),
                    context.from_dict(d['outputs']),
                    app_description=d.get('appDescription'),

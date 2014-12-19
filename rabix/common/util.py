@@ -135,3 +135,8 @@ def set_log_level(v_count):
     else:
         level = logging.DEBUG
     logging.root.setLevel(level)
+
+
+def sec_files_naming_conv(path, ext):
+    return ''.join(['.'.join(path.split('.')[:-1]), ext]) if \
+        ext.startswith('.') else ''.join([path, '.', ext])

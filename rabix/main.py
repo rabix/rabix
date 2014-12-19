@@ -99,7 +99,7 @@ def fix_types(tool):
 
     # tool type
     if '@type' not in tool:
-        tool['@type'] = 'CommandLineTool'
+        tool['@type'] = 'CommandLine'
 
     if tool['@type'] == 'Workflow':
         for step in tool['steps']:
@@ -157,9 +157,9 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
                            inputs=' '.join(usage_str))
 
 
-def resolve_values(inp, nval, inputs, startdir=None):
+def resolve_values(inp, nval, inputs, startdir=None, type='CommandLine'):
     if isinstance(nval, list):
-        if inp.constructor != 'array':
+        if inp.constructor != 'array' and type != 'CommandLine':
             inputs[inp.id] = []
             for nv in nval:
                 if inp.constructor in ['file', 'directory']:
@@ -172,7 +172,7 @@ def resolve_values(inp, nval, inputs, startdir=None):
                     inputs[inp.id].append(float(nval))
                 else:
                     inputs[inp.id].append(nval)
-        else:
+        elif inp.constructor == 'array':
             inputs[inp.id] = []
             for nv in nval:
                 if (inp.itemType in ['file', 'directory']):
@@ -181,6 +181,8 @@ def resolve_values(inp, nval, inputs, startdir=None):
                     inputs[inp.id].append({'path': nv})
                 else:
                     inputs[inp.id].append(nv)
+        else:
+            raise Exception('Too many values')
     else:
         if inp.constructor in ['file', 'directory']:
             if startdir:
@@ -194,14 +196,14 @@ def resolve_values(inp, nval, inputs, startdir=None):
             inputs[inp.id] = nval
 
 
-def get_inputs_from_file(app, args, startdir):
+def get_inputs_from_file(app, args, startdir, type='CommandLine'):
     inp = {}
     inputs = app.inputs.io
-    resolve_nested_paths(inp, inputs, args, startdir)
+    resolve_nested_paths(inp, inputs, args, startdir, type)
     return {'inputs': inp}
 
 
-def resolve_nested_paths(inp, inputs, args, startdir):
+def resolve_nested_paths(inp, inputs, args, startdir, type='CommandLine'):
     for input in inputs:
         nval = args.get(input.id)
         if nval:
@@ -216,16 +218,16 @@ def resolve_nested_paths(inp, inputs, args, startdir):
                         startdir
                     )
             else:
-                resolve_values(input, nval, inp, startdir)
+                resolve_values(input, nval, inp, startdir, type)
 
 
-def get_inputs(app, args):
+def get_inputs(app, args, type='CommandLine'):
     inputs = {}
     properties = app.inputs.io
     for input in properties:
         nval = args.get('--' + input.id) or args.get(input.id)
         if nval:
-            resolve_values(input, nval, inputs)
+            resolve_values(input, nval, inputs, type)
     return {'inputs': inputs}
 
 
@@ -295,7 +297,7 @@ def main():
             input_file = from_url(args.get('--inp-file'))
             dot_update_dict(
                 job['inputs'],
-                get_inputs_from_file(app, input_file, startdir)['inputs']
+                get_inputs_from_file(app, input_file, startdir, type=tool.get('@type'))['inputs']
             )
 
         app_inputs_usage = make_app_usage_string(
@@ -309,7 +311,7 @@ def main():
             print(app_usage)
             return
 
-        inp = get_inputs(app, app_inputs)
+        inp = get_inputs(app, app_inputs, type=tool.get('@type'))
         job['inputs'].update(inp['inputs'])
 
         if args['--print-cli']:
