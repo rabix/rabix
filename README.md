@@ -12,18 +12,42 @@ The goal is to specify a way to describe bioinformatics tools and workflows that
 
 To play with describing tools and making workflows visit [rabix.org](http://rabix.org).
 
-This repo includes a local python executor (currently only running tools) and some utilities for building docker images.
+This repo includes a local python executor and some utilities for building docker images.
 
 
 ### Install
 
-First, [install docker](https://docs.docker.com/installation/#installation) on
-a linux machine.
+Rabix requires Python 2.7 or 3.x to run.
+
+There are several external dependencies for Rabix.
+The first one is [Docker](https://docs.docker.com/installation/#installation)
+for running command line bioinformatics tools.
+Second one is a JavaScript interpreter: 
+you can look for available options on
+[PyExecJS](https://github.com/doloopwhile/PyExecJS),
+but probably the easiest  way is to install something like PhantomJS or NodeJS
+from your distro's repo.
+Finally you should install `libyaml` development package.
+
+If you are on Debian-based ditro, the following should work:
+
+```
+$ sudo apt-get install phantomjs libyaml-dev
+```
  
-Second, install rabix via pip:
+Second, install rabix via `pip`:
 
 ```
 $ pip install git+https://github.com/rabix/rabix
+```
+
+If you are using Anaconda there might be an issue with a version of `requests`,
+so you should create separate environment with requests 2.2.1,
+prior to running `pip`:
+ 
+```
+$ conda create -n rabix pip requests=2.2.1
+$ source activate rabix
 ```
 
 Check if everything works by installing an example tool:
