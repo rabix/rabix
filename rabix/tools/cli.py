@@ -16,10 +16,10 @@ log = logging.getLogger(__name__)
 
 USAGE = """
 Usage:
-  rabix build [-v...] [--config=<cfg_path>]
-  rabix checksum [--method=(md5|sha1)] <jsonptr>
-  rabix -h | --help
-  rabix --version
+  rabix-tools build [-v...] [--config=<cfg_path>]
+  rabix-tools checksum [--method=(md5|sha1)] <jsonptr>
+  rabix-tools -h | --help
+  rabix-tools --version
 
 Commands:
   build                     Execute steps for app building, wrapping and
