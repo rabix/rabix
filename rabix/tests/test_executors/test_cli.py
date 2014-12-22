@@ -33,15 +33,11 @@ def test_provide_image_good_repo():
 
 
 def test_cmd_line():
-    cmd1 = dry_run_parse(['-i', './rabix/tests/test-cmdline/inputs.json',
-                          './rabix/tests/test-cmdline/bwa-mem-tool.yml#tool'])
+    cmd1 = dry_run_parse(['https://s3.amazonaws.com/rabix/rabix-test/'
+                          'bwa-mem.json',
+                          '-i', './rabix/tests/test-cmdline/inputs.json'])
     tool1 = get_tool(cmd1)
     assert tool1
-    cmd2 = dry_run_parse(['https://s3.amazonaws.com/rabix/rabix-test/'
-                          'bwa-mem-tool.json#tool',
-                          '-i', './rabix/tests/test-cmdline/inputs.json'])
-    tool2 = get_tool(cmd2)
-    assert tool2
 
 
 @nottest
@@ -97,11 +93,3 @@ def test_override_input():
     main()
     assert os.path.exists(os.path.abspath('./testdir') + '/output.sam')
     shutil.rmtree(os.path.abspath('./testdir'))
-
-
-if __name__ == '__main__':
-    sys.argv = ['rabix', '-i', 'rabix/tests/test-cmdline/inputs.json', '--d',
-                'testdir', 'rabix/tests/test-cmdline/bwa-object-param.json', '--',
-                '--reference', 'rabix/tests/test-files/chr20.fa']
-    main()
-    # shutil.rmtree(os.path.abspath('./testdir'))
