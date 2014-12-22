@@ -31,7 +31,7 @@
                         "type": "file",
                         "adapter": {
                             "order": 2,
-                            "secondaryFiles": ["amb", "ann", "bwt", "pac", "sa"]
+                            "secondaryFiles": [".amb", ".ann", ".bwt", ".pac", ".sa"]
                         }
                     },
                     "reads": {
@@ -100,7 +100,7 @@
                         }
                     }
                 ]
-            },
+            }
         },
         "inputs": {
             "reference": {

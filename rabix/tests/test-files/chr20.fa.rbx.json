@@ -1,1 +1,1 @@
-{"path": "/home/sinisa/devel/CWL/rabix/rabix/tests/test-files/chr20.fa", "meta": {"file_type": "fasta"}, "secondaryFiles": ["amb", "ann", "bwt", "pac", "sa"]}
+{"path": "chr20.fa", "meta": {"file_type": "fasta"}, "secondaryFiles": [{"path": "./chr20.fa.amb"}, {"path": "./chr20.fa.ann"}, {"path": "./chr20.fa.bwt"}, {"path": "./chr20.fa.pac"}, {"path": "./chr20.fa.sa"}]}

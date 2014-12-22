@@ -11,7 +11,7 @@ import glob
 from six.moves.urllib import parse as urlparse
 from six.moves import input as raw_input
 from rabix.common.errors import ResourceUnavailable
-from rabix.common.util import sec_files_naming_conv
+from rabix.common.util import sec_files_naming_conv, url_type
 from rabix.common.ref_resolver import from_url
 
 
@@ -46,16 +46,31 @@ class InputCollector(object):
             os.mkdir(self.dir)
         return self.dir
 
+    def set_dir(self, job_dir):
+        self.dir = job_dir
+
     def download(self, path, secondaryFiles=None, prompt=True):
-        file = {}
-        file['path'] = self._download(path, metasearch=True)
-        file['meta'] = self._meta(path, prompt=prompt)
-        if secondaryFiles:
-            file['secondaryFiles'] = self._get_secondary_files(secondaryFiles,
-                                                               path,
-                                                               prompt=prompt)
-        if prompt:
-            self._rbx_dump(file)
+        npath = self._download(path, metasearch=True)
+        if os.path.exists(npath + '.rbx.json'):
+            file = from_url(path + '.rbx.json')
+            startdir = os.path.dirname(path)
+            for i, v in enumerate(file.get('secondaryFiles', [])):
+                spath = v['path']
+                if not os.path.isabs(spath) and url_type(spath) == 'file':
+                    spath = os.path.join(startdir, spath)
+                file['secondaryFiles'][i]['path'] = self._download(
+                    spath, metasearch=False)
+            file['path'] = npath
+        else:
+            file = {}
+            file['metadata'] = self._meta(path, prompt=prompt)
+            if secondaryFiles:
+                file['secondaryFiles'] = self._get_secondary_files(secondaryFiles,
+                                                                   path,
+                                                                   prompt=prompt)
+            file['path'] = npath
+            if prompt:
+                self._rbx_dump(file)
         return file
 
     def _download(self, url, metasearch=True):
@@ -71,7 +86,7 @@ class InputCollector(object):
         try:
             r.raise_for_status()
         except Exception as e:
-
+            log.error('Resource unavailable %s: ', url)
             raise ResourceUnavailable(str(e))
         dest = self._get_dest_for_url(url)
         with open(dest, 'wb') as fp:
@@ -80,14 +95,14 @@ class InputCollector(object):
         if metasearch:
             meta = self._get_meta_for_url(url)
             if meta:
-                with open(dest + '.meta', 'w') as fp:
+                with open(dest + '.rbx.json', 'w') as fp:
                     to_json(meta, fp)
         return os.path.abspath(dest)
 
     def _get_meta_for_url(self, url):
         log.debug('Fetching metadata for %s', url)
         chunks = list(urlparse.urlparse(url))
-        chunks[2] += '.meta'
+        chunks[2] += '.rbx.json'
         meta_url = urlparse.urlunparse(chunks)
         r = requests.get(meta_url)
         if not r.ok:
@@ -144,7 +159,8 @@ class InputCollector(object):
             for n, sf in enumerate(secondaryFiles):
                 path = sec_files_naming_conv(input, sf)
                 log.info('Downloading: %s', path)
-                secFiles.append(self.download(path, prompt=False))
+                secFiles.append({'path': self._download(
+                    path, metasearch=False)})
         if autodetect:
             if not secondaryFiles:
                 secondaryFiles = []
@@ -152,9 +168,9 @@ class InputCollector(object):
             ad = []
             names = [os.path.basename(f) for f in secondaryFiles]
             for sf in autodetected:
-                sf = sf.replace(input + '.', '')
+                sf = sf.replace(input, '')
                 if sf not in names:
-                    ad.append(sf)
+                    ad.append(str(sf))
             if ad:
                 cont = raw_input('Do you want to include autodetected '
                                  'additional files for file %s %s? [Y/n] '

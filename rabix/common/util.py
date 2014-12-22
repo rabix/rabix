@@ -138,5 +138,14 @@ def set_log_level(v_count):
 
 
 def sec_files_naming_conv(path, ext):
-    return ''.join(['.'.join(path.split('.')[:-1]), ext]) if \
-        ext.startswith('.') else ''.join([path, '.', ext])
+    return ''.join([path, ext]) if ext.startswith('.') \
+        else ''.join(['.'.join(path.split('.')[:-1]), ext])
+
+
+def url_type(url):
+    if url.startswith('data:,'):
+        return 'data'
+    if '://' not in url:
+        return 'file'
+    else:
+        return 'url'

@@ -43,13 +43,14 @@
         }
     },
     "tool": {
+        "name": "BWA_MEM",
         "softwareDescription": {},
         "documentAuthor": "boysha",
         "requirements": {
             "environment": {
                 "container": {
                     "type": "docker",
-                    "uri": "docker://images.sbgenomics.com/rabix/bwa#9d3b9b0359cf",
+                    "uri": "docker://images.sbgenomics.com/rabix/bwa_mem:9d3b9b0359cf",
                     "imageId": "9d3b9b0359cf"
                 }
             },

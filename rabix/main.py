@@ -5,7 +5,7 @@ import logging
 import six
 
 from rabix import __version__ as version
-from rabix.common.util import set_log_level, dot_update_dict
+from rabix.common.util import set_log_level, dot_update_dict, url_type
 from rabix.common.models import Job, IO
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
@@ -163,9 +163,10 @@ def resolve_values(inp, nval, inputs, startdir=None, type='CommandLine'):
             inputs[inp.id] = []
             for nv in nval:
                 if inp.constructor in ['file', 'directory']:
-                    if startdir:
-                        nval = os.path.join(startdir, nv)
-                    inputs[inp.id].append({'path': nval})
+                    if startdir and url_type(nv) == 'file' and \
+                            not os.path.isabs(nv):
+                        nv = os.path.join(startdir, nv)
+                    inputs[inp.id].append({'path': nv})
                 elif inp.constructor == 'integer':
                     inputs[inp.id].append(int(nval))
                 elif inp.constructor == 'number':
@@ -176,7 +177,8 @@ def resolve_values(inp, nval, inputs, startdir=None, type='CommandLine'):
             inputs[inp.id] = []
             for nv in nval:
                 if (inp.itemType in ['file', 'directory']):
-                    if startdir:
+                    if startdir and url_type(nv) == 'file' and \
+                            not os.path.isabs(nv):
                         nv = os.path.join(startdir, nv)
                     inputs[inp.id].append({'path': nv})
                 else:
@@ -185,7 +187,8 @@ def resolve_values(inp, nval, inputs, startdir=None, type='CommandLine'):
             raise Exception('Too many values')
     else:
         if inp.constructor in ['file', 'directory']:
-            if startdir:
+            if startdir and url_type(nval) == 'file' and not os.path.isabs(
+                    nval):
                 nval = os.path.join(startdir, nval)
             inputs[inp.id] = {'path': nval}
         elif inp.constructor == 'integer':
@@ -227,7 +230,7 @@ def get_inputs(app, args, type='CommandLine'):
     for input in properties:
         nval = args.get('--' + input.id) or args.get(input.id)
         if nval:
-            resolve_values(input, nval, inputs, type)
+            resolve_values(input, nval, inputs, type=type)
     return {'inputs': inputs}
 
 

@@ -45,11 +45,12 @@ class Container(object):
     def set_config(self, *args, **kwargs):
         pass
 
-    def ensure_files(self, job):
+    def ensure_files(self, job, job_dir):
         '''
         Resolve paths of all input files
         '''
         inputs = job.app.inputs.io
+        self.inputCollector.set_dir(job_dir)
         input_values = job.inputs
         self._resolve(inputs, input_values, job.inputs)
 
@@ -75,13 +76,12 @@ class Container(object):
     def _resolve_single(self, inp, input_value, job):
 
         if input_value:
-            if input_value['path'].endswith('.rbx.json'):
-                job[inp.id] = from_url(input_value['path'])
-            else:
-                secondaryFiles = inp.annotations.get(
-                    'secondaryFiles')
-                job[inp.id] = self.inputCollector.download(
-                    input_value['path'], secondaryFiles)
+            # if input_value['path'].endswith('.rbx.json'):
+            #     job[inp.id] = from_url(input_value['path'])
+            # else:
+            secondaryFiles = inp.annotations.get('secondaryFiles')
+            job[inp.id] = self.inputCollector.download(
+                input_value['path'], secondaryFiles)
 
     def _resolve_list(self, inp, input_value, job):
         if input_value:
@@ -146,7 +146,7 @@ class CliApp(App):
         os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
                  stat.S_IWOTH)
         if self.requirements.container:
-            self.ensure_files(job)
+            self.ensure_files(job, job_dir)
             self.install(job=job)
             self.job_dump(job, job_dir)
             self.set_config(job=job, job_dir=job_dir)
@@ -157,11 +157,8 @@ class CliApp(App):
                 outputs = adapter.get_outputs(os.path.abspath(job_dir))
                 for k, v in six.iteritems(outputs):
                     if v:
-                        meta = v.get('metadata', {})
-                        with open(v['path'] + '.meta', 'w') as m:
-                            json.dump(meta, m)
-                    with open(v['path'] + '.rbx.json', 'w') as rx:
-                        json.dump(v, rx)
+                        with open(v['path'] + '.rbx.json', 'w') as rx:
+                            json.dump(v, rx)
                 json.dump(outputs, f)
                 return outputs
 
@@ -169,9 +166,9 @@ class CliApp(App):
         if self.requirements and self.requirements.container:
             self.requirements.container.install(*args, **kwargs)
 
-    def ensure_files(self, job):
+    def ensure_files(self, job, job_dir):
         if self.requirements and self.requirements.container:
-            self.requirements.container.ensure_files(job)
+            self.requirements.container.ensure_files(job, job_dir)
 
     def set_config(self, *args, **kwargs):
         if self.requirements and self.requirements.container:

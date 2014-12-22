@@ -27,11 +27,11 @@
                 "adapter": {
                     "order": 2,
                     "secondaryFiles": [
-                        "amb",
-                        "ann",
-                        "bwt",
-                        "pac",
-                        "sa"
+                        ".amb",
+                        ".ann",
+                        ".bwt",
+                        ".pac",
+                        ".sa"
                     ]
                 }
             },
@@ -85,7 +85,7 @@
                         },
                         "__inherit__": "reads"
                     },
-                    "secondaryFiles": ["bla"]
+                    "secondaryFiles": []
                 }
             }
         }
