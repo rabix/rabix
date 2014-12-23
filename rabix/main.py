@@ -9,6 +9,7 @@ from rabix.common.util import set_log_level, dot_update_dict, url_type
 from rabix.common.models import Job, IO
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
+from rabix.common.errors import RabixError
 from rabix.cli.adapter import CLIJob
 from rabix.executor import Executor
 from rabix.cli import CliApp
@@ -330,7 +331,12 @@ def main():
 
         job['@id'] = args.get('--dir')
         job['app'] = app.to_dict()
-        print(app.run(Job.from_dict(context, job)))
+
+        try:
+            result = app.run(Job.from_dict(context, job))
+            print(result)
+        except RabixError as err:
+            print(err.message)
 
     except docopt.DocoptExit:
         print(app_usage)

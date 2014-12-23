@@ -4,6 +4,7 @@ import six
 class RabixError(BaseException):
     def __init__(self, message=''):
         super(RabixError, self).__init__(message)
+        self.message = message
 
 
 class ValidationError(RabixError):

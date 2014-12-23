@@ -1,2 +1,2 @@
 #!/bin/sh
-rabix 'rabix/tests/test_runtime/bwa-mem-tool.yml#tool' -- --reads rabix/tests/test-files/example_human_Illumina.pe_1.fastq --reads rabix/tests/test-files/example_human_Illumina.pe_2.fastq --reference rabix/tests/test-files/example_human_reference.fasta
+rabix 'rabix/tests/test-cmdline/bwa-mem.json#tool' -- --reads rabix/tests/test-files/example_human_Illumina.pe_1.fastq --reads rabix/tests/test-files/example_human_Illumina.pe_2.fastq --reference rabix/tests/test-files/example_human_reference.fasta
