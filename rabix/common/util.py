@@ -36,15 +36,15 @@ def import_name(name):
     return getattr(module, var_name)
 
 
-def update_dict(cfg, new_cfg):
-    for key, val in six.iteritems(new_cfg):
-        t = cfg
+def dot_update_dict(dst, src):
+    for key, val in six.iteritems(src):
+        t = dst
         if '.' in key:
             for k in key.split('.'):
                 if k == key.split('.')[-1]:
                     if isinstance(val, collections.Mapping):
                         t = t.setdefault(k, {})
-                        update_dict(t, new_cfg[key])
+                        dot_update_dict(t, src[key])
                     else:
                         t[k] = val
                 else:
@@ -54,9 +54,10 @@ def update_dict(cfg, new_cfg):
         else:
             if isinstance(val, collections.Mapping):
                 t = t.setdefault(key, {})
-                update_dict(t, new_cfg[key])
+                dot_update_dict(t, src[key])
             else:
                 t[key] = val
+    return dst
 
 
 class DotAccessDict(dict):
@@ -134,3 +135,17 @@ def set_log_level(v_count):
     else:
         level = logging.DEBUG
     logging.root.setLevel(level)
+
+
+def sec_files_naming_conv(path, ext):
+    return ''.join([path, ext]) if ext.startswith('.') \
+        else ''.join(['.'.join(path.split('.')[:-1]), ext])
+
+
+def url_type(url):
+    if url.startswith('data:,'):
+        return 'data'
+    if '://' not in url:
+        return 'file'
+    else:
+        return 'url'

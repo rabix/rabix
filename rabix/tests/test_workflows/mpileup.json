@@ -1,0 +1,908 @@
+{"steps": [
+    {
+        "_id": "mpileup",
+        "app": {
+            "json": {
+                "display": {
+                    "canvas": {
+                        "x": 0,
+                        "y": 0,
+                        "zoom": 1
+                    },
+                    "description": "",
+                    "name": ""
+                },
+                "steps": [
+                    {
+                        "_id": "samtools mpileup_1",
+                        "app": {
+                            "app_id": "547c7b69fd79e7f979392689",
+                            "json": {
+                                "softwareDescription": {
+                                    "repo_owner": "sinisa88",
+                                    "name": "samtools mpileup",
+                                    "appVersion": "1.1.18"
+                                },
+                                "documentAuthor": "StarvingMarvin",
+                                "requirements": {
+                                    "environment": {
+                                        "container": {
+                                            "type": "docker",
+                                            "uri": "docker://samtools#latest",
+                                            "imageId": "4b41a079614a"
+                                        }
+                                    },
+                                    "resources": {
+                                        "cpu": 0,
+                                        "mem": 5000,
+                                        "ports": [],
+                                        "diskSpace": 0,
+                                        "network": false
+                                    }
+                                },
+                                "inputs": {
+                                    "type": "object",
+                                    "required": ["bam"],
+                                    "properties": {
+                                        "bam": {
+                                            "type": "array",
+                                            "minItems": 1,
+                                            "maxItems": 0,
+                                            "required": true,
+                                            "items": {
+                                                "type": "file"
+                                            },
+                                            "adapter": {
+                                                "order": 2,
+                                                "listStreamable": true,
+                                                "listSeparator": "_"
+                                            }
+                                        },
+                                        "quality": {
+                                            "type": "boolean",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-6",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "count_anomalous_read_pairs": {
+                                            "type": "boolean",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-A",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "disable_BAQ_computation": {
+                                            "type": "boolean",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-B",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "list_of_input_BAM_filenames": {
+                                            "type": "file",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-b",
+                                                "order": 1,
+                                                "streamable": false
+                                            },
+                                            "required": false
+                                        },
+                                        "parameter_for_adjusting_mapQ": {
+                                            "type": "integer",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-C",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "max_per_BAM_depth_to_avoid_excessive_memory_usage": {
+                                            "type": "integer",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-d",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "recalculate_extended_BAQ_on_the_fly_thus_ignoring_existing_BQs": {
+                                            "type": "boolean",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-E",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "faidx_indexed_reference_sequence_file": {
+                                            "type": "file",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-f",
+                                                "order": 1,
+                                                "streamable": false
+                                            },
+                                            "required": false
+                                        },
+                                        "exclude_read_groups_listed_in_FILE": {
+                                            "type": "file",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-G",
+                                                "order": 1,
+                                                "streamable": false
+                                            },
+                                            "required": false
+                                        },
+                                        "list_of_positions_chr_pos_or_regions_BED": {
+                                            "type": "file",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-l",
+                                                "order": 1,
+                                                "streamable": false
+                                            },
+                                            "required": false
+                                        },
+                                        "ignore_RG_tags": {
+                                            "type": "boolean",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-R",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "skip_alignments_with_mapQ_smaller_than_INT": {
+                                            "type": "integer",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-q",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "skip_bases_with_baseQ_BAQ_smaller_than_INT": {
+                                            "type": "integer",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-Q",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "required_flags_skip_reads_with_mask_bits_unset": {
+                                            "type": "integer",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "--rf",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "output_per_sample_DP_in_BCF": {
+                                            "type": "boolean",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-D",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "generate_BCF_output": {
+                                            "type": "boolean",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-g",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "output_base_positions_on_reads": {
+                                            "type": "boolean",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-O",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "output_mapping_quality": {
+                                            "type": "boolean",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-s",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "output_per_sample_strand_bias_P_value_in_BCF": {
+                                            "type": "boolean",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-S",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "filter_flags_skip_reads_with_mask_bits_set": {
+                                            "type": "integer",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "--ff",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "minimum_fraction_of_gapped_reads_for_candidates": {
+                                            "type": "number",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-F",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "do_not_perform_indel_calling": {
+                                            "type": "boolean",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-I",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "max_per_sample_depth_for_INDEL_calling": {
+                                            "type": "integer",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-L",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "minimum_gapped_reads_for_indel_candidates": {
+                                            "type": "integer",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-m",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "generate_uncompress_BCF_output": {
+                                            "type": "boolean",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-u",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "Phred_scaled_gap_extension_seq_error_probability": {
+                                            "type": "integer",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-e",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "Phred_scaled_gap_open_sequencing_error_probability": {
+                                            "type": "integer",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-o",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "apply_m_and_F_per_sample_to_increase_sensitivity": {
+                                            "type": "boolean",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-p",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "cap_mapping_quality_at_INT": {
+                                            "type": "integer",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-M",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "coefficient_for_homopolymer_errors": {
+                                            "type": "integer",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-h",
+                                                "order": 1
+                                            },
+                                            "required": false
+                                        },
+                                        "region_in_which_pileup_is_generated": {
+                                            "type": "string",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-r",
+                                                "order": 1
+                                            }
+                                        },
+                                        "comma_separated_list_of_platforms_for_indels": {
+                                            "type": "array",
+                                            "adapter": {
+                                                "separator": "_",
+                                                "prefix": "-p",
+                                                "order": 1,
+                                                "listSeparator": ","
+                                            },
+                                            "required": false,
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                },
+                                "outputs": {
+                                    "type": "object",
+                                    "properties": {
+                                        "out": {
+                                            "type": "array",
+                                            "adapter": {
+                                                "glob": "output.txt",
+                                                "stdout": true,
+                                                "meta": {
+                                                    "__inherit__": "bam",
+                                                    "file_type": {
+                                                        "expr": {
+                                                            "value": "{if($job.inputs.generate_uncompress_BCF_output === true) {return 'bcf'} else {return 'txt'}}",
+                                                            "lang": "javascript"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "items": {
+                                                "type": "file"
+                                            }
+                                        }
+                                    }
+                                },
+                                "adapter": {
+                                    "baseCmd": ["/opt/samtools-1.1/samtools"],
+                                    "stdout": "output.txt",
+                                    "args": [
+                                        {
+                                            "order": 0,
+                                            "prefix": "",
+                                            "separator": " ",
+                                            "value": "mpileup"
+                                        }
+                                    ]
+                                },
+                                "name": "mpileup"
+                            },
+                            "author": "StarvingMarvin",
+                            "name": "mpileup",
+                            "_id": "547c7b69fd79e7f97939268a",
+                            "__v": 0,
+                            "version": 1
+                        },
+                        "inputs": {
+                            "bam": {
+                                "$from": "input_1"
+                            }
+                        },
+                        "outputs": {
+                            "out": {
+                                "$to": "output_1"
+                            }
+                        }
+                    }
+                ],
+                "inputs": {
+                    "properties": {
+                        "Input_1_1": {
+                            "name": "Input_1",
+                            "id": "input_1",
+                            "required": false,
+                            "type": "file"
+                        }
+                    }
+                },
+                "outputs": {
+                    "properties": {
+                        "Output_1_1": {
+                            "name": "Output_1",
+                            "id": "output_1",
+                            "required": false,
+                            "type": "file"
+                        }
+                    }
+                },
+                "type": "workflow",
+                "name": "mpileup"
+            },
+            "$promise": {
+                "$$state": {
+                    "status": 1,
+                    "value": {
+                        "json": {
+                            "display": {
+                                "canvas": {
+                                    "x": 0,
+                                    "y": 0,
+                                    "zoom": 1
+                                },
+                                "description": "",
+                                "name": ""
+                            },
+                            "steps": [
+                                {
+                                    "_id": "samtools mpileup_1",
+                                    "app": {
+                                        "app_id": "547c7b69fd79e7f979392689",
+                                        "json": {
+                                            "softwareDescription": {
+                                                "repo_owner": "sinisa88",
+                                                "name": "samtools mpileup",
+                                                "appVersion": "1.1.18"
+                                            },
+                                            "documentAuthor": "StarvingMarvin",
+                                            "requirements": {
+                                                "environment": {
+                                                    "container": {
+                                                        "type": "docker",
+                                                        "uri": "docker://samtools#latest",
+                                                        "imageId": "4b41a079614a"
+                                                    }
+                                                },
+                                                "resources": {
+                                                    "cpu": 0,
+                                                    "mem": 5000,
+                                                    "ports": [],
+                                                    "diskSpace": 0,
+                                                    "network": false
+                                                }
+                                            },
+                                            "inputs": {
+                                                "type": "object",
+                                                "required": ["bam"],
+                                                "properties": {
+                                                    "bam": {
+                                                        "type": "array",
+                                                        "minItems": 1,
+                                                        "maxItems": 0,
+                                                        "required": true,
+                                                        "items": {
+                                                            "type": "file"
+                                                        },
+                                                        "adapter": {
+                                                            "order": 2,
+                                                            "listStreamable": true,
+                                                            "listSeparator": "_"
+                                                        }
+                                                    },
+                                                    "quality": {
+                                                        "type": "boolean",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-6",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "count_anomalous_read_pairs": {
+                                                        "type": "boolean",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-A",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "disable_BAQ_computation": {
+                                                        "type": "boolean",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-B",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "list_of_input_BAM_filenames": {
+                                                        "type": "file",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-b",
+                                                            "order": 1,
+                                                            "streamable": false
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "parameter_for_adjusting_mapQ": {
+                                                        "type": "integer",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-C",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "max_per_BAM_depth_to_avoid_excessive_memory_usage": {
+                                                        "type": "integer",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-d",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "recalculate_extended_BAQ_on_the_fly_thus_ignoring_existing_BQs": {
+                                                        "type": "boolean",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-E",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "faidx_indexed_reference_sequence_file": {
+                                                        "type": "file",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-f",
+                                                            "order": 1,
+                                                            "streamable": false
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "exclude_read_groups_listed_in_FILE": {
+                                                        "type": "file",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-G",
+                                                            "order": 1,
+                                                            "streamable": false
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "list_of_positions_chr_pos_or_regions_BED": {
+                                                        "type": "file",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-l",
+                                                            "order": 1,
+                                                            "streamable": false
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "ignore_RG_tags": {
+                                                        "type": "boolean",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-R",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "skip_alignments_with_mapQ_smaller_than_INT": {
+                                                        "type": "integer",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-q",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "skip_bases_with_baseQ_BAQ_smaller_than_INT": {
+                                                        "type": "integer",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-Q",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "required_flags_skip_reads_with_mask_bits_unset": {
+                                                        "type": "integer",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "--rf",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "output_per_sample_DP_in_BCF": {
+                                                        "type": "boolean",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-D",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "generate_BCF_output": {
+                                                        "type": "boolean",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-g",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "output_base_positions_on_reads": {
+                                                        "type": "boolean",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-O",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "output_mapping_quality": {
+                                                        "type": "boolean",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-s",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "output_per_sample_strand_bias_P_value_in_BCF": {
+                                                        "type": "boolean",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-S",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "filter_flags_skip_reads_with_mask_bits_set": {
+                                                        "type": "integer",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "--ff",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "minimum_fraction_of_gapped_reads_for_candidates": {
+                                                        "type": "number",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-F",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "do_not_perform_indel_calling": {
+                                                        "type": "boolean",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-I",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "max_per_sample_depth_for_INDEL_calling": {
+                                                        "type": "integer",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-L",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "minimum_gapped_reads_for_indel_candidates": {
+                                                        "type": "integer",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-m",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "generate_uncompress_BCF_output": {
+                                                        "type": "boolean",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-u",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "Phred_scaled_gap_extension_seq_error_probability": {
+                                                        "type": "integer",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-e",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "Phred_scaled_gap_open_sequencing_error_probability": {
+                                                        "type": "integer",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-o",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "apply_m_and_F_per_sample_to_increase_sensitivity": {
+                                                        "type": "boolean",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-p",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "cap_mapping_quality_at_INT": {
+                                                        "type": "integer",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-M",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "coefficient_for_homopolymer_errors": {
+                                                        "type": "integer",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-h",
+                                                            "order": 1
+                                                        },
+                                                        "required": false
+                                                    },
+                                                    "region_in_which_pileup_is_generated": {
+                                                        "type": "string",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-r",
+                                                            "order": 1
+                                                        }
+                                                    },
+                                                    "comma_separated_list_of_platforms_for_indels": {
+                                                        "type": "array",
+                                                        "adapter": {
+                                                            "separator": "_",
+                                                            "prefix": "-p",
+                                                            "order": 1,
+                                                            "listSeparator": ","
+                                                        },
+                                                        "required": false,
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "outputs": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "out": {
+                                                        "type": "array",
+                                                        "adapter": {
+                                                            "glob": "output.txt",
+                                                            "stdout": true,
+                                                            "meta": {
+                                                                "__inherit__": "bam",
+                                                                "file_type": {
+                                                                    "expr": {
+                                                                        "value": "{if($job.inputs.generate_uncompress_BCF_output === true) {return 'bcf'} else {return 'txt'}}",
+                                                                        "lang": "javascript"
+                                                                    }
+                                                                }
+                                                            }
+                                                        },
+                                                        "items": {
+                                                            "type": "file"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "adapter": {
+                                                "baseCmd": ["/opt/samtools-1.1/samtools"],
+                                                "stdout": "output.txt",
+                                                "args": [
+                                                    {
+                                                        "order": 0,
+                                                        "prefix": "",
+                                                        "separator": " ",
+                                                        "value": "mpileup"
+                                                    }
+                                                ]
+                                            },
+                                            "name": "mpileup"
+                                        },
+                                        "author": "StarvingMarvin",
+                                        "name": "mpileup",
+                                        "_id": "547c7b69fd79e7f97939268a",
+                                        "__v": 0,
+                                        "version": 1
+                                    },
+                                    "inputs": {
+                                        "bam": {
+                                            "$from": "input_1"
+                                        }
+                                    },
+                                    "outputs": {
+                                        "out": {
+                                            "$to": "output_1"
+                                        }
+                                    }
+                                }
+                            ],
+                            "inputs": {
+                                "properties": {
+                                    "Input_1_1": {
+                                        "name": "Input_1",
+                                        "id": "input_1",
+                                        "required": false,
+                                        "type": "file"
+                                    }
+                                }
+                            },
+                            "outputs": {
+                                "properties": {
+                                    "Output_1_1": {
+                                        "name": "Output_1",
+                                        "id": "output_1",
+                                        "required": false,
+                                        "type": "file"
+                                    }
+                                }
+                            },
+                            "type": "workflow",
+                            "name": "mpileup"
+                        }
+                    },
+                    "processScheduled": false
+                }
+            },
+            "$resolved": true
+        },
+        "inputs": {
+            "input_1": {
+                "$from": "input_1"
+            }
+        },
+        "outputs": {
+            "output_1": {
+                "$to": "output_1"
+            }
+        }
+    }
+], "inputs": {
+    "properties": {
+        "Input_1": {
+            "name": "Input_1",
+            "id": "input_1",
+            "required": false,
+            "type": "file"
+        }
+    }
+}, "outputs": {
+    "properties": {
+        "Output_1": {
+            "name": "Output_1",
+            "id": "output_1",
+            "required": false,
+            "type": "file"
+        }
+    }
+}}

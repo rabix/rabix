@@ -6,9 +6,9 @@ from os.path import isfile
 
 from rabix import __version__ as version
 from rabix.common.errors import RabixError
-from rabix.cliche.ref_resolver import Loader
+from rabix.common.ref_resolver import Loader
 from rabix.common.util import set_log_level
-from rabix.tools.steps import run_steps
+from rabix.tools.build import run_steps
 
 
 log = logging.getLogger(__name__)
@@ -16,10 +16,10 @@ log = logging.getLogger(__name__)
 
 USAGE = """
 Usage:
-  rabix build [-v...] [--config=<cfg_path>]
-  rabix checksum [--method=(md5|sha1)] <jsonptr>
-  rabix -h | --help
-  rabix --version
+  rabix-tools build [-v...] [--config=<cfg_path>]
+  rabix-tools checksum [--method=(md5|sha1)] <jsonptr>
+  rabix-tools -h | --help
+  rabix-tools --version
 
 Commands:
   build                     Execute steps for app building, wrapping and

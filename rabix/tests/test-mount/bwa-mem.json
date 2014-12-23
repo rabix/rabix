@@ -1,5 +1,6 @@
 {
     "tool": {
+        "name": "BWA_MEM",
         "softwareDescription": {},
         "documentAuthor": "boysha",
         "requirements": {
@@ -28,21 +29,19 @@
             "properties": {
                 "reference": {
                     "type": "file",
-                    "required": true,
                     "adapter": {
                         "order": 2,
                         "secondaryFiles": [
-                            "amb",
-                            "ann",
-                            "bwt",
-                            "pac",
-                            "sa"
+                            "*.amb",
+                            "*.ann",
+                            "*.bwt",
+                            "*.pac",
+                            "*.sa"
                         ]
                     }
                 },
                 "reads": {
                     "type": "array",
-                    "required": true,
                     "minItems": 1,
                     "maxItems": 2,
                     "adapter": {
@@ -86,7 +85,11 @@
                     "adapter": {
                         "stdout": true,
                         "glob": "output.sam",
-                        "streamable": true
+                        "streamable": true,
+                        "meta": {
+                            "file_type": "sam",
+                            "__inherit__": "reads"
+                        }
                     }
                 }
             }
@@ -97,6 +100,9 @@
                 "mem"
             ],
             "stdout": "output.sam",
+            "environment": {
+                "ENVVAR1": "/home/envvar1"
+            },
             "args": [
                 {
                     "order": 1,

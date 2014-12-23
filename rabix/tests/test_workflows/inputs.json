@@ -1,0 +1,4 @@
+{
+"input_1": ["../test-files/chr20.fa", "../test-files/example_human_reference.fasta"],
+"input_2": ["../test-files/example_human_Illumina.pe_1.fastq", "../test-files/example_human_Illumina.pe_2.fastq"]
+}
