@@ -182,7 +182,7 @@
                 "separator": "_",
                 "prefix": "-O",
                 "order": 1,
-                "listSeparator": ","
+                "itemSeparator": ","
             },
             "required": false,
             "minItems": 1,
@@ -197,7 +197,7 @@
                 "separator": "_",
                 "prefix": "-E",
                 "order": 1,
-                "listSeparator": ","
+                "itemSeparator": ","
             },
             "required": false,
             "minItems": 1,
@@ -212,7 +212,7 @@
                 "separator": "_",
                 "prefix": "-L",
                 "order": 1,
-                "listSeparator": ","
+                "itemSeparator": ","
             },
             "required": false,
             "minItems": 1,
