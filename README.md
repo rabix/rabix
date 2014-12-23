@@ -7,7 +7,7 @@ Rabix is an open source implementation of the specification being developed on t
 
 CWL is an informal task force consisting of people from various organizations
 that have an interest in portability of bioinformatics workflows.
-The goal is to specify a way to describe bioinformatics tools and workflowsthat is powerful,
+The goal is to specify a way to describe bioinformatics tools and workflows that is powerful,
 easy to use and allows for portability of tools/workflows and reproducibility of runs.
 
 Version 0.5 should be compatible with
@@ -82,13 +82,12 @@ will produce the following output:
       [-- --reads=<file>... --reference=<file> [--minimum_seed_length=<integer>] [--min_std_max_min=<array_number_separator(None)>...]...]
 
 
-We see a lot of options here, but ideally, we'll be dealing with workflows that have lot of options pre-populated, so that we only need to supply few additional arguments such as our reads or similar.
-
+We see a lot of options here, but ideally, we'll be dealing with workflows that have lot of options pre-populated, so that we only need to supply few additional arguments such as yours input files or similar.
 
 Let's try running this tool with some example files:
 
 ```
-$ rabix https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json -- \
+$ rabix -v https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json -- \
  --reference https://s3.amazonaws.com/rabix/rabix-test/chr20.fa \
  --reads https://s3.amazonaws.com/rabix/rabix-test/example_human_Illumina.pe_1.fastq \
  --reads https://s3.amazonaws.com/rabix/rabix-test/example_human_Illumina.pe_2.fastq
@@ -96,8 +95,17 @@ $ rabix https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json -- \
 
 Once again, we can supply either paths to local files or HTTP URLs.
 
+Of course of we wanted to type down command line arguments for command line programs, we wouldn't need a middleman. Here is a more meaningful example:
 
-This command will look for a docker images specified in the document, pull them and run according to description.
+```
+rabix -v -i https://s3.amazonaws.com/rabix/rabix-test/inputs-workflow-remote.json \
+  https://s3.amazonaws.com/rabix/rabix-test/bwa-mem-workflow.json
+```
+
+Now we have entire workflow defined in one file and all the options we want to apply to that workflow in another, specified after `-i` option.
+These are simple JSON files that you can write yourself, or more conveniently, use UI on [rabix.org](http://rabix.org).
+
+When running an app, rabix will look for a docker images specified in the document, pull them and run according to description.
 If for some reason you want to pre-fetch required images, you can use "--install" switch:
 
 
@@ -116,4 +124,6 @@ If former, you should probably present your idea on the mailing list or submit a
 [Common Workflow Language](https://github.com/common-workflow-language/common-workflow-language)
 project.
 
-If you are interested in contributing to rabix, feel free to submit issues and pull requests, just pay attention to "devel" branch as it's the place where feature branches get merged. We will merge thing to master branch periodically in sync with releases on PyPI.
+If you are interested in contributing to rabix, feel free to submit issues and pull requests.
+If you are contributing code, pay attention to "devel" branch as it's the place where feature branches get merged.
+We will merge thing to master branch periodically in sync with releases on PyPI.
