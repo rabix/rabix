@@ -44,7 +44,7 @@ although you'll probably want to install newer version of Docker from the above 
 Now we can install rabix via `pip`:
 
 ```
-$ pip install git+https://github.com/rabix/rabix
+$ pip install rabix
 ```
 
 If you are using Anaconda there might be an issue with a version of `requests`,
