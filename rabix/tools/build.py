@@ -1,14 +1,13 @@
-import docker
 import logging
 import re
 import six
 import shlex
 
-from os import getenv
 from os.path import abspath
 from docker.utils.utils import parse_repository_tag
 
 from rabix.docker.container import Container, find_image, get_image
+from rabix.docker import docker_client
 from rabix.common.errors import RabixError
 
 log = logging.getLogger(__name__)
@@ -95,7 +94,7 @@ class Runner(object):
 
             step_type = self.types.get(type_name)
             if not step_type:
-                raise RabixError("Unknown step type: %" % type_name)
+                raise RabixError("Unknown step type: %s" % type_name)
 
             resolved = {k: self.resolve(v) for k, v
                         in six.iteritems(step_conf)}
@@ -125,6 +124,5 @@ class Runner(object):
 
 
 def run_steps(config, docker_host=None, steps=None, context=None):
-    docker_host = docker_host or getenv("DOCKER_HOST", None)
-    r = Runner(docker.Client(docker_host, version="1.12"), steps, context)
+    r = Runner(docker_client(docker_host), steps, context)
     r.run(config)

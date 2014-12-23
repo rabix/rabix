@@ -1,7 +1,5 @@
-from rabix.docker.docker_app import DockerContainer
-
-DOCKER_API_VERSION = '1.12'
-DEFAULT_TIMEOUT_SECONDS = 60
+from rabix.docker.docker_app import DockerContainer, docker_client
+from rabix.docker.container import find_image, get_image
 
 
 def init(context):

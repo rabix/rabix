@@ -3,6 +3,7 @@ import six
 import shlex
 
 from docker.errors import APIError
+from docker.utils.utils import parse_repository_tag
 
 from rabix.common.errors import ResourceUnavailable
 
@@ -18,18 +19,13 @@ def ensure_image(docker_client, image_id, uri):
         if not uri:
             log.error('Image cannot be pulled: no URI given')
             raise Exception('Cannot pull image')
-        repo, tag = parse_docker_uri(uri)
+        repo, tag = parse_repository_tag(uri)
         log.info("Pulling image %s:%s" % (repo, tag))
         docker_client.pull(repo, tag)
         if filter(lambda x: (image_id in x['Id']),
                   docker_client.images()):
             return
         raise Exception('Image not found')
-
-
-def parse_docker_uri(uri):
-    repo, tag = uri.split(':')
-    return repo, tag
 
 
 def make_config(**kwargs):

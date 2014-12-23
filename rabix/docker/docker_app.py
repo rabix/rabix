@@ -11,6 +11,21 @@ from rabix.common.errors import ResourceUnavailable
 
 log = logging.getLogger(__name__)
 
+DOCKER_DEFAULT_API_VERSION = "1.12"
+DOCKER_DEFAULT_TIMEOUT = 60
+
+
+def docker_client(docker_host=None,
+                  api_version=DOCKER_DEFAULT_API_VERSION,
+                  timeout=DOCKER_DEFAULT_TIMEOUT,
+                  tls=None):
+
+    docker_host = docker_host or os.getenv("DOCKER_HOST", None)
+    tls = False if tls is None else os.getenv("DOCKER_TLS_VERIFY", "") != ""
+    docker_cert_path = os.getenv("DOCKER_CERT_PATH", "")  # ???
+
+    return docker.Client(docker_host, api_version, timeout, tls)
+
 
 def ensure_image(docker_client, image_id, uri):
     if image_id and [x for x in docker_client.images() if x['Id'].startswith(
@@ -71,8 +86,7 @@ class DockerContainer(Container):
         super(DockerContainer, self).__init__()
         self.uri = uri
         self.image_id = image_id
-        self.docker_client = dockr or docker.Client(os.getenv(
-            "DOCKER_HOST", None), version='1.12')
+        self.docker_client = dockr or docker_client()
         self.config = {}
         self.volumes = {}
         self.binds = {}
