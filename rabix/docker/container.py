@@ -10,22 +10,22 @@ from rabix.common.errors import ResourceUnavailable
 log = logging.getLogger(__name__)
 
 
-def ensure_image(docker_client, image_id, uri):
-    if image_id and [x for x in docker_client.images() if x['Id'].startswith(
-            image_id)]:
-        log.debug("Provide image: found %s" % image_id)
-        return
-    else:
-        if not uri:
-            log.error('Image cannot be pulled: no URI given')
-            raise Exception('Cannot pull image')
-        repo, tag = parse_repository_tag(uri)
-        log.info("Pulling image %s:%s" % (repo, tag))
-        docker_client.pull(repo, tag)
-        if filter(lambda x: (image_id in x['Id']),
-                  docker_client.images()):
-            return
-        raise Exception('Image not found')
+# def ensure_image(docker_client, image_id, uri):
+#     if image_id and [x for x in docker_client.images() if x['Id'].startswith(
+#             image_id)]:
+#         log.debug("Provide image: found %s" % image_id)
+#         return
+#     else:
+#         if not uri:
+#             log.error('Image cannot be pulled: no URI given')
+#             raise Exception('Cannot pull image')
+#         repo, tag = parse_repository_tag(uri)
+#         log.info("Pulling image %s:%s" % (repo, tag))
+#         docker_client.pull(repo, tag)
+#         if filter(lambda x: (image_id in x['Id']),
+#                   docker_client.images()):
+#             return
+#         raise Exception('Image not found')
 
 
 def make_config(**kwargs):
@@ -82,7 +82,7 @@ class Container(object):
         self.config = make_config(**kwargs)
 
         try:
-            ensure_image(docker_client, self.image_id, self.uri)
+            get_image(docker_client, image_id=self.image_id, repo=self.uri)
             self.container = self.docker_client.create_container_from_config(
                 self.config)
         except APIError as e:
@@ -178,6 +178,9 @@ def get_image(client, repo=None, tag=None, image_id=None):
 
     if not image_id and not repo:
         raise ValueError('Need either repository or image ID.')
+
+    if repo and not tag:
+        repo, tag = parse_repository_tag(repo)
 
     img = None
 

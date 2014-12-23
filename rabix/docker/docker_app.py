@@ -1,11 +1,13 @@
 import os
 import six
-import copy
 import shlex
 import logging
 import docker
+
 from docker.errors import APIError
+
 from rabix.cli.cli_app import Container
+from rabix.docker.container import get_image
 from rabix.common.errors import ResourceUnavailable
 
 
@@ -27,29 +29,29 @@ def docker_client(docker_host=None,
     return docker.Client(docker_host, api_version, timeout, tls)
 
 
-def ensure_image(docker_client, image_id, uri):
-    if image_id and [x for x in docker_client.images() if x['Id'].startswith(
-            image_id)]:
-        log.debug("Provide image: found %s" % image_id)
-        return
-    else:
-        if not uri:
-            log.error('Image cannot be pulled: no URI given')
-            raise Exception('Cannot pull image')
-        repo, tag = parse_docker_uri(uri)
-        log.info("Pulling image %s:%s" % (repo, tag))
-        docker_client.pull(repo, tag)
-        if filter(lambda x: (image_id in x['Id']),
-                  docker_client.images()):
-            return
-        raise Exception('Image not found')
+# def ensure_image(docker_client, image_id, uri):
+#     if image_id and [x for x in docker_client.images() if x['Id'].startswith(
+#             image_id)]:
+#         log.debug("Provide image: found %s" % image_id)
+#         return
+#     else:
+#         if not uri:
+#             log.error('Image cannot be pulled: no URI given')
+#             raise Exception('Cannot pull image')
+#         repo, tag = parse_docker_uri(uri)
+#         log.info("Pulling image %s:%s" % (repo, tag))
+#         docker_client.pull(repo, tag)
+#         if filter(lambda x: (image_id in x['Id']),
+#                   docker_client.images()):
+#             return
+#         raise Exception('Image not found')
 
 
-def parse_docker_uri(uri):
-    repo, tag = uri.split(':')
-    repo = repo.lstrip('docker://')
-    return repo, tag
-
+# def parse_docker_uri(uri):
+#     repo, tag = uri.split(':')
+#     repo = repo.lstrip('docker://')
+#     return repo, tag
+#
 
 def make_config(**kwargs):
     keys = ['Hostname', 'Domainname', 'User', 'Memory', 'MemorySwap',
@@ -84,7 +86,7 @@ class DockerContainer(Container):
 
     def __init__(self, uri, image_id, dockr=None):
         super(DockerContainer, self).__init__()
-        self.uri = uri
+        self.uri = uri.lstrip("docker://")
         self.image_id = image_id
         self.docker_client = dockr or docker_client()
         self.config = {}
@@ -93,10 +95,9 @@ class DockerContainer(Container):
 
     def install(self, *args, **kwargs):
         try:
-            ensure_image(self.docker_client,
-                         self.image_id,
-                         self.uri
-                         )
+            get_image(self.docker_client,
+                      image_id=self.image_id,
+                      repo=self.uri)
         except APIError as e:
             if e.response.status_code == 404:
                 log.info('Image %s not found:' % self.image_id)
