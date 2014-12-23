@@ -67,7 +67,7 @@ class InputAdapter(object):
     position = property(lambda self: (self.adapter.get('order', 9999999), self.key))
     transform = property(lambda self: self.adapter.get('value'))
     prefix = property(lambda self: self.adapter.get('prefix'))
-    item_separator = property(lambda self: self.adapter.get('listSeparator', ','))
+    item_separator = property(lambda self: self.adapter.get('itemSeparator', ','))
 
     @property
     def separator(self):
@@ -124,7 +124,7 @@ class InputAdapter(object):
         if not as_arg_list:
             return None
         if len(as_arg_list) > 1 or isinstance(as_arg_list[0], (dict, list)):
-            raise ValueError('Only lists of primitive values can use listSeparator.')
+            raise ValueError('Only lists of primitive values can use itemSeparator.')
         return six.text_type(as_arg_list[0])
 
 
@@ -197,7 +197,7 @@ class CLIJob(object):
 
     def _secondaryFiles(self, p, adapter):
         secondaryFiles = []
-        secFiles = adapter.get('secondaryFiles')
+        secFiles = adapter.get('secondaryFiles', [])
         for s in secFiles:
             path = sec_files_naming_conv(p, s)
             secondaryFiles.append({'path': path})

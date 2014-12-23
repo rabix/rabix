@@ -64,7 +64,7 @@
                         "adapter": {
                             "order": 1,
                             "prefix": "-I",
-                            "listSeparator": ","
+                            "itemSeparator": ","
                         }
                     }
                 }
