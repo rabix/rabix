@@ -1,7 +1,7 @@
 steps:
   - make:
       type: run
-      from: bedtools-build
+      from: slartibartfast/bedtools-buildenv
       cmd:
         - curl -k https://bedtools.googlecode.com/files/BEDTools.v2.17.0.tar.gz > BEDTools.tar.gz
         - tar -zxvf BEDTools.tar.gz
@@ -18,4 +18,4 @@ steps:
   - test_tool:
       type: run
       from: ${package_tool}
-      cmd: [sort, -i, ./rabix/tests/test-files/Illumina.TruSeq.hg19.bed]
+      cmd: sort -i ./rabix/tests/test-files/Illumina.TruSeq.hg19.bed

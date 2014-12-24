@@ -45,9 +45,9 @@ def run_container(client, from_img, kwargs, container_kwargs):
         raise RabixError("Commands ('cmd') not specified!")
 
     repo, tag = parse_repository_tag(from_img)
-    img = find_image(client, from_img)
+    img = get_image(client, from_img)
     if not img:
-        img = get_image(client, repo=repo, tag=tag)
+        raise RabixError("Unable to find image: %s" % img)
 
     mount_point = kwargs.pop('mount_point', MOUNT_POINT)
     run_cmd = make_cmd(cmd, join=True)

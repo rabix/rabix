@@ -161,16 +161,34 @@ class Container(object):
         return self
 
 
-def find_image(client, image_id, repo=None, tag=None):
+def match_image(image, query):
     """Returns image dict if it exists locally, or None"""
+    if isinstance(query, str):
+        return (len(query) >= 12 and image['Id'].startswith(query)) or \
+            query in image['RepoTags'] or \
+            (query + ":latest") in image['RepoTags']
+
+    if isinstance(query, list):
+        return any([match_image(image, q) for q in query])
+
+    if isinstance(query, tuple):
+        repo, tag = query
+        return (repo + ":" + tag) in image['RepoTags']
+
+    if isinstance(query, dict):
+        image_id = query.get('image_id')
+        repo = query.get('repo')
+        tag = query.get('tag', 'latest')
+        return (image_id and image['Id'].startswith(image_id)) or \
+               ((repo + ":" + tag) in image['RepoTags'])
+
+    return False
+
+
+def find_image(client, query):
     images = client.images()
-    tag = tag or 'latest'
-    img = ([i for i in images if i['Id'].startswith(image_id)]
-           if image_id else None)
-    if not img:
-        img = ([i for i in images if (repo + ':' + tag) in i['RepoTags']]
-               if repo and tag else None)
-    return (img or [None])[0]
+    it = (image for image in images if match_image(image, query))
+    return next(it, None)
 
 
 def get_image(client, repo=None, tag=None, image_id=None):
@@ -182,15 +200,16 @@ def get_image(client, repo=None, tag=None, image_id=None):
     if repo and not tag:
         repo, tag = parse_repository_tag(repo)
 
-    img = None
+    queries = [image_id, repo]
+    if tag:
+        queries.append((repo, tag))
 
-    if image_id:
-        img = find_image(client, image_id)
+    img = find_image(client, queries)
 
     if not img:
         log.info('Pulling %s', repo)
         client.pull(repo, tag)
-        img = find_image(client, image_id, repo, tag)
+        img = find_image(client, queries)
 
     if not img:
         raise ResourceUnavailable(repo, 'Image not found.')
