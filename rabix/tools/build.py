@@ -6,7 +6,7 @@ import shlex
 from os.path import abspath
 from docker.utils.utils import parse_repository_tag
 
-from rabix.docker.container import Container, find_image, get_image
+from rabix.docker.container import Container, get_image
 from rabix.docker import docker_client
 from rabix.common.errors import RabixError
 
@@ -58,7 +58,7 @@ def run_container(client, from_img, kwargs, container_kwargs):
                           working_dir=mount_point, **container_kwargs)
 
     container.start({abspath('.'): mount_point})
-    container.get_stdout()
+    container.write_stdout()
     return container
 
 
