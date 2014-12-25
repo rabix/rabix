@@ -1,3 +1,4 @@
+from __future__ import print_function
 import logging
 import six
 import shlex
@@ -8,24 +9,6 @@ from docker.utils.utils import parse_repository_tag
 from rabix.common.errors import ResourceUnavailable
 
 log = logging.getLogger(__name__)
-
-
-# def ensure_image(docker_client, image_id, uri):
-#     if image_id and [x for x in docker_client.images() if x['Id'].startswith(
-#             image_id)]:
-#         log.debug("Provide image: found %s" % image_id)
-#         return
-#     else:
-#         if not uri:
-#             log.error('Image cannot be pulled: no URI given')
-#             raise Exception('Cannot pull image')
-#         repo, tag = parse_repository_tag(uri)
-#         log.info("Pulling image %s:%s" % (repo, tag))
-#         docker_client.pull(repo, tag)
-#         if filter(lambda x: (image_id in x['Id']),
-#                   docker_client.images()):
-#             return
-#         raise Exception('Image not found')
 
 
 def make_config(**kwargs):
@@ -120,34 +103,20 @@ class Container(object):
     def is_success(self):
         return self.wait().inspect()['State']['ExitCode'] == 0
 
-    def get_stdout(self, file=None):
+    def write_stdout(self, file=None):
+        write = lambda out: print(out.rstrip())
+        f = None
         if file:
             f = open(file, 'w', buffering=1)
+            write = f.write
+
         if self.is_running():
             for out in self.docker_client.attach(self.container, stdout=True,
                                                  stderr=False, stream=True,
                                                  logs=True):
-                if file:
-                    f.write(out.rstrip() + '\n')
-                else:
-                    print(out.rstrip())
-            if file:
+                write(out)
+            if f:
                 f.close()
-        else:
-            print(self.docker_client.logs(self.container))
-        return self
-
-    def get_stderr(self, file=None):
-        if file:
-            f = open(file, 'w')
-        if self.is_running():
-            for out in self.docker_client.attach(self.container, stdout=False,
-                                                 stderr=True, stream=True,
-                                                 logs=True):
-                if file:
-                    f.write(str(out).rstrip() + '\n')
-                else:
-                    print(out.rstrip())
         else:
             print(self.docker_client.logs(self.container))
         return self

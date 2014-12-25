@@ -29,30 +29,6 @@ def docker_client(docker_host=None,
     return docker.Client(docker_host, api_version, timeout, tls)
 
 
-# def ensure_image(docker_client, image_id, uri):
-#     if image_id and [x for x in docker_client.images() if x['Id'].startswith(
-#             image_id)]:
-#         log.debug("Provide image: found %s" % image_id)
-#         return
-#     else:
-#         if not uri:
-#             log.error('Image cannot be pulled: no URI given')
-#             raise Exception('Cannot pull image')
-#         repo, tag = parse_docker_uri(uri)
-#         log.info("Pulling image %s:%s" % (repo, tag))
-#         docker_client.pull(repo, tag)
-#         if filter(lambda x: (image_id in x['Id']),
-#                   docker_client.images()):
-#             return
-#         raise Exception('Image not found')
-
-
-# def parse_docker_uri(uri):
-#     repo, tag = uri.split(':')
-#     repo = repo.lstrip('docker://')
-#     return repo, tag
-#
-
 def make_config(**kwargs):
     keys = ['Hostname', 'Domainname', 'User', 'Memory', 'MemorySwap',
             'CpuShares', 'Cpuset', 'AttachStdin', 'AttachStdout',
