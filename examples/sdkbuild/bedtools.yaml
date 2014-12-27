@@ -13,9 +13,9 @@ steps:
       type: build
       from: ubuntu:14.04
       cmd: cp ./bedtools-2.17.0/bin/bedtools /usr/bin
-      entrypoint: /usr/bin/bedtools
+      # entrypoint: /usr/bin/bedtools
 
   - test_tool:
       type: run
       from: ${package_tool}
-      cmd: sort -i ./rabix/tests/test-files/Illumina.TruSeq.hg19.bed
+      cmd: /usr/bin/bedtools sort -i ./rabix/tests/test-files/Illumina.TruSeq.hg19.bed

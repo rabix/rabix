@@ -2,7 +2,6 @@ import os
 import six
 import json
 import logging
-from copy import copy
 from uuid import uuid4
 from jsonschema.validators import Draft4Validator
 
@@ -73,42 +72,48 @@ class App(object):
 
 class File(object):
 
-    def __init__(self, path, size=None, meta=None, secondaryFiles=None):
+    def __init__(self, path, size=None, meta=None, secondary_files=None):
         self.path = path
         self.size = size
-        self.meta = meta
-        self.secondaryFiles = secondaryFiles
+        self.meta = meta or {}
+        self.secondary_files = secondary_files or []
+
+    def to_dict(self):
+        return {
+            "@type": "File",
+            "path": self.path,
+            "size": self.size,
+            "metadata": self.meta,
+            "secondaryFiles": [sf.to_dict for sf in self.secondary_files]
+        }
+
+    @classmethod
+    def from_dict(cls, d):
+
+        if isinstance(d, six.string_types):
+            d = {'path': d}
+
+        size = d.get('size')
+        if size is not None:
+            size = int(size)
+
+        return cls(path=d.get('path'),
+                   size=size,
+                   meta=d.get('meta'),
+                   secondary_files=[File.from_dict(sf)
+                                    for sf in d.get('secondaryFiles', [])])
 
 
 class IO(object):
 
-    def __init__(self, context, port_id, validator=None, constructor=None,
-                 required=False, annotations=None, items=None):
+    def __init__(self, port_id, validator=None, constructor=None,
+                 required=False, annotations=None, depth=0):
         self.id = port_id
         self.validator = Draft4Validator(validator)
         self.required = required
         self.annotations = annotations
         self.constructor = constructor or str
-        if self.constructor == 'array':
-            self.itemType = items['type']
-            if self.itemType == 'object':
-                required = items.get('required', [])
-                self.objects = [IO(context, k, v,
-                                   constructor=v['type'],
-                                   required=k in required,
-                                   annotations=v['adapter'],
-                                   items=v.get('items'))
-                                for k, v in
-                                six.iteritems(items['properties'])]
-
-    @property
-    def depth(self):
-        if self.constructor != 'array':
-            return 0
-        elif self.itemType != 'object':
-            return 1
-        else:
-            return 1 + max([k.depth for k in self.objects])
+        self.depth = depth
 
     def validate(self, value):
         return self.validator.validate(value)
@@ -129,17 +134,24 @@ class IO(object):
             'integer': int,
             'number': float,
             'boolean': bool,
-            'array': list,
             'object': dict,
             'string': str,
-            'file': File
+            'file': File.from_dict
         }
+        item_schema = d.get('schema', {})
+        type_name = item_schema.get('type')
+        depth = 0
+        while type_name == 'array':
+            depth += 1
+            item_schema = item_schema.get('items', {})
+            type_name = item_schema.get('type')
+
         return cls(d.get('@id', str(uuid4())),
                    validator=context.from_dict(d.get('schema')),
-                   constructor=constructor_map[
-                       d.get('schema', {}).get('type')],
+                   constructor=constructor_map[type_name],
                    required=d['required'],
-                   annotations=d['annotations'])
+                   annotations=d['annotations'],
+                   depth=depth)
 
 
 class Job(object):

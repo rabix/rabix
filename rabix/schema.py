@@ -1,18 +1,35 @@
 import six
-from jsonschema.validators import Draft4Validator
 from rabix.common.models import IO
+from rabix.common.errors import RabixError
 
 
 class JsonSchema(object):
 
     def __init__(self, context, schema):
+
+        if 'type' not in schema:
+            raise RabixError(
+                "Invalid JSON schema: schema doesn't have a type.")
+
+        if schema['type'] != 'object':
+            raise RabixError("Invalid JSON schema: schema type isn't 'object'")
+
+        if 'properties' not in schema:
+            raise RabixError(
+                "Invalid JSON schema: schema doesn't have properties")
+
         self.schema = schema
         self.schema['@type'] = 'JsonSchema'
         required = schema.get('required', [])
-        self.io = [IO(context, k, v, constructor=v['type'],
-                      required=k in required, annotations=v.get('adapter'),
-                      items=v.get('items'))
-                   for k, v in six.iteritems(schema['properties'])]
+        self.io = [
+            IO.from_dict(context, {
+                '@id': k,
+                'schema': v,
+                'required': k in required,
+                'annotations': v.get('adapter')
+            })
+            for k, v in six.iteritems(schema['properties'])
+        ]
 
     def __iter__(self, *args, **kwargs):
         return self.io.__iter__(*args, **kwargs)

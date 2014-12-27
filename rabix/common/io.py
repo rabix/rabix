@@ -11,7 +11,7 @@ import glob
 from six.moves.urllib import parse as urlparse
 from six.moves import input as raw_input
 from rabix.common.errors import ResourceUnavailable
-from rabix.common.util import sec_files_naming_conv, url_type
+from rabix.common.util import sec_files_naming_conv
 from rabix.common.ref_resolver import from_url
 
 
@@ -49,24 +49,24 @@ class InputCollector(object):
     def set_dir(self, job_dir):
         self.dir = job_dir
 
-    def download(self, path, secondaryFiles=None, prompt=True):
-        npath = self._download(path, metasearch=True)
+    def download(self, url, secondaryFiles=None, prompt=True):
+        npath = self._download(url, metasearch=True)
         if os.path.exists(npath + '.rbx.json'):
-            file = from_url(path + '.rbx.json')
-            startdir = os.path.dirname(path)
+            file = from_url(url + '.rbx.json')
+            startdir = os.path.dirname(url)
             for i, v in enumerate(file.get('secondaryFiles', [])):
                 spath = v['path']
-                if not os.path.isabs(spath) and url_type(spath) == 'file':
+                if not os.path.isabs(spath.path) and spath.scheme == 'file':
                     spath = os.path.join(startdir, spath)
                 file['secondaryFiles'][i]['path'] = self._download(
                     spath, metasearch=False)
             file['path'] = npath
         else:
             file = {}
-            file['metadata'] = self._meta(path, prompt=prompt)
+            file['metadata'] = self._meta(url, prompt=prompt)
             if secondaryFiles:
                 file['secondaryFiles'] = self._get_secondary_files(secondaryFiles,
-                                                                   path,
+                                                                   url,
                                                                    prompt=prompt)
             file['path'] = npath
             if prompt:

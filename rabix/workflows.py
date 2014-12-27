@@ -49,7 +49,7 @@ class Step(object):
 
 class WorkflowApp(App):
 
-    def __init__(self, app_id, steps, executor,
+    def __init__(self, app_id, steps, context,
                  inputs=None, outputs=None,
                  app_description=None,
                  annotations=None,
@@ -57,7 +57,7 @@ class WorkflowApp(App):
         self.graph = Graph()
         self.inputs = inputs or []
         self.outputs = outputs or []
-        self.executor = executor
+        self.executor = context.executor
         self.steps = steps
 
         for step in steps:
@@ -98,7 +98,7 @@ class WorkflowApp(App):
                 schema['required'].append(inp.id)
 
         super(WorkflowApp, self).__init__(
-            app_id, JsonSchema(None, schema), self.outputs,
+            app_id, JsonSchema(context, schema), self.outputs,
             app_description=app_description,
             annotations=annotations,
             platform_features=platform_features
@@ -165,7 +165,7 @@ class WorkflowApp(App):
         return cls(
             d.get('@id', str(uuid4())),
             steps,
-            context.executor
+            context
         )
 
 
