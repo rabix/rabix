@@ -5,6 +5,7 @@ import logging
 import docker
 
 from docker.errors import APIError
+from six.moves.urllib.parse import urlparse
 
 from rabix.cli.cli_app import Container
 from rabix.docker.container import get_image
@@ -248,7 +249,7 @@ class DockerContainer(Container):
             print(self.docker_client.logs(self.container))
         return self
 
-    def to_dict(self):
+    def to_dict(self, context=None):
         return {
             "@type": "Docker",
             "type": "docker",

@@ -9,7 +9,7 @@ from rabix.expressions.evaluator import Evaluator
 
 class ScriptApp(App):
 
-    def __init__(self, app_id, inputs, outputs, script,
+    def __init__(self, app_id, inputs, outputs, script, context,
                  app_description=None,
                  annotations=None,
                  platform_features=None):
@@ -21,6 +21,7 @@ class ScriptApp(App):
         )
         self.script = script
         self.evaluator = Evaluator()
+        self.context = context
 
     def run(self, job):
         if isinstance(self.script, six.string_types):
@@ -32,11 +33,11 @@ class ScriptApp(App):
         else:
             raise RabixError("invalid script")
 
-        result = self.evaluator.evaluate(lang, expr, job.to_dict(), None)
+        result = self.evaluator.evaluate(lang, expr, job.to_dict(self.context), None)
         return result
 
-    def to_dict(self):
-        d = super(ScriptApp, self).to_dict()
+    def to_dict(self, context):
+        d = super(ScriptApp, self).to_dict(context)
         d.update({
             "@type": "Script",
             "script": self.script,
@@ -51,6 +52,7 @@ class ScriptApp(App):
                    context.from_dict(d['inputs']),
                    context.from_dict(d['outputs']),
                    d['script'],
+                   context,
                    app_description=d.get('appDescription'),
                    annotations=d.get('annotations'),
                    platform_features=d.get('platform_features'))

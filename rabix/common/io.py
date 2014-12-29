@@ -2,16 +2,15 @@ import os
 import tempfile
 import logging
 import uuid
-import copy
 import json
 import six
 import requests
 import glob
 
-from six.moves.urllib import parse as urlparse
+from six.moves.urllib.parse import urlparse, urlunparse
 from six.moves import input as raw_input
 from rabix.common.errors import ResourceUnavailable
-from rabix.common.util import sec_files_naming_conv, url_type
+from rabix.common.util import sec_files_naming_conv
 from rabix.common.ref_resolver import from_url
 
 
@@ -49,24 +48,24 @@ class InputCollector(object):
     def set_dir(self, job_dir):
         self.dir = job_dir
 
-    def download(self, path, secondaryFiles=None, prompt=True):
-        npath = self._download(path, metasearch=True)
+    def download(self, url, secondaryFiles=None, prompt=True):
+        npath = self._download(url, metasearch=True)
         if os.path.exists(npath + '.rbx.json'):
-            file = from_url(path + '.rbx.json')
-            startdir = os.path.dirname(path)
+            file = from_url(url + '.rbx.json')
+            startdir = os.path.dirname(url)
             for i, v in enumerate(file.get('secondaryFiles', [])):
                 spath = v['path']
-                if not os.path.isabs(spath) and url_type(spath) == 'file':
+                if not os.path.isabs(spath) and urlparse(spath, 'file').scheme == 'file':
                     spath = os.path.join(startdir, spath)
                 file['secondaryFiles'][i]['path'] = self._download(
                     spath, metasearch=False)
             file['path'] = npath
         else:
             file = {}
-            file['metadata'] = self._meta(path, prompt=prompt)
+            file['metadata'] = self._meta(url, prompt=prompt)
             if secondaryFiles:
                 file['secondaryFiles'] = self._get_secondary_files(secondaryFiles,
-                                                                   path,
+                                                                   url,
                                                                    prompt=prompt)
             file['path'] = npath
             if prompt:
@@ -101,9 +100,9 @@ class InputCollector(object):
 
     def _get_meta_for_url(self, url):
         log.debug('Fetching metadata for %s', url)
-        chunks = list(urlparse.urlparse(url))
+        chunks = list(urlparse(url))
         chunks[2] += '.rbx.json'
-        meta_url = urlparse.urlunparse(chunks)
+        meta_url = urlunparse(chunks)
         r = requests.get(meta_url)
         if not r.ok:
             log.warning('Failed to get metadata for URL %s', url)
@@ -130,9 +129,12 @@ class InputCollector(object):
         cont = ''
         if metadata is None:
             metadata = {}
-            cont = raw_input('Metadata for file %s not found. '
-                             'Do you want to set it manually? [Y/n] '
-                             % input).lower().strip()
+            cont = 'n'
+            # cont = raw_input('Metadata for file %s not found. '
+            #                  'Do you want to set it manually? [Y/n] '
+            #                  % input)
+            # print(cont.__class__)
+            # cont = cont.lower().strip()
         if cont == 'y' or cont == '':
             key = raw_input("Key: ")
             if key == '':
@@ -193,7 +195,7 @@ class InputCollector(object):
         return os.path.abspath(dest)
 
     def _get_dest_for_url(self, url):
-        path = urlparse.urlparse(url).path
+        path = urlparse(url).path
         name = path.split('/')[-1]
         tgt = os.path.join(self.task_dir, name)
         if os.path.exists(tgt) or not name:

@@ -2,9 +2,12 @@ import os
 import six
 import json
 import logging
-from copy import copy
+import time
+import datetime
+
 from uuid import uuid4
 from jsonschema.validators import Draft4Validator
+from six.moves.urllib.parse import urlparse
 
 
 log = logging.getLogger(__name__)
@@ -45,26 +48,17 @@ class App(object):
                 return False
         return True
 
-    def mk_work_dir(self, path):
-        if os.path.exists(path):
-            num = 0
-            while os.path.exists(path):
-                path = '_'.join([path, str(num)])
-                num = num + 1
-        os.mkdir(path)
-        return path
-
-    def job_dump(self, job, dirname):
+    def job_dump(self, job, dirname, context):
         with open(os.path.join(dirname, 'job.cwl.json'), 'w') as f:
-            json.dump(job.to_dict(), f)
+            json.dump(job.to_dict(context), f)
             log.info('File %s created.', job.id)
 
-    def to_dict(self):
+    def to_dict(self, context):
         return {
             '@id': self.id,
             '@type': 'App',
-            'inputs': [inp.to_dict() for inp in self.inputs],
-            'outputs': [outp.to_dict() for outp in self.outputs],
+            'inputs': [context.to_dict(inp) for inp in self.inputs],
+            'outputs': [context.to_dict(outp) for outp in self.outputs],
             'appDescription': self.app_description,
             'annotations': self.annotations,
             'platformFeatures': self.platform_features
@@ -73,47 +67,58 @@ class App(object):
 
 class File(object):
 
-    def __init__(self, path, size=None, meta=None, secondaryFiles=None):
-        self.path = path
+    def __init__(self, path, size=None, meta=None, secondary_files=None):
+        self.url = path
         self.size = size
-        self.meta = meta
-        self.secondaryFiles = secondaryFiles
+        self.meta = meta or {}
+        self.secondary_files = secondary_files or []
+
+    def to_dict(self, context):
+        if isinstance(self.url, str):
+            path = self.url
+        else:
+            path = self.url.geturl()
+        return {
+            "@type": "File",
+            "path": path,
+            "size": self.size,
+            "metadata": self.meta,
+            "secondaryFiles": [sf.to_dict(context)
+                               for sf in self.secondary_files]
+        }
+
+    @classmethod
+    def from_dict(cls, d):
+
+        if isinstance(d, six.string_types):
+            d = {'path': d}
+
+        size = d.get('size')
+        if size is not None:
+            size = int(size)
+
+        return cls(path=d.get('path'),
+                   size=size,
+                   meta=d.get('meta'),
+                   secondary_files=[File.from_dict(sf)
+                                    for sf in d.get('secondaryFiles', [])])
 
 
 class IO(object):
 
-    def __init__(self, context, port_id, validator=None, constructor=None,
-                 required=False, annotations=None, items=None):
+    def __init__(self, port_id, validator=None, constructor=None,
+                 required=False, annotations=None, depth=0):
         self.id = port_id
         self.validator = Draft4Validator(validator)
         self.required = required
         self.annotations = annotations
         self.constructor = constructor or str
-        if self.constructor == 'array':
-            self.itemType = items['type']
-            if self.itemType == 'object':
-                required = items.get('required', [])
-                self.objects = [IO(context, k, v,
-                                   constructor=v['type'],
-                                   required=k in required,
-                                   annotations=v['adapter'],
-                                   items=v.get('items'))
-                                for k, v in
-                                six.iteritems(items['properties'])]
-
-    @property
-    def depth(self):
-        if self.constructor != 'array':
-            return 0
-        elif self.itemType != 'object':
-            return 1
-        else:
-            return 1 + max([k.depth for k in self.objects])
+        self.depth = depth
 
     def validate(self, value):
         return self.validator.validate(value)
 
-    def to_dict(self):
+    def to_dict(self, ctx=None):
         return {
             '@id': self.id,
             '@type': 'IO',
@@ -129,17 +134,25 @@ class IO(object):
             'integer': int,
             'number': float,
             'boolean': bool,
-            'array': list,
             'object': dict,
             'string': str,
-            'file': File
+            'file': File.from_dict,
+            'directory': File.from_dict
         }
+        item_schema = d.get('schema', {})
+        type_name = item_schema.get('type')
+        depth = 0
+        while type_name == 'array':
+            depth += 1
+            item_schema = item_schema.get('items', {})
+            type_name = item_schema.get('type')
+
         return cls(d.get('@id', str(uuid4())),
                    validator=context.from_dict(d.get('schema')),
-                   constructor=constructor_map[
-                       d.get('schema', {}).get('type')],
+                   constructor=constructor_map[type_name],
                    required=d['required'],
-                   annotations=d['annotations'])
+                   annotations=d['annotations'],
+                   depth=depth)
 
 
 class Job(object):
@@ -155,24 +168,33 @@ class Job(object):
     def run(self):
         return self.app.run(self)
 
-    def to_dict(self):
+    def to_dict(self, context):
         return {
             '@id': self.id,
             '@type': 'Job',
-            'app': self.app.to_dict(),
-            'inputs': self.inputs,
+            'app': self.app.to_dict(context),
+            'inputs': context.to_dict(self.inputs),
             'allocatedResources': self.allocated_resources
         }
 
-    def __str__(self):
-        return str(self.to_dict())
-
-    __repr__ = __str__
+    @staticmethod
+    def mk_work_dir(name):
+        ts = time.time()
+        path = '_'.join([name, datetime.datetime.fromtimestamp(ts).strftime('%H%M%S')])
+        try_path = path
+        if os.path.exists(path):
+            num = 0
+            try_path = path
+            while os.path.exists(try_path):
+                try_path = '_'.join([path, str(num)])
+                num += 1
+        return try_path
 
     @classmethod
     def from_dict(cls, context, d):
+        app = context.from_dict(d['app'])
         return cls(
-            d.get('@id', str(uuid4())), context.from_dict(d['app']),
+            d.get('@id', cls.mk_work_dir(app.id)), app,
             context.from_dict(d['inputs']), d.get('allocatedResources')
         )
 
