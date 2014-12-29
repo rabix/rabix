@@ -7,7 +7,7 @@ import six
 from six.moves.urllib.parse import urlparse
 
 from rabix import __version__ as version
-from rabix.common.util import set_log_level, dot_update_dict
+from rabix.common.util import log_level, dot_update_dict
 from rabix.common.models import Job, IO, File
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
@@ -275,7 +275,7 @@ def main():
     try:
         args = docopt.docopt(usage, version=version, help=False)
         job = TEMPLATE_JOB
-        set_log_level(dry_run_args['--verbose'])
+        logging.root.setLevel(log_level(dry_run_args['--verbose']))
 
         if args['--inp-file']:
             startdir = os.path.dirname(args.get('--inp-file'))
@@ -314,10 +314,8 @@ def main():
         job['app'] = app.to_dict(context)
 
         try:
-            # result = app.run(Job.from_dict(context, job))
             context.executor.execute(Job.from_dict(context, job),
                                      lambda _, result: print(result))
-            # print(result)
         except RabixError as err:
             print(err.message)
 

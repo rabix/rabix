@@ -1,8 +1,11 @@
 import nose
+import six
+
 from nose.tools import *
 
 from rabix.schema import JsonSchema
 from rabix.main import init_context
+from rabix.common.errors import RabixError
 
 
 def test_simple_json_schema():
@@ -21,9 +24,38 @@ def test_simple_json_schema():
     assert_equal(a.constructor, int)
     assert_false(a.required)
 
+    to_dict = js.to_dict()
+    for k, v in six.iteritems(schema):
+        assert_equal(to_dict[k], v)
+
 
 def test_invalid_json_schema():
-    pass
+    ctx = init_context()
+
+    no_type = {
+        "properties": {
+            "a": {
+                "type": "integer"
+            }
+        }
+    }
+    assert_raises(RabixError, JsonSchema, ctx, no_type)
+
+    not_object = {
+        "type": "int",
+        "properties": {
+            "a": {
+                "type": "integer"
+            }
+        }
+    }
+    assert_raises(RabixError, JsonSchema, ctx, not_object)
+
+    no_properties = {
+        "type": "object",
+    }
+    assert_raises(RabixError, JsonSchema, ctx, no_properties)
+
 
 if __name__ == '__main__':
     nose.run()

@@ -14,7 +14,7 @@ class Resources(object):
         self.cpu = cpu
         self.mem = mem
 
-    def to_dict(self, context=None):
+    def to_dict(self, serializer=None):
         return {
             "@type": "Resources",
             "cpu": self.cpu,
