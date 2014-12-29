@@ -3,7 +3,30 @@ import sys
 import json
 import shutil
 
+from nose.tools import raises
+
+from rabix.tests import mock_app_bad_repo, mock_app_good_repo
 from rabix.main import main
+from rabix.docker import docker_client, get_image
+
+
+@raises(Exception)
+def test_provide_image_bad_repo():
+    uri = mock_app_bad_repo["tool"]["requirements"]["environment"][
+        "container"]["uri"]
+    imageId = mock_app_bad_repo["tool"]["requirements"]["environment"][
+        "container"]["imageId"]
+    docker = docker_client()
+    get_image(docker, image_id=imageId, repo=uri)
+
+
+def test_provide_image_good_repo():
+    uri = mock_app_good_repo["tool"]["requirements"]["environment"][
+        "container"]["uri"]
+    imageId = mock_app_good_repo["tool"]["requirements"]["environment"][
+        "container"]["imageId"]
+    docker = docker_client()
+    get_image(docker, image_id=imageId, repo=uri)
 
 
 def test_expr_and_meta():
