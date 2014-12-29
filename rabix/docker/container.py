@@ -75,7 +75,7 @@ class Container(object):
         except APIError:
             logging.error('Failed to run container %s' % self.container)
             raise RabixError('Unable to run container from image %s:'
-                               % self.image_id)
+                             % self.image_id)
 
     def remove(self, success_only=False):
         self.wait()
