@@ -2,19 +2,10 @@ import os
 import six
 import json
 import stat
-import time
-import datetime
-from uuid import uuid4
 
 from rabix.cli.adapter import CLIJob
 from rabix.common.models import App, File
-from rabix.common.ref_resolver import from_url
 from rabix.common.io import InputCollector
-
-
-def job_id(name):
-    ts = time.time()
-    return '_'.join([name, datetime.datetime.fromtimestamp(ts).strftime('%H%M%S')])
 
 
 class Resources(object):
@@ -56,7 +47,7 @@ class Container(object):
         self._resolve(inputs, input_values, job.inputs)
 
     def _resolve(self, inputs, input_values, job):
-        is_single = lambda i: i.constructor == File.from_dict
+        is_single = lambda i: i.constructor == File.from_dict and i.depth == 0
         is_array = lambda i: i.constructor == File.from_dict and i.depth > 0
         # is_object = lambda i: i.constructor == 'array' and i.itemType == 'object'
 
@@ -65,34 +56,36 @@ class Container(object):
             lists = filter(is_array, [i for i in inputs])
             # objects = filter(is_object, [i for i in inputs])
             for inp in single:
-                self._resolve_single(inp, input_values.get(inp.id), job)
+                ival = input_values.get(inp.id)
+                if ival:
+                    job[inp.id] = self._resolve_file(
+                        inp.annotations.get('secondaryFiles'),
+                        ival
+                    )
+
             for inp in lists:
-                self._resolve_list(inp, input_values.get(inp.id), job)
+                ivals = input_values.get(inp.id)
+                if ivals:
+                    job[inp.id] = [self._resolve_file(
+                        inp.annotations.get('secondaryFiles'),
+                        ival
+                    ) for ival in ivals]
             # for obj in objects:
             #     if input_values.get(obj.id):
             #         for num, o in enumerate(input_values[obj.id]):
             #             self._resolve(obj.objects, o, job[obj.id][num])
 
-    def _resolve_single(self, inp, input_value, job):
+    def _resolve_file(self, secondary_files, input_value):
 
-        if input_value:
-            # if input_value['path'].endswith('.rbx.json'):
-            #     job[inp.id] = from_url(input_value['path'])
-            # else:
-            secondaryFiles = inp.annotations.get('secondaryFiles')
-            job[inp.id] = self.inputCollector.download(
-                input_value.url.geturl(), secondaryFiles)
-
-    def _resolve_list(self, inp, input_value, job):
-        if input_value:
-            secondaryFiles = inp.annotations.get('secondaryFiles')
-            for num, inv in enumerate(input_value):
-                if input_value[num].url.path.endswith('.rbx.json'):
-                    job[inp.id][num] = from_url(input_value[num].url.geturl())
-                else:
-                    job[inp.id][num] = self.inputCollector.download(
-                        input_value[num].url.geturl(), secondaryFiles
-                    )
+        # if input_value['path'].endswith('.rbx.json'):
+        #     job[inp.id] = from_url(input_value['path'])
+        # else:
+        url = input_value.url
+        if url.scheme == 'file':
+            url = url.path
+        else:
+            url = url.geturl()
+        return self.inputCollector.download(url, secondary_files)
 
 
 class Requirements(object):
@@ -102,11 +95,11 @@ class Requirements(object):
         self.resources = resources
         self.platform_features = platform_features
 
-    def to_dict(self, context=None):
+    def to_dict(self, context):
         return {
             "@type": "Requirements",
             "environment": {"container": self.container.to_dict(context)},
-            "resources": self.resources.to_dict(context),
+            "resources": context.to_dict(self.resources),
             "platformFeatures": self.platform_features
         }
 
@@ -141,8 +134,8 @@ class CliApp(App):
         self.context = context
 
     def run(self, job, job_dir=None):
-        job_dir = job_dir or job.app.id
-        job_dir = self.mk_work_dir(job_dir)
+        job_dir = job_dir or job.id
+        os.mkdir(job_dir)
         os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
                  stat.S_IWOTH)
         if self.requirements.container:
@@ -182,13 +175,14 @@ class CliApp(App):
             'annotations': self.annotations,
             'platform_features': self.platform_features,
             'inputs': self.inputs.schema,
-            'outputs': self.outputs.schema
+            'outputs': self.outputs.schema,
+            'requirements': self.requirements.to_dict(context)
         })
         return d
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d.get('@id', d.get('@id') if d.get('@id') else job_id(d.get('name'))),
+        return cls(d.get('@id', d.get('name')),
                    context.from_dict(d['inputs']),
                    context.from_dict(d['outputs']),
                    context,

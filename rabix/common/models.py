@@ -2,6 +2,8 @@ import os
 import six
 import json
 import logging
+import time
+import datetime
 
 from uuid import uuid4
 from jsonschema.validators import Draft4Validator
@@ -45,15 +47,6 @@ class App(object):
             elif inp.required:
                 return False
         return True
-
-    def mk_work_dir(self, path):
-        if os.path.exists(path):
-            num = 0
-            while os.path.exists(path):
-                path = '_'.join([path, str(num)])
-                num = num + 1
-        os.mkdir(path)
-        return path
 
     def job_dump(self, job, dirname, context):
         with open(os.path.join(dirname, 'job.cwl.json'), 'w') as f:
@@ -183,10 +176,24 @@ class Job(object):
             'allocatedResources': self.allocated_resources
         }
 
+    @staticmethod
+    def mk_work_dir(name):
+        ts = time.time()
+        path = '_'.join([name, datetime.datetime.fromtimestamp(ts).strftime('%H%M%S')])
+        try_path = path
+        if os.path.exists(path):
+            num = 0
+            try_path = path
+            while os.path.exists(try_path):
+                try_path = '_'.join([path, str(num)])
+                num += 1
+        return try_path
+
     @classmethod
     def from_dict(cls, context, d):
+        app = context.from_dict(d['app'])
         return cls(
-            d.get('@id', str(uuid4())), context.from_dict(d['app']),
+            d.get('@id', cls.mk_work_dir(app.id)), app,
             context.from_dict(d['inputs']), d.get('allocatedResources')
         )
 

@@ -129,9 +129,12 @@ class InputCollector(object):
         cont = ''
         if metadata is None:
             metadata = {}
-            cont = raw_input('Metadata for file %s not found. '
-                             'Do you want to set it manually? [Y/n] '
-                             % input).lower().strip()
+            cont = 'n'
+            # cont = raw_input('Metadata for file %s not found. '
+            #                  'Do you want to set it manually? [Y/n] '
+            #                  % input)
+            # print(cont.__class__)
+            # cont = cont.lower().strip()
         if cont == 'y' or cont == '':
             key = raw_input("Key: ")
             if key == '':

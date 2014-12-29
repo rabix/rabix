@@ -1,5 +1,6 @@
 import copy
 import six
+import os
 
 from rabix.common.util import wrap_in_list
 from rabix.common.errors import RabixError
@@ -56,7 +57,7 @@ class Executor(object):
         result = None
         if isinstance(jobs, list):
             results = []
-            for job in wrap_in_list(jobs):
+            for job in jobs:
                 results.append(job.run())
 
             combined = {}

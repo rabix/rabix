@@ -128,10 +128,10 @@ class DockerContainer(Container):
             else:
                 docker_dir = '/' + inp
             dir_name, file_name = os.path.split(
-                os.path.abspath(input_values[inp].url.path))
+                os.path.abspath(input_values[inp]['path']))
             volumes[docker_dir] = {}
             binds[docker_dir] = dir_name
-            remaped_job[inp].url = '/'.join(
+            remaped_job[inp]['path'] = '/'.join(
                 [docker_dir, file_name])
 
     def _remap_list(self, inp, input_values, volumes, binds, remaped_job,
@@ -143,10 +143,10 @@ class DockerContainer(Container):
                 else:
                     docker_dir = '/' + '/'.join([inp, str(num)])
                 dir_name, file_name = os.path.split(
-                    os.path.abspath(inv.url.path))
+                    os.path.abspath(inv['path']))
                 volumes[docker_dir] = {}
                 binds[docker_dir] = dir_name
-                remaped_job[inp][num].url = '/'.join(
+                remaped_job[inp][num]['path'] = '/'.join(
                     [docker_dir, file_name])
 
     def _envvars(self, job):

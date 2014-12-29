@@ -1,5 +1,5 @@
 {
-"reference": "https://s3.amazonaws.com/rabix/rabix-test/chr20.fa",
+"reference": "../test-files/chr20.fa",
 "reads": ["../test-files/example_human_Illumina.pe_1.fastq", "../test-files/example_human_Illumina.pe_2.fastq"],
 "minimum_seed_length": 4,
 "min_std_max_min": [1, 2, 3, 4]
