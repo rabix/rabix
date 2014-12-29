@@ -36,6 +36,6 @@ class Context(object):
             return [self.to_dict(e) for e in o]
         if hasattr(o, 'to_dict'):
             return o.to_dict(self)
-        if isinstance(o, (int, float, bool, str)):
+        if isinstance(o, (int, float, bool, six.string_types)):
             return o
         raise RuntimeError("can't transform %s to dict" % o)

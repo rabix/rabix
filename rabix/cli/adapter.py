@@ -57,24 +57,21 @@ class InputAdapter(object):
                 except jsonschema.exceptions.ValidationError:
                     pass
         self.value = eval_resolve(value, self.job)
-        if self.transform:
-            self.value = eval_resolve(self.transform, self.job, self.value)
+        # if self.transform:
+        #     self.value = eval_resolve(self.transform, self.job, self.value)
         if self.is_file():
             self.value = self.value['path']
 
     __str__ = lambda self: str(self.value)
     __repr__ = lambda self: 'InputAdapter(%s)' % self
     position = property(lambda self: (self.adapter.get('order', 9999999), self.key))
-    transform = property(lambda self: self.adapter.get('value'))
+    # transform = property(lambda self: self.adapter.get('value'))
     prefix = property(lambda self: self.adapter.get('prefix'))
     item_separator = property(lambda self: self.adapter.get('itemSeparator', ','))
 
     @property
     def separator(self):
-        sep = self.adapter.get('separator', '')
-        if sep == ' ':
-            return None
-        return sep
+        return self.adapter.get('separator', ' ')
 
     def is_file(self):
         return isinstance(self.value, dict) and 'path' in self.value
@@ -95,7 +92,7 @@ class InputAdapter(object):
             return [self.prefix]
         if not self.prefix:
             return [self.value]
-        if self.separator is None:
+        if self.separator in [' ', None]:
             return [self.prefix, self.value]
         return [self.prefix + self.separator + six.text_type(self.value)]
 

@@ -56,7 +56,6 @@ def test_log_level():
     assert_equals(log_level(1), logging.INFO)
     assert_equals(log_level(2), logging.DEBUG)
     assert_equals(log_level(99), logging.DEBUG)
-    assert_raises(TypeError, log_level, "asdf")
     assert_raises(RabixError, log_level, 0.5)
 
 

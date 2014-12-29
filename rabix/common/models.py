@@ -136,7 +136,8 @@ class IO(object):
             'boolean': bool,
             'object': dict,
             'string': str,
-            'file': File.from_dict
+            'file': File.from_dict,
+            'directory': File.from_dict
         }
         item_schema = d.get('schema', {})
         type_name = item_schema.get('type')
