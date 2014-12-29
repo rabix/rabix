@@ -4,7 +4,7 @@ import sys
 import logging
 import six
 
-from urlparse import urlparse
+from six.moves.urllib.parse import urlparse
 
 from rabix import __version__ as version
 from rabix.common.util import set_log_level, dot_update_dict
@@ -133,9 +133,9 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
             to_append = param_str
 
         if v.depth > 0:
-            arg += '...'
+            arg += '... '
 
-        if not (v.required or v.id in inp):
+        if not v.required or v.id in inp:
             arg = '['+arg+']'
 
         to_append.append(arg)
@@ -304,18 +304,20 @@ def main():
                 print(dry_run_args['<tool>'] + " is not a command line app")
                 return
             job['@id'] = args.get('--dir')
-            job['app'] = app.to_dict()
+            job['app'] = app.to_dict(context)
             j = Job.from_dict(context, job)
-            adapter = CLIJob(j.to_dict(), j.app)
+            adapter = CLIJob(j.to_dict(context), j.app)
             print(adapter.cmd_line())
             return
 
         job['@id'] = args.get('--dir')
-        job['app'] = app.to_dict()
+        job['app'] = app.to_dict(context)
 
         try:
-            result = app.run(Job.from_dict(context, job))
-            print(result)
+            # result = app.run(Job.from_dict(context, job))
+            context.executor.execute(Job.from_dict(context, job),
+                                     lambda _, result: print(result))
+            # print(result)
         except RabixError as err:
             print(err.message)
 

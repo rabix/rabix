@@ -2,13 +2,12 @@ import os
 import tempfile
 import logging
 import uuid
-import copy
 import json
 import six
 import requests
 import glob
 
-from six.moves.urllib import parse as urlparse
+from six.moves.urllib.parse import urlparse, urlunparse
 from six.moves import input as raw_input
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import sec_files_naming_conv
@@ -56,7 +55,7 @@ class InputCollector(object):
             startdir = os.path.dirname(url)
             for i, v in enumerate(file.get('secondaryFiles', [])):
                 spath = v['path']
-                if not os.path.isabs(spath.path) and spath.scheme == 'file':
+                if not os.path.isabs(spath) and urlparse(spath, 'file').scheme == 'file':
                     spath = os.path.join(startdir, spath)
                 file['secondaryFiles'][i]['path'] = self._download(
                     spath, metasearch=False)
@@ -101,9 +100,9 @@ class InputCollector(object):
 
     def _get_meta_for_url(self, url):
         log.debug('Fetching metadata for %s', url)
-        chunks = list(urlparse.urlparse(url))
+        chunks = list(urlparse(url))
         chunks[2] += '.rbx.json'
-        meta_url = urlparse.urlunparse(chunks)
+        meta_url = urlunparse(chunks)
         r = requests.get(meta_url)
         if not r.ok:
             log.warning('Failed to get metadata for URL %s', url)
@@ -193,7 +192,7 @@ class InputCollector(object):
         return os.path.abspath(dest)
 
     def _get_dest_for_url(self, url):
-        path = urlparse.urlparse(url).path
+        path = urlparse(url).path
         name = path.split('/')[-1]
         tgt = os.path.join(self.task_dir, name)
         if os.path.exists(tgt) or not name:

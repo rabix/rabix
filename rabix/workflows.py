@@ -1,5 +1,4 @@
 import six
-import copy
 import logging
 import copy
 
@@ -29,13 +28,13 @@ class Step(object):
         self.inputs = inputs
         self.outputs = outputs
 
-    def to_dict(self):
+    def to_dict(self, context):
         return {
             "id": self.id,
             "@type": "Step",
-            "app": self.app.to_dict(),
-            "inputs": self.inputs,
-            "outputs": self.outputs
+            "app": self.app.to_dict(context),
+            "inputs": context.to_dict(self.inputs),
+            "outputs": context.to_dict(self.outputs)
         }
 
     @classmethod
@@ -142,15 +141,15 @@ class WorkflowApp(App):
     def run(self, job):
         eg = ExecutionGraph(self, job)
         while eg.has_next():
-            next_id, next = eg.next_jobs()
+            next_id, next = eg.next_job()
             self.executor.execute(next, eg.job_done, next_id)
         return eg.outputs
 
-    def to_dict(self):
-        d = super(WorkflowApp, self).to_dict()
+    def to_dict(self, context):
+        d = super(WorkflowApp, self).to_dict(context)
         d.update({
             "@type": "Workflow",
-            'steps': [step.to_dict() for step in self.steps]
+            'steps': [step.to_dict(context) for step in self.steps]
         })
         return d
 
@@ -217,44 +216,8 @@ class PartialJob(object):
             log.debug("Propagating result: %s, %s" % (k, v))
             self.outputs[k].resolve_input(v)
 
-    @staticmethod
-    def depth(val):
-        d = 0
-        cur = val
-        while isinstance(cur, list):
-            if not cur:
-                break
-            cur = cur[0]
-            d += 1
-
-        return d
-
-    def jobs(self):
-
-        parallel_input = None
-        for input_name, input_val in six.iteritems(self.inputs):
-            io = self.app.get_input(input_name)
-            val_d = self.depth(input_val)
-            if val_d == io.depth:
-                continue
-            if val_d > io.depth + 1:
-                raise RabixError("Depth difference to large")
-            if val_d < io.depth:
-                raise RabixError("Insufficient dimensionality")
-            if parallel_input:
-                raise RabixError("Already parallelized by input '%%s'" % parallel_input)
-
-            parallel_input = input_name
-
-        if parallel_input:
-            jobs = []
-            for i, val in enumerate(self.inputs[parallel_input]):
-                inputs = copy.deepcopy(self.inputs)
-                inputs[parallel_input] = val
-                jobs.append(Job(self.node_id+"_"+str(i), self.app, inputs, {}))
-            return jobs
-        else:
-            return Job(self.node_id, self.app, self.inputs, {})
+    def job(self):
+        return Job(self.node_id, self.app, self.inputs, {})
 
 
 class ExecRelation(object):
@@ -344,11 +307,11 @@ class ExecutionGraph(object):
         ex = self.executables[node_id]
         ex.propagate_result(results)
 
-    def next_jobs(self):
+    def next_job(self):
         if not self.order:
             return None
         next = self.order.pop()
-        return next, self.executables[next].jobs()
+        return next, self.executables[next].job()
 
     def has_next(self):
         return len(self.order) > 0

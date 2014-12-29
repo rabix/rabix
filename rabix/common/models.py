@@ -2,8 +2,10 @@ import os
 import six
 import json
 import logging
+
 from uuid import uuid4
 from jsonschema.validators import Draft4Validator
+from six.moves.urllib.parse import urlparse
 
 
 log = logging.getLogger(__name__)
@@ -53,17 +55,17 @@ class App(object):
         os.mkdir(path)
         return path
 
-    def job_dump(self, job, dirname):
+    def job_dump(self, job, dirname, context):
         with open(os.path.join(dirname, 'job.cwl.json'), 'w') as f:
-            json.dump(job.to_dict(), f)
+            json.dump(job.to_dict(context), f)
             log.info('File %s created.', job.id)
 
-    def to_dict(self):
+    def to_dict(self, context):
         return {
             '@id': self.id,
             '@type': 'App',
-            'inputs': [inp.to_dict() for inp in self.inputs],
-            'outputs': [outp.to_dict() for outp in self.outputs],
+            'inputs': [context.to_dict(inp) for inp in self.inputs],
+            'outputs': [context.to_dict(outp) for outp in self.outputs],
             'appDescription': self.app_description,
             'annotations': self.annotations,
             'platformFeatures': self.platform_features
@@ -73,18 +75,23 @@ class App(object):
 class File(object):
 
     def __init__(self, path, size=None, meta=None, secondary_files=None):
-        self.path = path
+        self.url = path
         self.size = size
         self.meta = meta or {}
         self.secondary_files = secondary_files or []
 
-    def to_dict(self):
+    def to_dict(self, context):
+        if isinstance(self.url, str):
+            path = self.url
+        else:
+            path = self.url.geturl()
         return {
             "@type": "File",
-            "path": self.path,
+            "path": path,
             "size": self.size,
             "metadata": self.meta,
-            "secondaryFiles": [sf.to_dict for sf in self.secondary_files]
+            "secondaryFiles": [sf.to_dict(context)
+                               for sf in self.secondary_files]
         }
 
     @classmethod
@@ -118,7 +125,7 @@ class IO(object):
     def validate(self, value):
         return self.validator.validate(value)
 
-    def to_dict(self):
+    def to_dict(self, ctx=None):
         return {
             '@id': self.id,
             '@type': 'IO',
@@ -167,19 +174,14 @@ class Job(object):
     def run(self):
         return self.app.run(self)
 
-    def to_dict(self):
+    def to_dict(self, context):
         return {
             '@id': self.id,
             '@type': 'Job',
-            'app': self.app.to_dict(),
-            'inputs': self.inputs,
+            'app': self.app.to_dict(context),
+            'inputs': context.to_dict(self.inputs),
             'allocatedResources': self.allocated_resources
         }
-
-    def __str__(self):
-        return str(self.to_dict())
-
-    __repr__ = __str__
 
     @classmethod
     def from_dict(cls, context, d):

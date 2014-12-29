@@ -1,6 +1,5 @@
 
 import nose
-import mock
 from nose.tools import *
 
 from rabix.schema import JsonSchema

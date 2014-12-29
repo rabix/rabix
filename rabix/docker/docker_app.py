@@ -5,6 +5,7 @@ import logging
 import docker
 
 from docker.errors import APIError
+from six.moves.urllib.parse import urlparse
 
 from rabix.cli.cli_app import Container
 from rabix.docker.container import get_image
@@ -127,10 +128,10 @@ class DockerContainer(Container):
             else:
                 docker_dir = '/' + inp
             dir_name, file_name = os.path.split(
-                os.path.abspath(input_values[inp]['path']))
+                os.path.abspath(input_values[inp].url.path))
             volumes[docker_dir] = {}
             binds[docker_dir] = dir_name
-            remaped_job[inp]['path'] = '/'.join(
+            remaped_job[inp].url = '/'.join(
                 [docker_dir, file_name])
 
     def _remap_list(self, inp, input_values, volumes, binds, remaped_job,
@@ -142,10 +143,10 @@ class DockerContainer(Container):
                 else:
                     docker_dir = '/' + '/'.join([inp, str(num)])
                 dir_name, file_name = os.path.split(
-                    os.path.abspath(inv['path']))
+                    os.path.abspath(inv.url.path))
                 volumes[docker_dir] = {}
                 binds[docker_dir] = dir_name
-                remaped_job[inp][num]['path'] = '/'.join(
+                remaped_job[inp][num].url = '/'.join(
                     [docker_dir, file_name])
 
     def _envvars(self, job):
@@ -248,7 +249,7 @@ class DockerContainer(Container):
             print(self.docker_client.logs(self.container))
         return self
 
-    def to_dict(self):
+    def to_dict(self, context=None):
         return {
             "@type": "Docker",
             "type": "docker",

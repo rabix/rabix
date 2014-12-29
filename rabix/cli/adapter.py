@@ -41,7 +41,7 @@ def eval_resolve(val, job, context=None):
 
 
 class InputAdapter(object):
-    def __init__(self, value, job_dict, schema, adapter_dict=None, key=None):
+    def __init__(self, value, job_dict, schema, adapter_dict=None, key=''):
         self.job = job_dict
         self.schema = schema or {}
         self.adapter = adapter_dict or self.schema.get('adapter')
@@ -101,9 +101,14 @@ class InputAdapter(object):
 
     def as_dict(self, mix_with=None):
         sch = lambda key: self.schema.get('properties', {}).get(key, {})
-        adapters = [InputAdapter(v, self.job, sch(k), key=k) for k, v in six.iteritems(self.value)]
+        adapters = [InputAdapter(v, self.job, sch(k), key=k)
+                    for k, v in six.iteritems(self.value)]
         adapters = (mix_with or []) + [adp for adp in adapters if adp.has_adapter]
-        return reduce(operator.add, [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)], [])
+        return reduce(
+            operator.add,
+            [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)],
+            []
+        )
 
     def as_list(self):
         items = [InputAdapter(item, self.job, self.schema.get('items', {}))

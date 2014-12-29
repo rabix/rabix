@@ -34,7 +34,7 @@ class JsonSchema(object):
     def __iter__(self, *args, **kwargs):
         return self.io.__iter__(*args, **kwargs)
 
-    def to_dict(self):
+    def to_dict(self, context=None):
         return self.schema
 
 
