@@ -72,6 +72,7 @@ class App(object):
 class URL(object):
 
     def __init__(self, url):
+        print(url)
         (self.scheme, self.netloc, self.path,
          self.params, self.query, self.fragment) = urlparse(url, 'file')
 
@@ -93,15 +94,24 @@ class URL(object):
 
     def geturl(self):
         return urlunparse(
-            self.scheme, self.netloc, self.path,
-            self.params, self.query, self.fragment
+            (self.scheme, self.netloc, self.path,
+             self.params, self.query, self.fragment)
         )
 
     def isabs(self):
         return not self.islocal() or isabs(self.path)
 
-    def abspath(self):
-        return abspath(self.path)
+    def abspath(self, base):
+        if self.isabs():
+            return self.path
+
+        path = self.path
+        if base:
+            path = join(base, path)
+        return abspath(path)
+
+    def to_abspath(self, base):
+        self.path = self.abspath(base)
 
     def isfile(self):
         return self.islocal() and isfile(self.path)
@@ -122,7 +132,7 @@ class URL(object):
 class File(object):
 
     def __init__(self, path, size=None, meta=None, secondary_files=None):
-        self.url = URL(path)
+        self.url = URL(path) if isinstance(path, str) else path
         self.size = size
         self.meta = meta or {}
         self.secondary_files = secondary_files or []

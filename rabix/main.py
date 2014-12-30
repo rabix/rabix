@@ -5,11 +5,9 @@ import sys
 import logging
 import six
 
-from six.moves.urllib.parse import urlparse
-
 from rabix import __version__ as version
 from rabix.common.util import log_level, dot_update_dict
-from rabix.common.models import Job, IO, File
+from rabix.common.models import Job, IO, File, URL
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
 from rabix.common.errors import RabixError
@@ -156,20 +154,11 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
                            inputs=' '.join(usage_str))
 
 
-def resolve_path(basedir, url):
-    if basedir and url.scheme == 'file' and not os.path.isabs(url.path):
-        l = list(url)  # transform from tuple
-        l[2] = os.path.join(basedir, url.path)  # update path
-        url = url.__class__(*l)  # return back to original type
-
-    return url
-
-
 def construct_value(constructor, val, basedir):
     if constructor == TYPE_MAP['File']:
-        url = urlparse(val, 'file')
-        url = resolve_path(basedir, url)
-        val = {'path': url}
+        path = URL(val)
+        path.to_abspath(basedir)
+        val = {'path': path}
 
     return constructor(val)
 
