@@ -3,6 +3,7 @@ import itertools
 import collections
 import logging
 import six
+import json
 
 from rabix.common.errors import RabixError
 
@@ -66,6 +67,33 @@ def rnd_name(syllables=5):
         (random.choice('aeiouy') for _ in range(syllables)))))
 
 
+def map_rec_collection(f, col):
+    if isinstance(col, list):
+        return [map_rec_collection(f, e) for e in col]
+    if isinstance(col, dict):
+        return {k: map_rec_collection(f, v) for k, v in six.iteritems(col)}
+    return f(col)
+
+
+def map_rec_list(f, lst):
+    if isinstance(lst, list):
+        return [map_rec_list(f, e) for e in lst]
+    return f(lst)
+
+
+def map_or_apply(f, lst):
+    if isinstance(lst, list):
+        return [f(e) for e in lst]
+    return f(lst)
+
+
+def getmethod(o, method_name, default=None):
+    attr = getattr(o, method_name)
+    if callable(attr):
+        return attr
+    return default
+
+
 def log_level(int_level):
     if int_level <= 0:
         level = logging.WARN
@@ -81,3 +109,10 @@ def log_level(int_level):
 def sec_files_naming_conv(path, ext):
     return ''.join([path, ext]) if ext.startswith('.') \
         else '.'.join(['.'.join(path.split('.')[:-1]), ext])
+
+
+def to_json(obj, fp=None):
+    default = lambda o: getmethod(o, '__json__',
+                                  lambda v: six.string_types(v))()
+    kwargs = dict(default=default, indent=2, sort_keys=True)
+    return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)

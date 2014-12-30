@@ -5,11 +5,9 @@ import sys
 import logging
 import six
 
-from six.moves.urllib.parse import urlparse
-
 from rabix import __version__ as version
-from rabix.common.util import log_level, dot_update_dict
-from rabix.common.models import Job, IO, File
+from rabix.common.util import log_level, dot_update_dict, map_or_apply
+from rabix.common.models import Job, IO, File, URL
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
 from rabix.common.errors import RabixError
@@ -156,30 +154,19 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
                            inputs=' '.join(usage_str))
 
 
-def resolve_path(basedir, url):
-    if basedir and url.scheme == 'file' and not os.path.isabs(url.path):
-        l = list(url)  # transform from tuple
-        l[2] = os.path.join(basedir, url.path)  # update path
-        url = url.__class__(*l)  # return back to original type
-
-    return url
-
-
 def construct_value(constructor, val, basedir):
     if constructor == TYPE_MAP['File']:
-        url = urlparse(val, 'file')
-        url = resolve_path(basedir, url)
-        val = {'path': url}
+        path = URL(val)
+        path.to_abspath(basedir)
+        val = {'path': path}
 
     return constructor(val)
 
 
-def resolve_values(inp, nval, inputs, basedir=None):
-    if isinstance(nval, list):
-        inputs[inp.id] = [construct_value(inp.constructor, nv, basedir)
-                          for nv in nval]
-    else:
-        inputs[inp.id] = construct_value(inp.constructor, nval, basedir)
+def construct_values(inp, nval, basedir=None):
+    return map_or_apply(
+        lambda val: construct_value(inp.constructor, val, basedir),
+        nval)
 
 
 def get_inputs_from_file(app, args, startdir):
@@ -204,7 +191,7 @@ def resolve_nested_paths(inp, inputs, args, startdir):
                         startdir
                     )
             else:
-                resolve_values(input, nval, inp, startdir)
+                inp[input.id] = construct_values(input, nval, startdir)
 
 
 def get_inputs(app, args):
@@ -213,7 +200,7 @@ def get_inputs(app, args):
     for input in properties:
         nval = args.get('--' + input.id) or args.get(input.id)
         if nval:
-            resolve_values(input, nval, inputs)
+            inputs[input.id] = construct_values(input, nval)
     return {'inputs': inputs}
 
 

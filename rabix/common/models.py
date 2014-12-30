@@ -6,8 +6,12 @@ import time
 import datetime
 
 from uuid import uuid4
+from os.path import abspath, isabs, isfile, exists, join
 from jsonschema.validators import Draft4Validator
-from six.moves.urllib.parse import urlparse
+from six.moves.urllib.parse import urlparse, urlunparse
+from base64 import b64decode
+
+from rabix.common.errors import ValidationError
 
 
 log = logging.getLogger(__name__)
@@ -65,27 +69,87 @@ class App(object):
         }
 
 
+class URL(object):
+
+    def __init__(self, url):
+        print(url)
+        (self.scheme, self.netloc, self.path,
+         self.params, self.query, self.fragment) = urlparse(url, 'file')
+
+        self.content_type = None
+        self.charset = None
+        self.data = None
+        if self.scheme == 'data':
+            meta, data = self.path.split(',')
+            meta_parts = meta.split(';')
+            self.content_type = meta_parts[0]
+            b64 = 'base64' in meta_parts
+            if b64:
+                self.data = b64decode(data)
+            else:
+                self.data = data  # py2/3, bytes, char encoding, escapes...
+
+    def islocal(self):
+        return self.scheme == 'file'
+
+    def geturl(self):
+        return urlunparse(
+            (self.scheme, self.netloc, self.path,
+             self.params, self.query, self.fragment)
+        )
+
+    def isabs(self):
+        return not self.islocal() or isabs(self.path)
+
+    def abspath(self, base):
+        if self.isabs():
+            return self.path
+
+        path = self.path
+        if base:
+            path = join(base, path)
+        return abspath(path)
+
+    def to_abspath(self, base):
+        self.path = self.abspath(base)
+
+    def isfile(self):
+        return self.islocal() and isfile(self.path)
+
+    def exist(self):
+        return self.islocal() and exists(self.path)
+
+    def isdata(self):
+        return self.scheme == 'data'
+
+    def __str__(self):
+        if self.islocal():
+            return self.path
+        else:
+            return self.geturl()
+
+
 class File(object):
 
     def __init__(self, path, size=None, meta=None, secondary_files=None):
-        self.url = path
+        self.url = URL(path) if isinstance(path, str) else path
         self.size = size
         self.meta = meta or {}
         self.secondary_files = secondary_files or []
 
     def to_dict(self, context):
-        if isinstance(self.url, str):
-            path = self.url
-        else:
-            path = self.url.geturl()
         return {
             "@type": "File",
-            "path": path,
+            "path": self.path,
             "size": self.size,
             "metadata": self.meta,
             "secondaryFiles": [sf.to_dict(context)
                                for sf in self.secondary_files]
         }
+
+    @property
+    def path(self):
+        return str(self.url)
 
     @classmethod
     def from_dict(cls, d):
@@ -97,7 +161,13 @@ class File(object):
         if size is not None:
             size = int(size)
 
-        return cls(path=d.get('path'),
+        path = d.get('path')
+        if path is None:
+            raise ValidationError(
+                "Not a valid 'File' object: %s" % str(d)
+            )
+
+        return cls(path=path,
                    size=size,
                    meta=d.get('meta'),
                    secondary_files=[File.from_dict(sf)

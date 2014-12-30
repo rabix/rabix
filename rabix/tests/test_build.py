@@ -41,24 +41,6 @@ def assert_run(container):
 @mock.patch('rabix.tools.build.get_image')
 @mock.patch('rabix.tools.build.Container')
 def test_build_ok(container_mock, get_image_mock):
-    c = container_mock()
-    c.is_success = mock.Mock(return_value=True)
-
-    steps.build('docker_client', 'image_id', cmd=['cmd'], message='message',
-                register={'repo': 'repo', 'tag': 'tag'})
-
-    container_mock.assert_called_with('docker_client', 'image_id',
-                                      {},
-                                      mount_point=steps.MOUNT_POINT)
-    c.run.assert_called_with(['cmd'])
-    c.is_success.assert_called_with()
-    c.commit.assert_called_with('message', {'Cmd': []},
-                                tag='tag', repository='repo')
-
-
-@mock.patch('rabix.tools.build.get_image')
-@mock.patch('rabix.tools.build.Container')
-def test_build_ok(container_mock, get_image_mock):
     container_mock().is_success = mock.Mock(return_value=True)
 
     steps.build('docker_client', 'image_id', cmd=['cmd'], message='message',
