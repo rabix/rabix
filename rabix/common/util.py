@@ -66,6 +66,33 @@ def rnd_name(syllables=5):
         (random.choice('aeiouy') for _ in range(syllables)))))
 
 
+def map_rec_collection(f, col):
+    if isinstance(col, list):
+        return [map_rec_collection(f, e) for e in col]
+    if isinstance(col, dict):
+        return {k: map_rec_collection(f, v) for k, v in six.iteritems(col)}
+    return f(col)
+
+
+def map_rec_list(f, lst):
+    if isinstance(lst, list):
+        return [map_rec_list(f, e) for e in lst]
+    return f(lst)
+
+
+def map_or_apply(f, lst):
+    if isinstance(lst, list):
+        return [f(e) for e in lst]
+    return f(lst)
+
+
+def getmethod(o, method_name):
+    attr = getattr(o, method_name)
+    if callable(attr):
+        return attr
+    return None
+
+
 def log_level(int_level):
     if int_level <= 0:
         level = logging.WARN
