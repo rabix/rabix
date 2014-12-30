@@ -204,7 +204,7 @@ class InputCollector(object):
 
     def _local(self, url):
         path = url[len('file://'):]
-        if not os.path.isfile(path):
+        if not os.path.exists(path):
             raise ResourceUnavailable('Not a file: %s' % path)
         return os.path.abspath(path)
 

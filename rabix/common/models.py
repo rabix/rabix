@@ -194,7 +194,7 @@ class Job(object):
     def from_dict(cls, context, d):
         app = context.from_dict(d['app'])
         return cls(
-            d.get('@id', cls.mk_work_dir(app.id)), app,
+            d.get('@id') if d.get('@id') else cls.mk_work_dir(app.id), app,
             context.from_dict(d['inputs']), d.get('allocatedResources')
         )
 

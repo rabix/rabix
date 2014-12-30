@@ -171,6 +171,7 @@ class CliApp(App):
         d = super(CliApp, self).to_dict(context)
         d.update({
             "@type": "CommandLine",
+            'name': self.id,
             'adapter': self.adapter,
             'annotations': self.annotations,
             'platform_features': self.platform_features,
