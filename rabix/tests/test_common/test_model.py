@@ -1,1 +1,2 @@
-__author__ = 'luka'
+from nose.tools import *
+from rabix.common.models import *

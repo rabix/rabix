@@ -6,7 +6,7 @@ import shlex
 from docker.errors import APIError
 from docker.utils.utils import parse_repository_tag
 
-from rabix.common.errors import ResourceUnavailable
+from rabix.common.errors import ResourceUnavailable, RabixError
 
 log = logging.getLogger(__name__)
 
@@ -64,15 +64,9 @@ class Container(object):
             })
         self.config = make_config(**kwargs)
 
-        try:
-            get_image(docker_client, image_id=self.image_id, repo=self.uri)
-            self.container = self.docker_client.create_container_from_config(
-                self.config)
-        except APIError as e:
-            if e.response.status_code == 404:
-                log.info('Image %s not found:' % self.image_id)
-                raise RuntimeError('Image %s not found:' % self.image_id)
-            raise RuntimeError('Failed to create Container')
+        get_image(docker_client, image_id=self.image_id, repo=self.uri)
+        self.container =\
+            self.docker_client.create_container_from_config(self.config)
 
     def start(self, binds=None, port_bindings=None):
         try:
@@ -80,8 +74,8 @@ class Container(object):
                                      port_bindings=port_bindings)
         except APIError:
             logging.error('Failed to run container %s' % self.container)
-            raise RuntimeError('Unable to run container from image %s:'
-                               % self.image_id)
+            raise RabixError('Unable to run container from image %s:'
+                             % self.image_id)
 
     def remove(self, success_only=False):
         self.wait()
