@@ -140,12 +140,5 @@ def resolve_pointer(document, pointer, default=POINTER_DEFAULT):
 loader = Loader()
 
 
-def to_json(obj, fp=None):
-    default = lambda o: (o.__json__() if callable(getattr(o, '__json__', None))
-                         else str(o))
-    kwargs = dict(default=default, indent=2, sort_keys=True)
-    return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
-
-
 def from_url(url, base_url=None):
     return loader.load(url, base_url)

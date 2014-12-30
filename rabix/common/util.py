@@ -3,6 +3,7 @@ import itertools
 import collections
 import logging
 import six
+import json
 
 from rabix.common.errors import RabixError
 
@@ -86,11 +87,11 @@ def map_or_apply(f, lst):
     return f(lst)
 
 
-def getmethod(o, method_name):
+def getmethod(o, method_name, default=None):
     attr = getattr(o, method_name)
     if callable(attr):
         return attr
-    return None
+    return default
 
 
 def log_level(int_level):
@@ -108,3 +109,10 @@ def log_level(int_level):
 def sec_files_naming_conv(path, ext):
     return ''.join([path, ext]) if ext.startswith('.') \
         else '.'.join(['.'.join(path.split('.')[:-1]), ext])
+
+
+def to_json(obj, fp=None):
+    default = lambda o: getmethod(o, '__json__',
+                                  lambda v: six.string_types(v))()
+    kwargs = dict(default=default, indent=2, sort_keys=True)
+    return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)

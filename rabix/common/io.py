@@ -10,19 +10,11 @@ import glob
 from six.moves.urllib.parse import urlparse, urlunparse
 from six.moves import input as raw_input
 from rabix.common.errors import ResourceUnavailable
-from rabix.common.util import sec_files_naming_conv
+from rabix.common.util import sec_files_naming_conv, to_json
 from rabix.common.ref_resolver import from_url
 
 
 log = logging.getLogger(__name__)
-
-
-def to_json(obj, fp=None):
-    default = lambda o: (o.__json__() if callable(getattr(o, '__json__',
-                                                          None))
-                         else six.text_type(o))
-    kwargs = dict(default=default, indent=2, sort_keys=True)
-    return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
 
 
 class InputCollector(object):
