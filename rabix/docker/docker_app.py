@@ -1,39 +1,33 @@
 import os
 import six
-import copy
 import shlex
 import logging
 import docker
+
 from docker.errors import APIError
+from six.moves.urllib.parse import urlparse
+
 from rabix.cli.cli_app import Container
+from rabix.docker.container import get_image
 from rabix.common.errors import ResourceUnavailable
 
 
 log = logging.getLogger(__name__)
 
-
-def ensure_image(docker_client, image_id, uri):
-    if image_id and [x for x in docker_client.images() if x['Id'].startswith(
-            image_id)]:
-        log.debug("Provide image: found %s" % image_id)
-        return
-    else:
-        if not uri:
-            log.error('Image cannot be pulled: no URI given')
-            raise Exception('Cannot pull image')
-        repo, tag = parse_docker_uri(uri)
-        log.info("Pulling image %s:%s" % (repo, tag))
-        docker_client.pull(repo, tag)
-        if filter(lambda x: (image_id in x['Id']),
-                  docker_client.images()):
-            return
-        raise Exception('Image not found')
+DOCKER_DEFAULT_API_VERSION = "1.12"
+DOCKER_DEFAULT_TIMEOUT = 60
 
 
-def parse_docker_uri(uri):
-    repo, tag = uri.split(':')
-    repo = repo.lstrip('docker://')
-    return repo, tag
+def docker_client(docker_host=None,
+                  api_version=DOCKER_DEFAULT_API_VERSION,
+                  timeout=DOCKER_DEFAULT_TIMEOUT,
+                  tls=None):
+
+    docker_host = docker_host or os.getenv("DOCKER_HOST", None)
+    tls = False if tls is None else os.getenv("DOCKER_TLS_VERIFY", "") != ""
+    docker_cert_path = os.getenv("DOCKER_CERT_PATH", "")  # ???
+
+    return docker.Client(docker_host, api_version, timeout, tls)
 
 
 def make_config(**kwargs):
@@ -69,20 +63,18 @@ class DockerContainer(Container):
 
     def __init__(self, uri, image_id, dockr=None):
         super(DockerContainer, self).__init__()
-        self.uri = uri
+        self.uri = uri.lstrip("docker://")
         self.image_id = image_id
-        self.docker_client = dockr or docker.Client(os.getenv(
-            "DOCKER_HOST", None), version='1.12')
+        self.docker_client = dockr or docker_client()
         self.config = {}
         self.volumes = {}
         self.binds = {}
 
     def install(self, *args, **kwargs):
         try:
-            ensure_image(self.docker_client,
-                         self.image_id,
-                         self.uri
-                         )
+            get_image(self.docker_client,
+                      image_id=self.image_id,
+                      repo=self.uri)
         except APIError as e:
             if e.response.status_code == 404:
                 log.info('Image %s not found:' % self.image_id)
@@ -257,7 +249,7 @@ class DockerContainer(Container):
             print(self.docker_client.logs(self.container))
         return self
 
-    def to_dict(self):
+    def to_dict(self, context=None):
         return {
             "@type": "Docker",
             "type": "docker",

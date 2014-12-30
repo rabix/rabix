@@ -7,9 +7,9 @@ import rabix.tools.build as steps
 from rabix.common.errors import RabixError
 
 
-@mock.patch('rabix.tools.build.find_image')
+@mock.patch('rabix.tools.build.get_image')
 @mock.patch('rabix.tools.build.Container')
-def test_run_ok(container_mock, find_image_mock):
+def test_run_ok(container_mock, get_image_mock):
     container_mock().is_success = mock.Mock(return_value=True)
 
     steps.run('docker_client', 'image_id', cmd=['cmd'])
@@ -18,9 +18,9 @@ def test_run_ok(container_mock, find_image_mock):
 
 
 @raises(RabixError)
-@mock.patch('rabix.tools.build.find_image')
+@mock.patch('rabix.tools.build.get_image')
 @mock.patch('rabix.tools.build.Container')
-def test_run_fail(container_mock, find_image_mock):
+def test_run_fail(container_mock, get_image_mock):
     container_mock().is_success = mock.Mock(return_value=False)
 
     try:
@@ -38,9 +38,9 @@ def assert_run(container):
     instance.is_success.assert_called_with()
 
 
-@mock.patch('rabix.tools.build.find_image')
+@mock.patch('rabix.tools.build.get_image')
 @mock.patch('rabix.tools.build.Container')
-def test_build_ok(container_mock, find_image_mock):
+def test_build_ok(container_mock, get_image_mock):
     c = container_mock()
     c.is_success = mock.Mock(return_value=True)
 
@@ -56,9 +56,9 @@ def test_build_ok(container_mock, find_image_mock):
                                 tag='tag', repository='repo')
 
 
-@mock.patch('rabix.tools.build.find_image')
+@mock.patch('rabix.tools.build.get_image')
 @mock.patch('rabix.tools.build.Container')
-def test_build_ok(container_mock, find_image_mock):
+def test_build_ok(container_mock, get_image_mock):
     container_mock().is_success = mock.Mock(return_value=True)
 
     steps.build('docker_client', 'image_id', cmd=['cmd'], message='message',
@@ -70,9 +70,9 @@ def test_build_ok(container_mock, find_image_mock):
 
 
 @raises(RabixError)
-@mock.patch('rabix.tools.build.find_image')
+@mock.patch('rabix.tools.build.get_image')
 @mock.patch('rabix.tools.build.Container')
-def test_build_fail(container_mock, find_image_mock):
+def test_build_fail(container_mock, get_image_mock):
     container_mock().is_success = mock.Mock(return_value=False)
 
     try:

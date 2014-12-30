@@ -41,7 +41,7 @@ def eval_resolve(val, job, context=None):
 
 
 class InputAdapter(object):
-    def __init__(self, value, job_dict, schema, adapter_dict=None, key=None):
+    def __init__(self, value, job_dict, schema, adapter_dict=None, key=''):
         self.job = job_dict
         self.schema = schema or {}
         self.adapter = adapter_dict or self.schema.get('adapter')
@@ -57,24 +57,21 @@ class InputAdapter(object):
                 except jsonschema.exceptions.ValidationError:
                     pass
         self.value = eval_resolve(value, self.job)
-        if self.transform:
-            self.value = eval_resolve(self.transform, self.job, self.value)
+        # if self.transform:
+        #     self.value = eval_resolve(self.transform, self.job, self.value)
         if self.is_file():
             self.value = self.value['path']
 
     __str__ = lambda self: str(self.value)
     __repr__ = lambda self: 'InputAdapter(%s)' % self
     position = property(lambda self: (self.adapter.get('order', 9999999), self.key))
-    transform = property(lambda self: self.adapter.get('value'))
+    # transform = property(lambda self: self.adapter.get('value'))
     prefix = property(lambda self: self.adapter.get('prefix'))
     item_separator = property(lambda self: self.adapter.get('itemSeparator', ','))
 
     @property
     def separator(self):
-        sep = self.adapter.get('separator', '')
-        if sep == ' ':
-            return None
-        return sep
+        return self.adapter.get('separator', ' ')
 
     def is_file(self):
         return isinstance(self.value, dict) and 'path' in self.value
@@ -95,15 +92,20 @@ class InputAdapter(object):
             return [self.prefix]
         if not self.prefix:
             return [self.value]
-        if self.separator is None:
+        if self.separator in [' ', None]:
             return [self.prefix, self.value]
         return [self.prefix + self.separator + six.text_type(self.value)]
 
     def as_dict(self, mix_with=None):
         sch = lambda key: self.schema.get('properties', {}).get(key, {})
-        adapters = [InputAdapter(v, self.job, sch(k), key=k) for k, v in six.iteritems(self.value)]
+        adapters = [InputAdapter(v, self.job, sch(k), key=k)
+                    for k, v in six.iteritems(self.value)]
         adapters = (mix_with or []) + [adp for adp in adapters if adp.has_adapter]
-        return reduce(operator.add, [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)], [])
+        return reduce(
+            operator.add,
+            [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)],
+            []
+        )
 
     def as_list(self):
         items = [InputAdapter(item, self.job, self.schema.get('items', {}))

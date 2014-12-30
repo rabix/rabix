@@ -1,10 +1,10 @@
-import copy
-import signal
 import random
 import itertools
 import collections
 import logging
 import six
+
+from rabix.common.errors import RabixError
 
 log = logging.getLogger(__name__)
 
@@ -60,92 +60,24 @@ def dot_update_dict(dst, src):
     return dst
 
 
-class DotAccessDict(dict):
-    def __getattr__(self, item):
-        return self.get(item, None)
-
-    def __setattr__(self, key, value):
-        self[key] = value
-
-    def __copy__(self):
-        return self.__class__(self)
-
-    def __deepcopy__(self, memo):
-        return self.__class__(copy.deepcopy(dict(self), memo))
-
-
-class NormDict(dict):
-    def __init__(self, normalize=six.text_type):
-        super(NormDict, self).__init__()
-        self.normalize = normalize
-
-    def __getitem__(self, key):
-        return super(NormDict, self).__getitem__(self.normalize(key))
-
-    def __setitem__(self, key, value):
-        return super(NormDict, self).__setitem__(self.normalize(key), value)
-
-    def __delitem__(self, key):
-        return super(NormDict, self).__delitem__(self.normalize(key))
-
-
-def intersect_dicts(d1, d2):
-    """
-    >>> intersect_dicts({'a': 1, 'b': 2}, {'a': 1, 'b': 3})
-    {'a': 1}
-    >>> intersect_dicts({'a': 1, 'b': 2}, {'a': 0})
-    {}
-    """
-    return {k: v for k, v in six.iteritems(d1) if v == d2.get(k)}
-
-
-class SignalContextProcessor(object):
-    def __init__(self, handler, *signals):
-        self.handler = handler
-        self.signals = signals
-        self.old_handlers = {}
-
-    def __enter__(self):
-        self.old_handlers = {
-            sig: signal.signal(sig, self.handler) for sig in self.signals
-        }
-
-    def __exit__(self, *_):
-        for sig in self.signals:
-            signal.signal(sig, self.old_handlers[sig])
-
-handle_signal = SignalContextProcessor
-
-
-def get_import_name(cls):
-    return '.'.join([cls.__module__, cls.__name__])
-
-
 def rnd_name(syllables=5):
     return ''.join(itertools.chain(*zip(
         (random.choice('bcdfghjklmnpqrstvwxz') for _ in range(syllables)),
         (random.choice('aeiouy') for _ in range(syllables)))))
 
 
-def set_log_level(v_count):
-    if v_count == 0:
+def log_level(int_level):
+    if int_level <= 0:
         level = logging.WARN
-    elif v_count == 1:
+    elif int_level == 1:
         level = logging.INFO
-    else:
+    elif int_level >= 2:
         level = logging.DEBUG
-    logging.root.setLevel(level)
+    else:
+        raise RabixError("Invalid log level: %s" % int_level)
+    return level
 
 
 def sec_files_naming_conv(path, ext):
     return ''.join([path, ext]) if ext.startswith('.') \
-        else ''.join(['.'.join(path.split('.')[:-1]), ext])
-
-
-def url_type(url):
-    if url.startswith('data:,'):
-        return 'data'
-    if '://' not in url:
-        return 'file'
-    else:
-        return 'url'
+        else '.'.join(['.'.join(path.split('.')[:-1]), ext])

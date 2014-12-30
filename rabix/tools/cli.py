@@ -7,7 +7,7 @@ from os.path import isfile
 from rabix import __version__ as version
 from rabix.common.errors import RabixError
 from rabix.common.ref_resolver import Loader
-from rabix.common.util import set_log_level
+from rabix.common.util import log_level
 from rabix.tools.build import run_steps
 
 
@@ -55,7 +55,7 @@ def main():
 
     args = docopt.docopt(USAGE, version=version)
 
-    set_log_level(args['--verbose'])
+    logging.root.setLevel(log_level(args['--verbose']))
     if args["checksum"]:
         checksum(args['<jsonptr>'], args['--method'])
     elif args["build"]:

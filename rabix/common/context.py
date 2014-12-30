@@ -26,3 +26,16 @@ class Context(object):
         if not constructor:
             raise ValidationError("Unknown type: %s" % type_name)
         return constructor(self, d)
+
+    def to_dict(self, o):
+        if o is None:
+            return None
+        if isinstance(o, dict):
+            return {k: self.to_dict(v) for k, v in six.iteritems(o)}
+        if isinstance(o, list):
+            return [self.to_dict(e) for e in o]
+        if hasattr(o, 'to_dict'):
+            return o.to_dict(self)
+        if isinstance(o, (int, float, bool, six.string_types)):
+            return o
+        raise RuntimeError("can't transform %s to dict" % o)

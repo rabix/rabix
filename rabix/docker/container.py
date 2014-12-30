@@ -1,35 +1,14 @@
+from __future__ import print_function
 import logging
 import six
 import shlex
 
 from docker.errors import APIError
+from docker.utils.utils import parse_repository_tag
 
-from rabix.common.errors import ResourceUnavailable
+from rabix.common.errors import ResourceUnavailable, RabixError
 
 log = logging.getLogger(__name__)
-
-
-def ensure_image(docker_client, image_id, uri):
-    if image_id and [x for x in docker_client.images() if x['Id'].startswith(
-            image_id)]:
-        log.debug("Provide image: found %s" % image_id)
-        return
-    else:
-        if not uri:
-            log.error('Image cannot be pulled: no URI given')
-            raise Exception('Cannot pull image')
-        repo, tag = parse_docker_uri(uri)
-        log.info("Pulling image %s:%s" % (repo, tag))
-        docker_client.pull(repo, tag)
-        if filter(lambda x: (image_id in x['Id']),
-                  docker_client.images()):
-            return
-        raise Exception('Image not found')
-
-
-def parse_docker_uri(uri):
-    repo, tag = uri.split(':')
-    return repo, tag
 
 
 def make_config(**kwargs):
@@ -85,15 +64,9 @@ class Container(object):
             })
         self.config = make_config(**kwargs)
 
-        try:
-            ensure_image(docker_client, self.image_id, self.uri)
-            self.container = self.docker_client.create_container_from_config(
-                self.config)
-        except APIError as e:
-            if e.response.status_code == 404:
-                log.info('Image %s not found:' % self.image_id)
-                raise RuntimeError('Image %s not found:' % self.image_id)
-            raise RuntimeError('Failed to create Container')
+        get_image(docker_client, image_id=self.image_id, repo=self.uri)
+        self.container =\
+            self.docker_client.create_container_from_config(self.config)
 
     def start(self, binds=None, port_bindings=None):
         try:
@@ -101,8 +74,8 @@ class Container(object):
                                      port_bindings=port_bindings)
         except APIError:
             logging.error('Failed to run container %s' % self.container)
-            raise RuntimeError('Unable to run container from image %s:'
-                               % self.image_id)
+            raise RabixError('Unable to run container from image %s:'
+                             % self.image_id)
 
     def remove(self, success_only=False):
         self.wait()
@@ -124,34 +97,20 @@ class Container(object):
     def is_success(self):
         return self.wait().inspect()['State']['ExitCode'] == 0
 
-    def get_stdout(self, file=None):
+    def write_stdout(self, file=None):
+        write = lambda out: print(out.rstrip())
+        f = None
         if file:
             f = open(file, 'w', buffering=1)
+            write = f.write
+
         if self.is_running():
             for out in self.docker_client.attach(self.container, stdout=True,
                                                  stderr=False, stream=True,
                                                  logs=True):
-                if file:
-                    f.write(out.rstrip() + '\n')
-                else:
-                    print(out.rstrip())
-            if file:
+                write(out)
+            if f:
                 f.close()
-        else:
-            print(self.docker_client.logs(self.container))
-        return self
-
-    def get_stderr(self, file=None):
-        if file:
-            f = open(file, 'w')
-        if self.is_running():
-            for out in self.docker_client.attach(self.container, stdout=False,
-                                                 stderr=True, stream=True,
-                                                 logs=True):
-                if file:
-                    f.write(str(out).rstrip() + '\n')
-                else:
-                    print(out.rstrip())
         else:
             print(self.docker_client.logs(self.container))
         return self
@@ -165,16 +124,34 @@ class Container(object):
         return self
 
 
-def find_image(client, image_id, repo=None, tag=None):
+def match_image(image, query):
     """Returns image dict if it exists locally, or None"""
+    if isinstance(query, str):
+        return (len(query) >= 12 and image['Id'].startswith(query)) or \
+            query in image['RepoTags'] or \
+            (query + ":latest") in image['RepoTags']
+
+    if isinstance(query, list):
+        return any([match_image(image, q) for q in query])
+
+    if isinstance(query, tuple):
+        repo, tag = query
+        return (repo + ":" + tag) in image['RepoTags']
+
+    if isinstance(query, dict):
+        image_id = query.get('image_id')
+        repo = query.get('repo')
+        tag = query.get('tag', 'latest')
+        return (image_id and image['Id'].startswith(image_id)) or \
+               ((repo + ":" + tag) in image['RepoTags'])
+
+    return False
+
+
+def find_image(client, query):
     images = client.images()
-    tag = tag or 'latest'
-    img = ([i for i in images if i['Id'].startswith(image_id)]
-           if image_id else None)
-    if not img:
-        img = ([i for i in images if (repo + ':' + tag) in i['RepoTags']]
-               if repo and tag else None)
-    return (img or [None])[0]
+    it = (image for image in images if match_image(image, query))
+    return next(it, None)
 
 
 def get_image(client, repo=None, tag=None, image_id=None):
@@ -183,15 +160,19 @@ def get_image(client, repo=None, tag=None, image_id=None):
     if not image_id and not repo:
         raise ValueError('Need either repository or image ID.')
 
-    img = None
+    if repo and not tag:
+        repo, tag = parse_repository_tag(repo)
 
-    if image_id:
-        img = find_image(client, image_id)
+    queries = [image_id, repo]
+    if tag:
+        queries.append((repo, tag))
+
+    img = find_image(client, queries)
 
     if not img:
         log.info('Pulling %s', repo)
         client.pull(repo, tag)
-        img = find_image(client, image_id, repo, tag)
+        img = find_image(client, queries)
 
     if not img:
         raise ResourceUnavailable(repo, 'Image not found.')
