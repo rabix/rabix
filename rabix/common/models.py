@@ -151,6 +151,10 @@ class File(object):
     def path(self):
         return str(self.url)
 
+    @path.setter
+    def path(self, val):
+        self.url = val
+
     @classmethod
     def from_dict(cls, d):
 
