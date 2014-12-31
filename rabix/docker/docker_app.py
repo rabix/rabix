@@ -95,10 +95,8 @@ class DockerContainer(Container):
 
     def _remap_obj(self, inputs, input_values, volumes, binds, remaped_job,
                    parent=None):
-        is_single = lambda i: i.constructor == File.from_dict and \
-                              i.depth == 0
-        is_list = lambda i: i.constructor == File.from_dict and \
-                            i.depth == 1
+        is_single = lambda i: i.constructor == File.from_dict and i.depth == 0
+        is_list = lambda i: i.constructor == File.from_dict and i.depth == 1
         if inputs:
             single = filter(is_single, [i for i in inputs])
             lists = filter(is_list, [i for i in inputs])
@@ -106,11 +104,12 @@ class DockerContainer(Container):
                 self._remap_single(inp, input_values, volumes, binds,
                                    remaped_job, parent)
             for inp in lists:
-                self._remap_list(inp, input_values, volumes, binds,
-                                     remaped_job, parent, inp.depth)
+                self._remap_list(
+                    inp, input_values, volumes, binds, remaped_job,
+                    parent, inp.depth)
 
-    def _remap_single(self, inp, input_values, volumes, binds, remaped_job,
-                          parent):
+    def _remap_single(
+            self, inp, input_values, volumes, binds, remaped_job, parent):
         if input_values.get(inp.id):
             if parent:
                 docker_dir = '/' + '/'.join([parent, inp.id])
@@ -123,8 +122,9 @@ class DockerContainer(Container):
             remaped_job[inp.id].path = '/'.join(
                 [docker_dir, file_name])
 
-    def _remap_list(self, inp, input_values, volumes, binds, remaped_job,
-                        parent, depth):
+    def _remap_list(
+            self, inp, input_values, volumes, binds, remaped_job,
+            parent, depth):
         if input_values[inp.id]:
 
             for num, inv in enumerate(input_values[inp.id]):
