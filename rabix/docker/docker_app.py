@@ -7,6 +7,7 @@ import docker
 from docker.errors import APIError
 from six.moves.urllib.parse import urlparse
 
+from rabix.common.models import URL
 from rabix.cli.cli_app import Container
 from rabix.docker.container import get_image
 from rabix.common.errors import ResourceUnavailable
@@ -128,11 +129,11 @@ class DockerContainer(Container):
             else:
                 docker_dir = '/' + inp
             dir_name, file_name = os.path.split(
-                os.path.abspath(input_values[inp]['path']))
+                os.path.abspath(input_values[inp].path))
             volumes[docker_dir] = {}
             binds[docker_dir] = dir_name
-            remaped_job[inp]['path'] = '/'.join(
-                [docker_dir, file_name])
+            remaped_job[inp].url = URL('/'.join(
+                [docker_dir, file_name]))
 
     def _remap_list(self, inp, input_values, volumes, binds, remaped_job,
                     parent):
@@ -143,11 +144,11 @@ class DockerContainer(Container):
                 else:
                     docker_dir = '/' + '/'.join([inp, str(num)])
                 dir_name, file_name = os.path.split(
-                    os.path.abspath(inv['path']))
+                    os.path.abspath(inv.path))
                 volumes[docker_dir] = {}
                 binds[docker_dir] = dir_name
-                remaped_job[inp][num]['path'] = '/'.join(
-                    [docker_dir, file_name])
+                remaped_job[inp][num].url = URL('/'.join(
+                    [docker_dir, file_name]))
 
     def _envvars(self, job):
         envvars = (job.app.annotations or {}).get('environment', {})

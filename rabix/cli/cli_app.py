@@ -6,6 +6,7 @@ import stat
 from rabix.cli.adapter import CLIJob
 from rabix.common.models import App, File
 from rabix.common.io import InputCollector
+from rabix.common.util import map_or_apply
 
 
 class Resources(object):
@@ -29,7 +30,7 @@ class Resources(object):
 class Container(object):
 
     def __init__(self):
-        self.inputCollector = InputCollector()
+        self.input_collector = None
 
     def install(self, job):
         pass
@@ -42,50 +43,21 @@ class Container(object):
         Resolve paths of all input files
         '''
         inputs = job.app.inputs.io
-        self.inputCollector.set_dir(job_dir)
+        self.input_collector = InputCollector(job_dir)
         input_values = job.inputs
         self._resolve(inputs, input_values, job.inputs)
 
     def _resolve(self, inputs, input_values, job):
-        is_single = lambda i: i.constructor == File.from_dict and i.depth == 0
-        is_array = lambda i: i.constructor == File.from_dict and i.depth > 0
-        # is_object = lambda i: i.constructor == 'array' and i.itemType == 'object'
 
         if inputs:
-            single = filter(is_single, [i for i in inputs])
-            lists = filter(is_array, [i for i in inputs])
-            # objects = filter(is_object, [i for i in inputs])
-            for inp in single:
-                ival = input_values.get(inp.id)
-                if ival:
-                    job[inp.id] = self._resolve_file(
-                        inp.annotations.get('secondaryFiles'),
-                        ival
-                    )
-
-            for inp in lists:
-                ivals = input_values.get(inp.id)
-                if ivals:
-                    job[inp.id] = [self._resolve_file(
-                        inp.annotations.get('secondaryFiles'),
-                        ival
-                    ) for ival in ivals]
-            # for obj in objects:
-            #     if input_values.get(obj.id):
-            #         for num, o in enumerate(input_values[obj.id]):
-            #             self._resolve(obj.objects, o, job[obj.id][num])
-
-    def _resolve_file(self, secondary_files, input_value):
-
-        # if input_value['path'].endswith('.rbx.json'):
-        #     job[inp.id] = from_url(input_value['path'])
-        # else:
-        url = input_value.url
-        if url.scheme == 'file':
-            url = url.path
-        else:
-            url = url.geturl()
-        return self.inputCollector.download(url, secondary_files)
+            file_ins = [i for i in inputs if i.constructor == File.from_dict]
+            for f in file_ins:
+                val = input_values.get(f.id)
+                job[f.id] = map_or_apply(
+                    lambda e: self.input_collector.download(
+                        e.url, f.annotations.get('secondaryFiles')
+                    ),
+                    val)
 
 
 class Requirements(object):
@@ -115,7 +87,7 @@ class Requirements(object):
 class CliApp(App):
     WORKING_DIR = '/work'
 
-    def __init__(self, app_id, inputs, outputs, context,
+    def __init__(self, app_id, inputs, outputs,
                  app_description=None,
                  annotations=None,
                  platform_features=None,
@@ -131,7 +103,6 @@ class CliApp(App):
         self.adapter = adapter
         self.software_description = software_description
         self.requirements = requirements
-        self.context = context
 
     def run(self, job, job_dir=None):
         job_dir = job_dir or job.id
@@ -141,9 +112,9 @@ class CliApp(App):
         if self.requirements.container:
             self.ensure_files(job, job_dir)
             self.install(job=job)
-            self.job_dump(job, job_dir, self.context)
+            self.job_dump(job, job_dir)
             self.set_config(job=job, job_dir=job_dir)
-            adapter = CLIJob(job.to_dict(self.context), job.app)
+            adapter = CLIJob(job)
             cmd_line = adapter.cmd_line()
             self.requirements.container.run(cmd_line)
             with open(os.path.abspath(job_dir) + '/result.cwl.json', 'w') as f:
@@ -154,6 +125,10 @@ class CliApp(App):
                             json.dump(v, rx)
                 json.dump(outputs, f)
                 return outputs
+
+    def command_line(self, job):
+        adapter = CLIJob(job)
+        return adapter.cmd_line()
 
     def install(self, *args, **kwargs):
         if self.requirements and self.requirements.container:
@@ -186,7 +161,6 @@ class CliApp(App):
         return cls(d.get('@id', d.get('name')),
                    context.from_dict(d['inputs']),
                    context.from_dict(d['outputs']),
-                   context,
                    app_description=d.get('appDescription'),
                    annotations=d.get('annotations'),
                    platform_features=d.get('platform_features'),

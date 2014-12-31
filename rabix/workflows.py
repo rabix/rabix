@@ -58,6 +58,7 @@ class WorkflowApp(App):
         self.outputs = outputs or []
         self.executor = context.executor
         self.steps = steps
+        self.context = context
 
         for step in steps:
             self.add_node(step.id,  AppNode(step.app, {}))
@@ -174,7 +175,7 @@ def init(context):
 
 class PartialJob(object):
 
-    def __init__(self, node_id, app, inputs, input_counts, outputs):
+    def __init__(self, node_id, app, inputs, input_counts, outputs, context):
         self.result = None
         self.status = 'WAITING'
         self.node_id = node_id
@@ -182,6 +183,7 @@ class PartialJob(object):
         self.inputs = inputs
         self.input_counts = input_counts
         self.outputs = outputs
+        self.context = context
 
         self.running = []
         self.resources = None
@@ -217,7 +219,7 @@ class PartialJob(object):
             self.outputs[k].resolve_input(v)
 
     def job(self):
-        return Job(self.node_id, self.app, self.inputs, {})
+        return Job(self.node_id, self.app, self.inputs, {}, self.context)
 
 
 class ExecRelation(object):
@@ -280,7 +282,8 @@ class ExecutionGraph(object):
                 outputs[rel.src_port] = OutRelation(self, tail)
 
         executable = PartialJob(
-            node_id, node.app, node.inputs, input_counts, outputs
+            node_id, node.app, node.inputs,
+            input_counts, outputs, self.workflow.context
         )
 
         for in_edge in in_edges:

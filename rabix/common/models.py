@@ -8,7 +8,7 @@ import datetime
 from uuid import uuid4
 from os.path import abspath, isabs, isfile, exists, join
 from jsonschema.validators import Draft4Validator
-from six.moves.urllib.parse import urlparse, urlunparse
+from six.moves.urllib.parse import urlparse, urlunparse, unquote
 from base64 import b64decode
 
 from rabix.common.errors import ValidationError
@@ -52,9 +52,9 @@ class App(object):
                 return False
         return True
 
-    def job_dump(self, job, dirname, context):
+    def job_dump(self, job, dirname):
         with open(os.path.join(dirname, 'job.cwl.json'), 'w') as f:
-            json.dump(job.to_dict(context), f)
+            json.dump(job.to_dict(), f)
             log.info('File %s created.', job.id)
 
     def to_dict(self, context):
@@ -72,7 +72,6 @@ class App(object):
 class URL(object):
 
     def __init__(self, url):
-        print(url)
         (self.scheme, self.netloc, self.path,
          self.params, self.query, self.fragment) = urlparse(url, 'file')
 
@@ -87,7 +86,7 @@ class URL(object):
             if b64:
                 self.data = b64decode(data)
             else:
-                self.data = data  # py2/3, bytes, char encoding, escapes...
+                self.data = unquote(data)
 
     def islocal(self):
         return self.scheme == 'file'
@@ -97,27 +96,6 @@ class URL(object):
             (self.scheme, self.netloc, self.path,
              self.params, self.query, self.fragment)
         )
-
-    def isabs(self):
-        return not self.islocal() or isabs(self.path)
-
-    def abspath(self, base):
-        if self.isabs():
-            return self.path
-
-        path = self.path
-        if base:
-            path = join(base, path)
-        return abspath(path)
-
-    def to_abspath(self, base):
-        self.path = self.abspath(base)
-
-    def isfile(self):
-        return self.islocal() and isfile(self.path)
-
-    def exist(self):
-        return self.islocal() and exists(self.path)
 
     def isdata(self):
         return self.scheme == 'data'
@@ -149,7 +127,13 @@ class File(object):
 
     @property
     def path(self):
-        return str(self.url)
+        return six.text_type(self.url)
+
+    def __str__(self):
+        return self.path
+
+    def __repr__(self):
+        return "File(" + six.text_type(self.to_dict()) + ")"
 
     @classmethod
     def from_dict(cls, d):
@@ -172,6 +156,54 @@ class File(object):
                    meta=d.get('meta'),
                    secondary_files=[File.from_dict(sf)
                                     for sf in d.get('secondaryFiles', [])])
+
+
+def make_constructor(schema):
+        constructor_map = {
+            'integer': int,
+            'number': float,
+            'boolean': bool,
+            'string': six.text_type,
+            'file': File.from_dict,
+            'directory': File.from_dict
+        }
+
+        type_name = schema.get('type')
+
+        if not type_name:
+            return lambda x: x
+
+        if type_name == 'array':
+            item_constructor = make_constructor(schema.get('items', {}))
+            return ArrayConstructor(item_constructor)
+
+        if type_name == 'object':
+            return ObjectConstructor(schema.get('properties', {}))
+
+        return constructor_map[type_name]
+
+
+class ArrayConstructor(object):
+
+    def __init__(self, item_constructor):
+        self.item_constructor = item_constructor
+
+    def __call__(self, val):
+        return [self.item_constructor(v) for v in val]
+
+
+class ObjectConstructor(dict):
+
+    def __init__(self, properties, **kwargs):
+        super().__init__(**kwargs)
+        for k, v in six.iteritems(properties):
+            self[k] = make_constructor(v)
+
+    def __call__(self, val):
+        return {
+            k: self.get(k, lambda x: x)(v)
+            for k, v in six.iteritems(val)
+        }
 
 
 class IO(object):
@@ -200,15 +232,7 @@ class IO(object):
 
     @classmethod
     def from_dict(cls, context, d):
-        constructor_map = {
-            'integer': int,
-            'number': float,
-            'boolean': bool,
-            'object': dict,
-            'string': str,
-            'file': File.from_dict,
-            'directory': File.from_dict
-        }
+
         item_schema = d.get('schema', {})
         type_name = item_schema.get('type')
         depth = 0
@@ -217,9 +241,11 @@ class IO(object):
             item_schema = item_schema.get('items', {})
             type_name = item_schema.get('type')
 
+        constructor = make_constructor(item_schema)
+
         return cls(d.get('@id', str(uuid4())),
                    validator=context.from_dict(d.get('schema')),
-                   constructor=constructor_map[type_name],
+                   constructor=constructor,
                    required=d['required'],
                    annotations=d['annotations'],
                    depth=depth)
@@ -227,24 +253,26 @@ class IO(object):
 
 class Job(object):
 
-    def __init__(self, job_id, app, inputs, allocated_resources):
+    def __init__(self, job_id, app, inputs, allocated_resources, context):
         # if not app.validate_inputs(inputs):
         #     raise ValidationError("Invalid inputs for application %s" % app.id)
         self.id = job_id
         self.app = app
         self.inputs = inputs
         self.allocated_resources = allocated_resources
+        self.context = context
 
     def run(self):
         return self.app.run(self)
 
-    def to_dict(self, context):
+    def to_dict(self, context=None):
+        ctx = context or self.context
         return {
             '@id': self.id,
             '@type': 'Job',
-            'app': self.app.to_dict(context),
-            'inputs': context.to_dict(self.inputs),
-            'allocatedResources': self.allocated_resources
+            'app': self.app.to_dict(ctx),
+            'inputs': ctx.to_dict(self.inputs),
+            'allocatedResources': ctx.to_dict(self.allocated_resources)
         }
 
     @staticmethod
@@ -264,8 +292,11 @@ class Job(object):
     def from_dict(cls, context, d):
         app = context.from_dict(d['app'])
         return cls(
-            d.get('@id') if d.get('@id') else cls.mk_work_dir(app.id), app,
-            context.from_dict(d['inputs']), d.get('allocatedResources')
+            d.get('@id') if d.get('@id') else cls.mk_work_dir(app.id),
+            app,
+            context.from_dict(d['inputs']),
+            d.get('allocatedResources'),
+            context
         )
 
 

@@ -6,8 +6,9 @@ import logging
 import six
 
 from rabix import __version__ as version
-from rabix.common.util import log_level, dot_update_dict, map_or_apply
-from rabix.common.models import Job, IO, File, URL
+from rabix.common.util import log_level, dot_update_dict, map_or_apply,\
+    map_rec_collection, to_abspath
+from rabix.common.models import Job, IO, File, ObjectConstructor, ArrayConstructor
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
 from rabix.common.errors import RabixError
@@ -58,18 +59,6 @@ Usage:
   tool {inputs}
 '''
 
-
-def make_resources_usage_string(template=TEMPLATE_RESOURCES):
-    param_str = []
-    for k, v in six.iteritems(template):
-        if type(v) is bool:
-            arg = '--resources.%s' % k
-        else:
-            arg = '--resources.%s=<%s>' % (k, type(v).__name__)
-        param_str.append(arg)
-    return ' '.join(param_str)
-
-
 TYPE_MAP = {
     'Job': Job.from_dict,
     'IO': IO.from_dict,
@@ -89,6 +78,10 @@ def init_context():
 
     return context
 
+
+###
+# input massage
+###
 
 def fix_types(tool):
     requirements = tool.get('requirements', {})
@@ -116,6 +109,55 @@ def fix_types(tool):
     outputs = tool.get('outputs')
     if isinstance(outputs, dict) and '@type' not in outputs:
         outputs['@type'] = 'JsonSchema'
+
+
+def rebase_input_path(input, value, base):
+    if isinstance(input, ObjectConstructor):
+        ret = {}
+        for k, v in six.iteritems(value):
+            rebased = rebase_input_path(input[k], v, base)
+            if rebased:
+                ret[k] = rebased
+        return ret
+
+    if isinstance(input, ArrayConstructor):
+        ret = []
+        for item in value:
+            rebased = rebase_input_path(input.item_constructor, item, base)
+            if rebased:
+                ret.append(rebased)
+        return ret
+
+    if input == TYPE_MAP['File']:
+        return to_abspath(value, base)
+
+    return None
+
+
+def rebase_paths(app, input_values, base):
+    file_inputs = {}
+    for input_name, val in six.iteritems(input_values):
+        input = app.get_input(input_name)
+        rebased = rebase_input_path(input, val, base)
+        if rebased:
+            file_inputs[input_name] = rebased
+
+    return dot_update_dict(input_values, file_inputs)
+
+
+###
+# usage strings
+###
+
+def make_resources_usage_string(template=TEMPLATE_RESOURCES):
+    param_str = []
+    for k, v in six.iteritems(template):
+        if type(v) is bool:
+            arg = '--resources.%s' % k
+        else:
+            arg = '--resources.%s=<%s>' % (k, type(v).__name__)
+        param_str.append(arg)
+    return ' '.join(param_str)
 
 
 def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
@@ -154,54 +196,16 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
                            inputs=' '.join(usage_str))
 
 
-def construct_value(constructor, val, basedir):
-    if constructor == TYPE_MAP['File']:
-        path = URL(val)
-        path.to_abspath(basedir)
-        val = {'path': path}
-
-    return constructor(val)
-
-
-def construct_values(inp, nval, basedir=None):
-    return map_or_apply(
-        lambda val: construct_value(inp.constructor, val, basedir),
-        nval)
-
-
-def get_inputs_from_file(app, args, startdir):
-    inp = {}
-    inputs = app.inputs.io
-    resolve_nested_paths(inp, inputs, args, startdir)
-    return {'inputs': inp}
-
-
-def resolve_nested_paths(inp, inputs, args, startdir):
-    for input in inputs:
-        nval = args.get(input.id)
-        if nval:
-            if input.depth > 0 and input.constructor == dict:
-                inp[input.id] = []
-                for sk, sv in enumerate(nval):
-                    inp[input.id].append({})
-                    resolve_nested_paths(
-                        inp[input.id][sk],
-                        input.objects,
-                        args[input.id],
-                        startdir
-                    )
-            else:
-                inp[input.id] = construct_values(input, nval, startdir)
-
-
 def get_inputs(app, args):
-    inputs = {}
-    properties = app.inputs.io
-    for input in properties:
-        nval = args.get('--' + input.id) or args.get(input.id)
-        if nval:
-            inputs[input.id] = construct_values(input, nval)
-    return {'inputs': inputs}
+
+    def get_arg(name):
+        return args.get('--' + name) or args.get(name)
+
+    return {'inputs': {
+        input.id: map_or_apply(input.constructor, get_arg(input.id))
+        for input in app.inputs.io
+        if get_arg(input.id)
+    }}
 
 
 def get_tool(args):
@@ -262,21 +266,22 @@ def main():
 
     try:
         args = docopt.docopt(usage, version=version, help=False)
-        job = TEMPLATE_JOB
+        job_dict = TEMPLATE_JOB
         logging.root.setLevel(log_level(dry_run_args['--verbose']))
 
         if args['--inp-file']:
             startdir = os.path.dirname(args.get('--inp-file'))
             input_file = from_url(args.get('--inp-file'))
+            rebased = rebase_paths(app, input_file, startdir)
             dot_update_dict(
-                job['inputs'],
-                get_inputs_from_file(app, input_file, startdir)['inputs']
+                job_dict,
+                get_inputs(app, rebased)
             )
 
         app_inputs_usage = make_app_usage_string(
-            app, template=TOOL_TEMPLATE, inp=job['inputs'])
+            app, template=TOOL_TEMPLATE, inp=job_dict['inputs'])
 
-        app_usage = make_app_usage_string(app, USAGE, job['inputs'])
+        app_usage = make_app_usage_string(app, USAGE, job_dict['inputs'])
 
         app_inputs = docopt.docopt(app_inputs_usage, args['<inputs>'])
 
@@ -285,25 +290,21 @@ def main():
             return
 
         inp = get_inputs(app, app_inputs)
-        job['inputs'].update(inp['inputs'])
+        job_dict['inputs'].update(inp['inputs'])
+        job_dict['@id'] = args.get('--dir')
+        job_dict['app'] = app.to_dict(context)
+        job = Job.from_dict(context, job_dict)
 
         if args['--print-cli']:
             if not isinstance(app, CliApp):
                 print(dry_run_args['<tool>'] + " is not a command line app")
                 return
-            job['@id'] = args.get('--dir')
-            job['app'] = app.to_dict(context)
-            j = Job.from_dict(context, job)
-            adapter = CLIJob(j.to_dict(context), j.app)
-            print(adapter.cmd_line())
+
+            print(app.command_line(job))
             return
 
-        job['@id'] = args.get('--dir')
-        job['app'] = app.to_dict(context)
-
         try:
-            context.executor.execute(Job.from_dict(context, job),
-                                     lambda _, result: print(result))
+            context.executor.execute(job, lambda _, result: print(result))
         except RabixError as err:
             print(err.message)
 

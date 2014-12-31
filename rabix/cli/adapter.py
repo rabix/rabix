@@ -1,4 +1,3 @@
-import copy
 import operator
 import six
 import logging
@@ -20,9 +19,9 @@ log = logging.getLogger(__name__)
 def evaluate(expr_object, job, context=None, *args, **kwargs):
     if isinstance(expr_object, dict):
         return ev.evaluate(expr_object.get('lang', 'javascript'), expr_object.get(
-            'value'), job, context, *args, **kwargs)
+            'value'), job.to_dict(), context, *args, **kwargs)
     else:
-        return ev.evaluate('javascript', expr_object, job, context, *args, **kwargs)
+        return ev.evaluate('javascript', expr_object, job.to_dict(), context, *args, **kwargs)
 
 
 def intersect_dicts(d1, d2):
@@ -41,8 +40,8 @@ def eval_resolve(val, job, context=None):
 
 
 class InputAdapter(object):
-    def __init__(self, value, job_dict, schema, adapter_dict=None, key=''):
-        self.job = job_dict
+    def __init__(self, value, job, schema, adapter_dict=None, key=''):
+        self.job = job
         self.schema = schema or {}
         self.adapter = adapter_dict or self.schema.get('adapter')
         self.has_adapter = self.adapter is not None
@@ -57,8 +56,6 @@ class InputAdapter(object):
                 except jsonschema.exceptions.ValidationError:
                     pass
         self.value = eval_resolve(value, self.job)
-        # if self.transform:
-        #     self.value = eval_resolve(self.transform, self.job, self.value)
         if self.is_file():
             self.value = self.value['path']
 
@@ -110,13 +107,22 @@ class InputAdapter(object):
     def as_list(self):
         items = [InputAdapter(item, self.job, self.schema.get('items', {}))
                  for item in self.value]
+
         if not self.prefix:
             return reduce(operator.add, [a.arg_list() for a in items], [])
+
         if self.separator is None and self.item_separator is None:
-            return reduce(operator.add, [[self.prefix] + a.arg_list() for a in items], [])
+            return reduce(operator.add, [[self.prefix] + a.arg_list()
+                                         for a in items], [])
+
         if self.separator is not None and self.item_separator is None:
-            return [self.prefix + self.separator + a.list_item() for a in items if a.list_item() is not None]
-        joined = self.item_separator.join(filter(None, [a.list_item() for a in items]))
+            return [self.prefix + self.separator + a.list_item()
+                    for a in items if a.list_item() is not None]
+
+        joined = self.item_separator.join(
+            filter(None, [a.list_item() for a in items])
+        )
+
         if self.separator is None and self.item_separator is not None:
             return [self.prefix, joined]
         return [self.prefix + self.separator + joined]
@@ -131,11 +137,9 @@ class InputAdapter(object):
 
 
 class CLIJob(object):
-    def __init__(self, job_dict, app, path_mapper=lambda x: x):
-        self.job = copy.deepcopy(job_dict)
-        self.app = app
-        self.path_mapper = path_mapper
-        self.rewrite_paths(self.job['inputs'])
+    def __init__(self, job):
+        self.job = job
+        self.app = job.app
         self.adapter = self.app.adapter or {}
         self.stdin = eval_resolve(self.adapter.get('stdin'), self.job)
         self.stdout = eval_resolve(self.adapter.get('stdout'), self.job)
@@ -147,9 +151,11 @@ class CLIJob(object):
         self.output_schema = self.app.outputs.schema
 
     def make_arg_list(self):
-        adapters = [InputAdapter(a['value'], self.job, {}, a) for a in self.args]
-        args = InputAdapter(self.job['inputs'], self.job, self.input_schema).as_dict(adapters)
+        adapters = [InputAdapter(a['value'], self.job, {}, a)
+                    for a in self.args]
+        args = InputAdapter(self.job.inputs, self.job, self.input_schema).as_dict(adapters)
         base_cmd = [eval_resolve(item, self.job) for item in self.base_cmd]
+
         return [six.text_type(arg) for arg in base_cmd + args]
 
     def cmd_line(self):
@@ -159,16 +165,6 @@ class CLIJob(object):
         if self.stdout:
             a += ['>', self.stdout]
         return ' '.join(a)  # TODO: escape
-
-    def rewrite_paths(self, val):
-        if isinstance(val, list):
-            for item in val:
-                self.rewrite_paths(item)
-        elif isinstance(val, dict) and 'path' in val:
-            val['path'] = self.path_mapper(val['path'])
-        elif isinstance(val, dict):
-            for item in six.itervalues(val):
-                self.rewrite_paths(item)
 
     def get_outputs(self, job_dir):
         result, outs = {}, self.output_schema.get('properties', {})
@@ -186,7 +182,7 @@ class CLIJob(object):
         meta, result = adapter.get('metadata', {}), {}
         inherit = meta.pop('__inherit__', None)
         if inherit:
-            src = self.job['inputs'].get(inherit)
+            src = self.job.inputs.get(inherit)
             if isinstance(src, list):
                 result = reduce(intersect_dicts, [x.get('metadata', {}) for x in src]) \
                     if len(src) > 1 else src[0].get('metadata', {})
