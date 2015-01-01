@@ -12,7 +12,6 @@ from rabix.common.models import Job, IO, File, ObjectConstructor, ArrayConstruct
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
 from rabix.common.errors import RabixError
-from rabix.cli.adapter import CLIJob
 from rabix.executor import Executor
 from rabix.cli import CliApp
 

@@ -15,7 +15,6 @@ from rabix.common.util import sec_files_naming_conv, to_json, to_abspath
 from rabix.common.ref_resolver import from_url
 from rabix.common.models import File, URL
 
-
 log = logging.getLogger(__name__)
 
 
@@ -58,7 +57,7 @@ class InputCollector(object):
 
             if prompt:
                 self._rbx_dump(file)
-        return file
+        return File.from_dict(file)
 
     def _download(self, url, metasearch=True):
         if url.isdata():

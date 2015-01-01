@@ -135,6 +135,10 @@ class File(object):
     def __repr__(self):
         return "File(" + six.text_type(self.to_dict()) + ")"
 
+    @path.setter
+    def path(self, val):
+        self.url = val
+
     @classmethod
     def from_dict(cls, d):
 

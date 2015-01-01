@@ -1,5 +1,3 @@
-![Build Status](https://travis-ci.org/rabix/rabix.svg?branch=devel)
-
 ## Reproducible Analyses for Bioinformatics
 
 Rabix is an open source implementation of the specification being developed on the
