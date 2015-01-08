@@ -8,7 +8,7 @@ import six
 from rabix import __version__ as version
 from rabix.common.util import log_level, dot_update_dict, map_or_apply,\
     map_rec_collection, to_abspath
-from rabix.common.models import Job, IO, File, ObjectConstructor, ArrayConstructor
+from rabix.common.models import Job, IO, ObjectConstructor, ArrayConstructor, FileConstructor
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
 from rabix.common.errors import RabixError
@@ -60,8 +60,7 @@ Usage:
 
 TYPE_MAP = {
     'Job': Job.from_dict,
-    'IO': IO.from_dict,
-    'File': File.from_dict
+    'IO': IO.from_dict
 }
 
 
@@ -111,15 +110,15 @@ def fix_types(tool):
 
 
 def rebase_input_path(input, value, base):
-    if isinstance(input, ObjectConstructor):
+    if isinstance(input.constructor, ObjectConstructor):
         ret = {}
         for k, v in six.iteritems(value):
-            rebased = rebase_input_path(input[k], v, base)
+            rebased = rebase_input_path(input.properties[k], v, base)
             if rebased:
                 ret[k] = rebased
         return ret
 
-    if isinstance(input, ArrayConstructor):
+    if isinstance(input.constructor, ArrayConstructor):
         ret = []
         for item in value:
             rebased = rebase_input_path(input.item_constructor, item, base)
@@ -127,8 +126,8 @@ def rebase_input_path(input, value, base):
                 ret.append(rebased)
         return ret
 
-    if input == TYPE_MAP['File']:
-        return to_abspath(value, base)
+    if input.constructor == FileConstructor:
+        return map_or_apply(lambda v: to_abspath(v, base), value)
 
     return None
 
@@ -165,7 +164,7 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
 
     def resolve(k, v, usage_str, param_str, inp):
 
-        if v.constructor == TYPE_MAP['File']:
+        if v.constructor == FileConstructor:
             arg = '--%s=<file>' % k
             to_append = usage_str
         else:

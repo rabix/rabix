@@ -7,7 +7,7 @@ import docker
 from docker.errors import APIError
 from six.moves.urllib.parse import urlparse
 
-from rabix.common.models import URL, File
+from rabix.common.models import FileConstructor
 from rabix.cli.cli_app import Container
 from rabix.docker.container import get_image
 from rabix.common.errors import ResourceUnavailable
@@ -96,8 +96,8 @@ class DockerContainer(Container):
 
     def _remap_obj(self, inputs, input_values, volumes, binds, remaped_job,
                    parent=None):
-        is_single = lambda i: i.constructor == File.from_dict and i.depth == 0
-        is_list = lambda i: i.constructor == File.from_dict and i.depth == 1
+        is_single = lambda i: i.constructor == FileConstructor and i.depth == 0
+        is_list = lambda i: i.constructor == FileConstructor and i.depth == 1
         if inputs:
             single = filter(is_single, [i for i in inputs])
             lists = filter(is_list, [i for i in inputs])

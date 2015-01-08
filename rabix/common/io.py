@@ -13,7 +13,7 @@ from os.path import basename, dirname, abspath, join, exists, isfile
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import sec_files_naming_conv, to_json, to_abspath
 from rabix.common.ref_resolver import from_url
-from rabix.common.models import File, URL
+from rabix.common.models import File, URL, FileConstructor
 
 log = logging.getLogger(__name__)
 
@@ -39,17 +39,17 @@ class InputCollector(object):
         rbx_path = npath + '.rbx.json'
         if isfile(rbx_path):
             file_dict = from_url(rbx_path)
-            file = File.from_dict(file_dict)
+            file = FileConstructor(file_dict)
             startdir = dirname(npath)
             file.secondary_files = [
-                File.from_dict(
+                File(
                     self._download(
                         URL(to_abspath(sf.path, startdir)),
                         metasearch=False))
                 for sf in file.secondary_files
             ]
         else:
-            file = File.from_dict(npath)
+            file = File(npath)
             file.meta = self._meta(npath, prompt=prompt)
             if secondary_files:
                 file.secondary_files = self._get_secondary_files(
@@ -57,7 +57,7 @@ class InputCollector(object):
 
             if prompt:
                 self._rbx_dump(file)
-        return File.from_dict(file)
+        return file
 
     def _download(self, url, metasearch=True):
         if url.isdata():
@@ -149,7 +149,7 @@ class InputCollector(object):
             for n, sf in enumerate(secondaryFiles):
                 path = sec_files_naming_conv(input.path, sf)
                 log.info('Downloading: %s', path)
-                secFiles.append(File.from_dict(self._download(URL(path), metasearch=False)))
+                secFiles.append(File(self._download(URL(path), metasearch=False)))
         if autodetect:
             if not secondaryFiles:
                 secondaryFiles = []

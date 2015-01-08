@@ -110,7 +110,7 @@ class URL(object):
 class File(object):
 
     def __init__(self, path, size=None, meta=None, secondary_files=None):
-        self.url = URL(path) if isinstance(path, str) else path
+        self.url = URL(path) if isinstance(path, six.string_types) else path
         self.size = size
         self.meta = meta or {}
         self.secondary_files = secondary_files or []
@@ -139,28 +139,6 @@ class File(object):
     def path(self, val):
         self.url = val
 
-    @classmethod
-    def from_dict(cls, d):
-
-        if isinstance(d, six.string_types):
-            d = {'path': d}
-
-        size = d.get('size')
-        if size is not None:
-            size = int(size)
-
-        path = d.get('path')
-        if path is None:
-            raise ValidationError(
-                "Not a valid 'File' object: %s" % str(d)
-            )
-
-        return cls(path=path,
-                   size=size,
-                   meta=d.get('meta'),
-                   secondary_files=[File.from_dict(sf)
-                                    for sf in d.get('secondaryFiles', [])])
-
 
 def make_constructor(schema):
         constructor_map = {
@@ -168,8 +146,8 @@ def make_constructor(schema):
             'number': float,
             'boolean': bool,
             'string': six.text_type,
-            'file': File.from_dict,
-            'directory': File.from_dict
+            'file': FileConstructor,
+            'directory': FileConstructor
         }
 
         type_name = schema.get('type')
@@ -196,18 +174,40 @@ class ArrayConstructor(object):
         return [self.item_constructor(v) for v in val]
 
 
-class ObjectConstructor(dict):
+class ObjectConstructor(object):
 
-    def __init__(self, properties, **kwargs):
-        super().__init__(**kwargs)
-        for k, v in six.iteritems(properties):
-            self[k] = make_constructor(v)
+    def __init__(self, properties):
+        self.properties = {
+            k: make_constructor(v)
+            for k, v in six.iteritems(properties)
+        }
 
     def __call__(self, val):
         return {
-            k: self.get(k, lambda x: x)(v)
+            k: self.properties.get(k, lambda x: x)(v)
             for k, v in six.iteritems(val)
         }
+
+
+def FileConstructor(val):
+    if isinstance(val, six.string_types):
+        val = {'path': val}
+
+    size = val.get('size')
+    if size is not None:
+        size = int(size)
+
+    path = val.get('path')
+    if path is None:
+        raise ValidationError(
+            "Not a valid 'File' object: %s" % str(val)
+        )
+
+    return File(path=path,
+               size=size,
+               meta=val.get('meta'),
+               secondary_files=[FileConstructor(sf)
+                                for sf in val.get('secondaryFiles', [])])
 
 
 class IO(object):

@@ -4,7 +4,7 @@ import json
 import stat
 
 from rabix.cli.adapter import CLIJob
-from rabix.common.models import App, File
+from rabix.common.models import App, FileConstructor
 from rabix.common.io import InputCollector
 from rabix.common.util import map_or_apply
 
@@ -50,7 +50,7 @@ class Container(object):
     def _resolve(self, inputs, input_values, job):
 
         if inputs:
-            file_ins = [i for i in inputs if i.constructor == File.from_dict]
+            file_ins = [i for i in inputs if i.constructor == FileConstructor]
             for f in file_ins:
                 val = input_values.get(f.id)
                 job[f.id] = map_or_apply(
