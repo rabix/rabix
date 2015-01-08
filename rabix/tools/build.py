@@ -53,7 +53,7 @@ def run_container(client, from_img, kwargs, container_kwargs):
     run_cmd = make_cmd(cmd, join=True)
 
     container = Container(client, img['Id'],
-                          "docker://{}#{}".format(repo, tag),
+                          "{}:{}".format(repo, tag),
                           run_cmd, volumes={mount_point: {}},
                           working_dir=mount_point, **container_kwargs)
 
