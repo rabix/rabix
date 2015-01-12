@@ -35,12 +35,12 @@ class InputCollector(object):
 
     def download(self, url, secondary_files=None, prompt=True):
         npath = self._download(url, metasearch=True)
-        npath = abspath(npath)
         rbx_path = npath + '.rbx.json'
         if isfile(rbx_path):
             file_dict = from_url(rbx_path)
-            file = FileConstructor(file_dict)
             startdir = dirname(npath)
+            file_dict['path'] = npath
+            file = FileConstructor(file_dict)
             file.secondary_files = [
                 File(
                     self._download(
@@ -157,7 +157,7 @@ class InputCollector(object):
             ad = []
             names = [basename(f) for f in secondaryFiles]
             for sf in autodetected:
-                sf = sf.replace(input, '')
+                sf = sf.replace(input.path, '')
                 if sf not in names:
                     ad.append(str(sf))
             if ad:
