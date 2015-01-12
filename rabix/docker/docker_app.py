@@ -64,7 +64,9 @@ class DockerContainer(Container):
 
     def __init__(self, uri, image_id, dockr=None):
         super(DockerContainer, self).__init__()
-        self.uri = uri.lstrip("docker://")
+        self.uri = uri.lstrip("docker://")\
+            if uri.startswith('docker:/') else uri
+
         self.image_id = image_id
         self.docker_client = dockr or docker_client()
         self.config = {}
@@ -298,4 +300,4 @@ class DockerContainer(Container):
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d['uri'], d.get('imageId'))
+        return cls(d.get('uri'), d.get('imageId'))

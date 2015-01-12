@@ -290,7 +290,7 @@ def main():
         inp = get_inputs(app, app_inputs)
         job_dict['inputs'].update(inp['inputs'])
         job_dict['@id'] = args.get('--dir')
-        job_dict['app'] = app.to_dict(context)
+        job_dict['app'] = app
         job = Job.from_dict(context, job_dict)
 
         if args['--print-cli']:

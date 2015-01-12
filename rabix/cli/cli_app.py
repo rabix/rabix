@@ -112,10 +112,11 @@ class CliApp(App):
         if self.requirements.container:
             self.ensure_files(job, job_dir)
             self.install(job=job)
-            self.job_dump(job, job_dir)
             self.set_config(job=job, job_dir=job_dir)
+            self.job_dump(job, job_dir)
             adapter = CLIJob(job)
             cmd_line = adapter.cmd_line()
+            print("Running command line: " + cmd_line)
             self.requirements.container.run(cmd_line)
             with open(os.path.abspath(job_dir) + '/result.cwl.json', 'w') as f:
                 outputs = adapter.get_outputs(os.path.abspath(job_dir))
@@ -160,7 +161,7 @@ class CliApp(App):
     def from_dict(cls, context, d):
         return cls(d.get('@id', d.get('name')),
                    context.from_dict(d['inputs']),
-                   context.from_dict(d['outputs']),
+                   context.from_dict(d.get('outputs', {})),
                    app_description=d.get('appDescription'),
                    annotations=d.get('annotations'),
                    platform_features=d.get('platform_features'),
