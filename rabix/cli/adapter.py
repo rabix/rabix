@@ -184,8 +184,8 @@ class CLIJob(object):
         if inherit:
             src = self.job.inputs.get(inherit)
             if isinstance(src, list):
-                result = reduce(intersect_dicts, [x.get('metadata', {}) for x in src]) \
-                    if len(src) > 1 else src[0].get('metadata', {})
+                result = reduce(intersect_dicts, [x.meta for x in src]) \
+                    if len(src) > 1 else src[0].meta
             elif isinstance(src, dict):
                 result = src.get('metadata', {})
         result.update(**meta)

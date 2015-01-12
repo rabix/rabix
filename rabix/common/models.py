@@ -204,10 +204,10 @@ def FileConstructor(val):
         )
 
     return File(path=path,
-               size=size,
-               meta=val.get('meta'),
-               secondary_files=[FileConstructor(sf)
-                                for sf in val.get('secondaryFiles', [])])
+                size=size,
+                meta=val.get('meta'),
+                secondary_files=[FileConstructor(sf)
+                                 for sf in val.get('secondaryFiles', [])])
 
 
 class IO(object):
@@ -265,6 +265,7 @@ class Job(object):
         self.inputs = inputs
         self.allocated_resources = allocated_resources
         self.context = context
+        pass
 
     def run(self):
         return self.app.run(self)
