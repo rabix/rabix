@@ -53,11 +53,12 @@ class Container(object):
             file_ins = [i for i in inputs if i.constructor == FileConstructor]
             for f in file_ins:
                 val = input_values.get(f.id)
-                job[f.id] = map_or_apply(
-                    lambda e: self.input_collector.download(
-                        e.url, f.annotations.get('secondaryFiles')
-                    ),
-                    val)
+                if val:
+                    job[f.id] = map_or_apply(
+                        lambda e: self.input_collector.download(
+                            e.url, f.annotations.get('secondaryFiles')
+                        ),
+                        val)
 
 
 class Requirements(object):
@@ -119,8 +120,6 @@ class CliApp(App):
 
             cmd_line = self.command_line(job, job_dir)
             self.job_dump(job, job_dir)
-
-            print("Running command line: " + cmd_line)
             self.requirements.container.run(cmd_line)
             with open(os.path.abspath(job_dir) + '/result.cwl.json', 'w') as f:
                 outputs = self.cli_job.get_outputs(os.path.abspath(job_dir))

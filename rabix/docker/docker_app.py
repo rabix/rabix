@@ -128,7 +128,7 @@ class DockerContainer(Container):
     def _remap_list(
             self, inp, input_values, volumes, binds, remaped_job,
             parent, depth):
-        if input_values[inp.id]:
+        if input_values.get(inp.id):
 
             for num, inv in enumerate(input_values[inp.id]):
                 if parent:

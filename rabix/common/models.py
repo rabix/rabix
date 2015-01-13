@@ -54,7 +54,6 @@ class App(object):
     def job_dump(self, job, dirname):
         with open(os.path.join(dirname, 'job.cwl.json'), 'w') as f:
             job_dict = job.to_dict()
-            print(job_dict)
             json.dump(job_dict, f)
             log.info('File %s created.', job.id)
 
@@ -247,9 +246,6 @@ class IO(object):
             type_name = item_schema.get('type')
 
         constructor = make_constructor(item_schema)
-
-        if not constructor:
-            print(d)
 
         return cls(d.get('@id', str(uuid4())),
                    validator=context.from_dict(d.get('schema')),

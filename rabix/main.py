@@ -344,6 +344,10 @@ def main():
             print(app.command_line(job))
             return
 
+        if not job.inputs and not args['--']:
+            print(app_usage)
+            return
+
         try:
             context.executor.execute(job, lambda _, result: print(result))
         except RabixError as err:
