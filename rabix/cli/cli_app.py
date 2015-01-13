@@ -137,7 +137,6 @@ class CliApp(App):
         # print(self._command_line)
         return self._command_line
 
-
     def install(self, *args, **kwargs):
         if self.requirements and self.requirements.container:
             self.requirements.container.install(*args, **kwargs)
