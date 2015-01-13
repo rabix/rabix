@@ -7,7 +7,7 @@ from collections import namedtuple, defaultdict
 from altgraph.Graph import Graph
 
 from rabix.common.errors import ValidationError, RabixError
-from rabix.common.util import wrap_in_list
+from rabix.common.util import wrap_in_list, map_rec_list
 from rabix.common.models import App, IO, Job
 from rabix.schema import JsonSchema
 
@@ -58,6 +58,7 @@ class WorkflowApp(App):
         self.outputs = outputs or []
         self.executor = context.executor
         self.steps = steps
+        self.context = context
 
         for step in steps:
             self.add_node(step.id,  AppNode(step.app, {}))
@@ -174,7 +175,7 @@ def init(context):
 
 class PartialJob(object):
 
-    def __init__(self, node_id, app, inputs, input_counts, outputs):
+    def __init__(self, node_id, app, inputs, input_counts, outputs, context):
         self.result = None
         self.status = 'WAITING'
         self.node_id = node_id
@@ -182,6 +183,7 @@ class PartialJob(object):
         self.inputs = inputs
         self.input_counts = input_counts
         self.outputs = outputs
+        self.context = context
 
         self.running = []
         self.resources = None
@@ -199,7 +201,7 @@ class PartialJob(object):
         if input_count <= 0:
             raise RabixError("Input already satisfied")
         self.input_counts[input_port] = input_count - 1
-        # recursive_merge(self.job['inputs'].get(input_port), results)
+
         prev_result = self.inputs.get(input_port)
         if prev_result is None:
             self.inputs[input_port] = results
@@ -217,7 +219,7 @@ class PartialJob(object):
             self.outputs[k].resolve_input(v)
 
     def job(self):
-        return Job(self.node_id, self.app, self.inputs, {})
+        return Job(self.node_id, self.app, self.inputs, {}, self.context)
 
 
 class ExecRelation(object):
@@ -227,7 +229,9 @@ class ExecRelation(object):
         self.input_port = input_port
 
     def resolve_input(self, result):
-        self.node.resolve_input(self.input_port, result)
+        io = self.node.app.get_input(self.input_port)
+        res = map_rec_list(io.constructor, result)
+        self.node.resolve_input(self.input_port, res)
 
 
 class OutRelation(object):
@@ -280,7 +284,8 @@ class ExecutionGraph(object):
                 outputs[rel.src_port] = OutRelation(self, tail)
 
         executable = PartialJob(
-            node_id, node.app, node.inputs, input_counts, outputs
+            node_id, node.app, node.inputs,
+            input_counts, outputs, self.workflow.context
         )
 
         for in_edge in in_edges:

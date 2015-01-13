@@ -46,7 +46,7 @@ class Executor(object):
             for i, val in enumerate(job.inputs[parallel_input]):
                 inputs = copy.deepcopy(job.inputs)
                 inputs[parallel_input] = val
-                jobs.append(Job(job.id+"_"+str(i), job.app, inputs, {}))
+                jobs.append(Job(job.id+"_"+str(i), job.app, inputs, {}, job.context))
             return jobs
         else:
             return job
