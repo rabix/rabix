@@ -103,23 +103,27 @@ class CliApp(App):
         self.adapter = adapter
         self.software_description = software_description
         self.requirements = requirements
+        self.cli_job = None
+        self._command_line = None
 
     def run(self, job, job_dir=None):
         job_dir = job_dir or job.id
         os.mkdir(job_dir)
         os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
                  stat.S_IWOTH)
+        self.cli_job = CLIJob(job)
+
         if self.requirements.container:
             self.ensure_files(job, job_dir)
             self.install(job=job)
-            self.set_config(job=job, job_dir=job_dir)
+
+            cmd_line = self.command_line(job, job_dir)
             self.job_dump(job, job_dir)
-            adapter = CLIJob(job)
-            cmd_line = adapter.cmd_line()
+
             print("Running command line: " + cmd_line)
             self.requirements.container.run(cmd_line)
             with open(os.path.abspath(job_dir) + '/result.cwl.json', 'w') as f:
-                outputs = adapter.get_outputs(os.path.abspath(job_dir))
+                outputs = self.cli_job.get_outputs(os.path.abspath(job_dir))
                 for k, v in six.iteritems(outputs):
                     if v:
                         with open(v['path'] + '.rbx.json', 'w') as rx:
@@ -127,9 +131,13 @@ class CliApp(App):
                 json.dump(outputs, f)
                 return outputs
 
-    def command_line(self, job):
-        adapter = CLIJob(job)
-        return adapter.cmd_line()
+    def command_line(self, job, job_dir=None):
+        if not self._command_line:
+            self.set_config(job=job, job_dir=job_dir)
+            self._command_line = self.cli_job.cmd_line()
+        # print(self._command_line)
+        return self._command_line
+
 
     def install(self, *args, **kwargs):
         if self.requirements and self.requirements.container:

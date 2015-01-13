@@ -65,7 +65,7 @@ class DockerContainer(Container):
     def __init__(self, uri, image_id, dockr=None):
         super(DockerContainer, self).__init__()
         self.uri = uri.lstrip("docker://")\
-            if uri.startswith('docker:/') else uri
+            if uri and uri.startswith('docker:/') else uri
 
         self.image_id = image_id
         self.docker_client = dockr or docker_client()

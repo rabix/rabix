@@ -119,8 +119,8 @@ POINTER_DEFAULT = object()
 
 
 def resolve_pointer(document, pointer, default=POINTER_DEFAULT):
-    parts = urlparse.unquote(pointer.lstrip('/#')).split('/') \
-        if pointer else []
+    ptr = urlparse.unquote(pointer.lstrip('/#').lstrip('#')) if pointer else None
+    parts = ptr.split('/') if ptr else []
     for part in parts:
         if isinstance(document, collections.Sequence):
             try:
@@ -133,7 +133,9 @@ def resolve_pointer(document, pointer, default=POINTER_DEFAULT):
             if default != POINTER_DEFAULT:
                 return default
             else:
-                raise ValueError('Unresolvable JSON pointer: %r' % pointer)
+                raise ValueError('Unresolvable JSON pointer: %r, part: %r' %
+                                 (pointer, part))
+
     return document
 
 

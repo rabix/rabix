@@ -6,7 +6,6 @@ import time
 import datetime
 
 from uuid import uuid4
-from os.path import abspath, isabs, isfile, exists, join
 from jsonschema.validators import Draft4Validator
 from six.moves.urllib.parse import urlparse, urlunparse, unquote
 from base64 import b64decode
@@ -55,6 +54,7 @@ class App(object):
     def job_dump(self, job, dirname):
         with open(os.path.join(dirname, 'job.cwl.json'), 'w') as f:
             job_dict = job.to_dict()
+            print(job_dict)
             json.dump(job_dict, f)
             log.info('File %s created.', job.id)
 
@@ -116,7 +116,7 @@ class File(object):
         self.meta = meta or {}
         self.secondary_files = secondary_files or []
 
-    def to_dict(self, context):
+    def to_dict(self, context=None):
         return {
             "@type": "File",
             "path": self.path,

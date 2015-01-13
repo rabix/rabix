@@ -34,8 +34,9 @@ def eval_resolve(val, job, context=None):
     if 'expr' in val or '$expr' in val:
         v = val.get('expr') or val.get('$expr')
         return evaluate(v, job, context)
-    if 'job' in val:
-        return resolve_pointer(job, val['job'], default=None)
+    if 'job' in val or '$job' in val:
+        v = val.get('job') or val.get('$job')
+        return resolve_pointer(job.to_dict(context), v)
     return val
 
 
@@ -68,7 +69,10 @@ class InputAdapter(object):
 
     @property
     def separator(self):
-        return self.adapter.get('separator', ' ')
+        sep = self.adapter.get('separator')
+        if sep == ' ':
+            sep = None
+        return sep
 
     def is_file(self):
         return isinstance(self.value, dict) and 'path' in self.value

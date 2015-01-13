@@ -4,6 +4,7 @@ import docopt
 import sys
 import logging
 import six
+import json
 
 from rabix import __version__ as version
 from rabix.common.util import log_level, dot_update_dict, map_or_apply,\
@@ -13,7 +14,7 @@ from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
 from rabix.common.errors import RabixError
 from rabix.executor import Executor
-from rabix.cli import CliApp
+from rabix.cli import CliApp, CLIJob
 
 import rabix.cli
 import rabix.docker
@@ -29,7 +30,6 @@ TEMPLATE_RESOURCES = {
 
 
 TEMPLATE_JOB = {
-    'app': 'http://example.com/app.json',
     'inputs': {},
     'platform': 'http://example.org/my_platform/v1',
     'allocatedResources': TEMPLATE_RESOURCES
@@ -38,6 +38,7 @@ TEMPLATE_JOB = {
 USAGE = '''
 Usage:
     rabix <tool> [-v...] [-hcI] [-d <dir>] [-i <inp>] [{resources}] [-- {inputs}...]
+    rabix --conformance-test [--basedir=<basedir>] [--no-container] <tool> <job> [-- <input>...]
     rabix --version
 
     Options:
@@ -111,12 +112,16 @@ def fix_types(tool):
 
 def rebase_input_path(input, value, base):
     if isinstance(input.constructor, ObjectConstructor):
-        ret = {}
-        for k, v in six.iteritems(value):
-            rebased = rebase_input_path(input.properties[k], v, base)
-            if rebased:
-                ret[k] = rebased
-        return ret
+
+        def do_rebase_obj(val):
+            ret = {}
+            for k, v in six.iteritems(val):
+                rebased = rebase_input_path(input.properties[k], v, base)
+                if rebased:
+                    ret[k] = rebased
+            return ret
+
+        return map_or_apply(dot_update_dict, value)
 
     if isinstance(input.constructor, ArrayConstructor):
         ret = []
@@ -126,8 +131,14 @@ def rebase_input_path(input, value, base):
                 ret.append(rebased)
         return ret
 
+    def do_rebase(v):
+        if isinstance(v, dict):
+            v['path'] = to_abspath(v['path'], base)
+            return v
+        return to_abspath(v, base)
+
     if input.constructor == FileConstructor:
-        return map_or_apply(lambda v: to_abspath(v, base), value)
+        return map_or_apply(do_rebase, value)
 
     return None
 
@@ -222,6 +233,33 @@ def dry_run_parse(args=None):
         return
 
 
+def conformance_test(context, app, job_dict, basedir):
+    job_dict['@type'] = 'Job'
+    job_dict['@id'] = basedir
+    job_dict['app'] = app
+
+    if not app.outputs:
+        app.outputs = rabix.schema.JsonSchema(context, {
+            'type': 'object',
+            'properties': {}
+        })
+
+    inputs = rebase_paths(app, job_dict['inputs'], basedir)
+    inputs = get_inputs(app, inputs)
+
+    dot_update_dict(job_dict, inputs)
+
+    job = context.from_dict(job_dict)
+
+    adapter = CLIJob(job)
+
+    print(json.dumps({
+        'args': adapter.make_arg_list(),
+        'stdin': adapter.stdin,
+        'stdout': adapter.stdout,
+    }))
+
+
 def main():
     logging.basicConfig(level=logging.WARN)
     if len(sys.argv) == 1:
@@ -260,6 +298,11 @@ def main():
     if dry_run_args['--install']:
         app.install()
         print("Install successful.")
+        return
+
+    if dry_run_args['--conformance-test']:
+        job_dict = from_url(dry_run_args['<job>'])
+        conformance_test(context, app, job_dict, dry_run_args.get('--basedir'))
         return
 
     try:
