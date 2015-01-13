@@ -1,18 +1,19 @@
-import os
 import tempfile
 import logging
-import uuid
 import json
-import six
 import requests
 import glob
 
+from copy import copy
 from six.moves.urllib.parse import urlparse, urlunparse
 from six.moves import input as raw_input
-from rabix.common.errors import ResourceUnavailable
-from rabix.common.util import sec_files_naming_conv, to_json
-from rabix.common.ref_resolver import from_url
+from os import mkdir
+from os.path import basename, dirname, abspath, join, exists, isfile
 
+from rabix.common.errors import ResourceUnavailable
+from rabix.common.util import sec_files_naming_conv, to_json, to_abspath
+from rabix.common.ref_resolver import from_url
+from rabix.common.models import File, URL, FileConstructor
 
 log = logging.getLogger(__name__)
 
@@ -22,58 +23,54 @@ class InputCollector(object):
     Will handle local files, 'data:,' URLs (for tests) and delegate other
     URLs to requests.get()
     """
-    def __init__(self):
+    def __init__(self, job_dir):
         self.downloader = self.detect_downloader()
+        self.dir = job_dir
+        if not exists(job_dir):
+            mkdir(job_dir)
 
     @staticmethod
     def detect_downloader():
         pass
 
-    @property
-    def task_dir(self):
-        if not self.dir:
-            self.dir = str(uuid.uuid4())
-        if not os.path.exists(self.dir):
-            os.mkdir(self.dir)
-        return self.dir
-
-    def set_dir(self, job_dir):
-        self.dir = job_dir
-
-    def download(self, url, secondaryFiles=None, prompt=True):
+    def download(self, url, secondary_files=None, prompt=True):
         npath = self._download(url, metasearch=True)
-        if os.path.exists(npath + '.rbx.json'):
-            file = from_url(url + '.rbx.json')
-            startdir = os.path.dirname(url)
-            for i, v in enumerate(file.get('secondaryFiles', [])):
-                spath = v['path']
-                if not os.path.isabs(spath) and urlparse(spath, 'file').scheme == 'file':
-                    spath = os.path.join(startdir, spath)
-                file['secondaryFiles'][i]['path'] = self._download(
-                    spath, metasearch=False)
-            file['path'] = npath
+        rbx_path = npath + '.rbx.json'
+        if isfile(rbx_path):
+            file_dict = from_url(rbx_path)
+            startdir = dirname(npath)
+            file_dict['path'] = npath
+            file = FileConstructor(file_dict)
+            file.secondary_files = [
+                File(
+                    self._download(
+                        URL(to_abspath(sf.path, startdir)),
+                        metasearch=False))
+                for sf in file.secondary_files
+            ]
         else:
-            file = {}
-            file['metadata'] = self._meta(url, prompt=prompt)
-            if secondaryFiles:
-                file['secondaryFiles'] = self._get_secondary_files(secondaryFiles,
-                                                                   url,
-                                                                   prompt=prompt)
-            file['path'] = npath
+            file = File(npath)
+            file.meta = self._meta(npath, prompt=prompt)
+            if secondary_files:
+                file.secondary_files = self._get_secondary_files(
+                    secondary_files, url, prompt=prompt)
+
             if prompt:
                 self._rbx_dump(file)
         return file
 
     def _download(self, url, metasearch=True):
-        if url.startswith('data:,'):
-            return self._data_url(url)
-        if '://' not in url:
-            url = 'file://' + url
-        if url.startswith('file://'):
-            return self._local(url)
+        if url.isdata():
+            dest = tempfile.mktemp(dir=self.dir)
+            with open(dest, 'w') as fp:
+                fp.write(url.data)
+            return dest
+
+        if url.islocal():
+            return url.path
 
         log.debug('Downloading %s', url)
-        r = requests.get(url)
+        r = requests.get(url.geturl())
         try:
             r.raise_for_status()
         except Exception as e:
@@ -88,14 +85,13 @@ class InputCollector(object):
             if meta:
                 with open(dest + '.rbx.json', 'w') as fp:
                     to_json(meta, fp)
-        return os.path.abspath(dest)
+        return dest
 
     def _get_meta_for_url(self, url):
         log.debug('Fetching metadata for %s', url)
-        chunks = list(urlparse(url))
-        chunks[2] += '.rbx.json'
-        meta_url = urlunparse(chunks)
-        r = requests.get(meta_url)
+        meta_url = copy(url)
+        meta_url.path = url.path + '.rbx.json'
+        r = requests.get(meta_url.geturl())
         if not r.ok:
             log.warning('Failed to get metadata for URL %s', url)
             return
@@ -110,11 +106,11 @@ class InputCollector(object):
 
     def _meta(self, path, prompt=True):
         file_meta = {}
-        if os.path.exists(path + '.meta'):
+        if isfile(path + '.meta'):
             with open(path + '.meta') as m:
                 file_meta = json.load(m)
         elif prompt:
-            file_meta = self._metadata_prompt(os.path.basename(path))
+            file_meta = self._metadata_prompt(basename(path))
         return file_meta
 
     def _metadata_prompt(self, input, metadata=None):
@@ -144,25 +140,24 @@ class InputCollector(object):
         def secondary_files_autodetect(path):
             log.info('Searching for additional files for file: %s', path)
             return [fn for fn in glob.glob(path + '.*')
-                    if not (os.path.basename(fn).endswith('.meta') or
-                            os.path.basename(fn).endswith('.rbx.json'))
+                    if not (basename(fn).endswith('.meta') or
+                            basename(fn).endswith('.rbx.json'))
                     ]
 
         secFiles = []
         if secondaryFiles:
             for n, sf in enumerate(secondaryFiles):
-                path = sec_files_naming_conv(input, sf)
+                path = sec_files_naming_conv(input.path, sf)
                 log.info('Downloading: %s', path)
-                secFiles.append({'path': self._download(
-                    path, metasearch=False)})
+                secFiles.append(File(self._download(URL(path), metasearch=False)))
         if autodetect:
             if not secondaryFiles:
                 secondaryFiles = []
-            autodetected = secondary_files_autodetect(input)
+            autodetected = secondary_files_autodetect(input.path)
             ad = []
-            names = [os.path.basename(f) for f in secondaryFiles]
+            names = [basename(f) for f in secondaryFiles]
             for sf in autodetected:
-                sf = sf.replace(input, '')
+                sf = sf.replace(input.path, '')
                 if sf not in names:
                     ad.append(str(sf))
             if ad:
@@ -179,34 +174,22 @@ class InputCollector(object):
                 prompt, input, autodetect=False, prompt=False))
         return secFiles
 
-    def _data_url(self, url):
-        data = url[len('data:,'):]
-        dest = tempfile.mktemp(dir=self.task_dir)
-        with open(dest, 'w') as fp:
-            fp.write(data)
-        return os.path.abspath(dest)
-
     def _get_dest_for_url(self, url):
-        path = urlparse(url).path
-        name = path.split('/')[-1]
-        tgt = os.path.join(self.task_dir, name)
-        if os.path.exists(tgt) or not name:
-            return tempfile.mktemp(dir=self.task_dir)
+        name = url.path.split('/')[-1]
+        tgt = join(self.dir, name)
+        if exists(tgt) or not name:
+            return tempfile.mktemp(dir=self.dir)
         return tgt
 
-    def _local(self, url):
-        path = url[len('file://'):]
-        if not os.path.exists(path):
-            raise ResourceUnavailable('Not a file: %s' % path)
-        return os.path.abspath(path)
-
     def _prompt_files(self, input, prompt=None, secFiles=None):
-        cont = ''
-        if prompt is None:
-            prompt = []
-            cont = raw_input('Do you want to include some additional '
-                             'files for file %s %s? [y/N] '
-                             % (input, str(secFiles))).lower().strip()
+
+        cont = 'n'
+        # cont = ''
+        # if prompt is None:
+        #     prompt = []
+        #     cont = raw_input('Do you want to include some additional '
+        #                      'files for file %s %s? [y/N] '
+        #                      % (input, str(secFiles))).lower().strip()
         if cont == 'y':
             ext = raw_input('Extension: ')
             if ext == '':
@@ -221,9 +204,16 @@ class InputCollector(object):
             return prompt
 
     def _rbx_dump(self, input):
-        cont = raw_input('Do you want to create rbx.json for file %s? [Y/n] ' % input['path']).lower().strip()
+        # cont = raw_input(
+        #     'Do you want to create rbx.json for file %s? [Y/n] '
+        #     % input.path)
+        #
+        # cont = cont.decode('ascii').lower().strip()
+        #
+        cont = 'n'
+
         if cont == 'y' or cont == '':
-            filename = input['path'] + '.rbx.json'
+            filename = input.path + '.rbx.json'
             with open(filename, 'w') as f:
                 json.dump(input, f)
                 log.info('File %s created.', filename)
