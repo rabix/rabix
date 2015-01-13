@@ -1,13 +1,20 @@
-import copy
-import signal
 import random
 import itertools
 import collections
 import logging
 import six
+import json
+
+from os.path import abspath, isabs, join
+
+from rabix.common.errors import RabixError
 
 log = logging.getLogger(__name__)
 
+
+###
+# collections
+###
 
 def wrap_in_list(val, *append_these):
     """
@@ -20,20 +27,6 @@ def wrap_in_list(val, *append_these):
     """
     wrapped = val if isinstance(val, list) else [val]
     return wrapped + list(append_these)
-
-
-def import_name(name):
-    name = str(name)
-    if '.' not in name:
-        return __import__(name)
-    chunks = name.split('.')
-    var_name = chunks[-1]
-    module_name = '.'.join(chunks[:-1])
-    fromlist = chunks[:-2] if len(chunks) > 2 else []
-    module = __import__(module_name, fromlist=fromlist)
-    if not hasattr(module, var_name):
-        raise ImportError('%s not found in %s' % (var_name, module_name))
-    return getattr(module, var_name)
 
 
 def dot_update_dict(dst, src):
@@ -60,66 +53,54 @@ def dot_update_dict(dst, src):
     return dst
 
 
-class DotAccessDict(dict):
-    def __getattr__(self, item):
-        return self.get(item, None)
-
-    def __setattr__(self, key, value):
-        self[key] = value
-
-    def __copy__(self):
-        return self.__class__(self)
-
-    def __deepcopy__(self, memo):
-        return self.__class__(copy.deepcopy(dict(self), memo))
+def map_rec_collection(f, col):
+    if isinstance(col, list):
+        return [map_rec_collection(f, e) for e in col]
+    if isinstance(col, dict):
+        return {k: map_rec_collection(f, v) for k, v in six.iteritems(col)}
+    return f(col)
 
 
-class NormDict(dict):
-    def __init__(self, normalize=six.text_type):
-        super(NormDict, self).__init__()
-        self.normalize = normalize
-
-    def __getitem__(self, key):
-        return super(NormDict, self).__getitem__(self.normalize(key))
-
-    def __setitem__(self, key, value):
-        return super(NormDict, self).__setitem__(self.normalize(key), value)
-
-    def __delitem__(self, key):
-        return super(NormDict, self).__delitem__(self.normalize(key))
+def map_rec_list(f, lst):
+    if isinstance(lst, list):
+        return [map_rec_list(f, e) for e in lst]
+    return f(lst)
 
 
-def intersect_dicts(d1, d2):
-    """
-    >>> intersect_dicts({'a': 1, 'b': 2}, {'a': 1, 'b': 3})
-    {'a': 1}
-    >>> intersect_dicts({'a': 1, 'b': 2}, {'a': 0})
-    {}
-    """
-    return {k: v for k, v in six.iteritems(d1) if v == d2.get(k)}
+def map_or_apply(f, lst):
+    if isinstance(lst, list):
+        return [f(e) for e in lst]
+    return f(lst)
 
 
-class SignalContextProcessor(object):
-    def __init__(self, handler, *signals):
-        self.handler = handler
-        self.signals = signals
-        self.old_handlers = {}
+###
+# reflection
+###
 
-    def __enter__(self):
-        self.old_handlers = {
-            sig: signal.signal(sig, self.handler) for sig in self.signals
-        }
+def import_name(name):
+    name = str(name)
+    if '.' not in name:
+        return __import__(name)
+    chunks = name.split('.')
+    var_name = chunks[-1]
+    module_name = '.'.join(chunks[:-1])
+    fromlist = chunks[:-2] if len(chunks) > 2 else []
+    module = __import__(module_name, fromlist=fromlist)
+    if not hasattr(module, var_name):
+        raise ImportError('%s not found in %s' % (var_name, module_name))
+    return getattr(module, var_name)
 
-    def __exit__(self, *_):
-        for sig in self.signals:
-            signal.signal(sig, self.old_handlers[sig])
 
-handle_signal = SignalContextProcessor
+def getmethod(o, method_name, default=None):
+    attr = getattr(o, method_name)
+    if callable(attr):
+        return attr
+    return default
 
 
-def get_import_name(cls):
-    return '.'.join([cls.__module__, cls.__name__])
-
+###
+# misc.
+###
 
 def rnd_name(syllables=5):
     return ''.join(itertools.chain(*zip(
@@ -127,25 +108,34 @@ def rnd_name(syllables=5):
         (random.choice('aeiouy') for _ in range(syllables)))))
 
 
-def set_log_level(v_count):
-    if v_count == 0:
+def log_level(int_level):
+    if int_level <= 0:
         level = logging.WARN
-    elif v_count == 1:
+    elif int_level == 1:
         level = logging.INFO
-    else:
+    elif int_level >= 2:
         level = logging.DEBUG
-    logging.root.setLevel(level)
+    else:
+        raise RabixError("Invalid log level: %s" % int_level)
+    return level
 
 
 def sec_files_naming_conv(path, ext):
     return ''.join([path, ext]) if ext.startswith('.') \
-        else ''.join(['.'.join(path.split('.')[:-1]), ext])
+        else '.'.join(['.'.join(path.split('.')[:-1]), ext])
 
 
-def url_type(url):
-    if url.startswith('data:,'):
-        return 'data'
-    if '://' not in url:
-        return 'file'
+def to_json(obj, fp=None):
+    default = lambda o: getmethod(o, '__json__',
+                                  lambda v: six.string_types(v))()
+    kwargs = dict(default=default, indent=2, sort_keys=True)
+    return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
+
+
+def to_abspath(path, base=None):
+    if not base:
+        return abspath(path)
+    elif isabs(path):
+        return path
     else:
-        return 'url'
+        return abspath(join(base, path))

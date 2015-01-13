@@ -1,17 +1,20 @@
+from __future__ import print_function
 import os
 import docopt
 import sys
 import logging
 import six
+import json
 
 from rabix import __version__ as version
-from rabix.common.util import set_log_level, dot_update_dict, url_type
-from rabix.common.models import Job, IO
+from rabix.common.util import log_level, dot_update_dict, map_or_apply,\
+    map_rec_collection, to_abspath
+from rabix.common.models import Job, IO, ObjectConstructor, ArrayConstructor, FileConstructor
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
-from rabix.cli.adapter import CLIJob
+from rabix.common.errors import RabixError
 from rabix.executor import Executor
-from rabix.cli import CliApp
+from rabix.cli import CliApp, CLIJob
 
 import rabix.cli
 import rabix.docker
@@ -27,7 +30,6 @@ TEMPLATE_RESOURCES = {
 
 
 TEMPLATE_JOB = {
-    'app': 'http://example.com/app.json',
     'inputs': {},
     'platform': 'http://example.org/my_platform/v1',
     'allocatedResources': TEMPLATE_RESOURCES
@@ -36,6 +38,7 @@ TEMPLATE_JOB = {
 USAGE = '''
 Usage:
     rabix <tool> [-v...] [-hcI] [-d <dir>] [-i <inp>] [{resources}] [-- {inputs}...]
+    rabix --conformance-test [--basedir=<basedir>] [--no-container] <tool> <job> [-- <input>...]
     rabix --version
 
     Options:
@@ -56,18 +59,6 @@ Usage:
   tool {inputs}
 '''
 
-
-def make_resources_usage_string(template=TEMPLATE_RESOURCES):
-    param_str = []
-    for k, v in six.iteritems(template):
-        if type(v) is bool:
-            arg = '--resources.%s' % k
-        else:
-            arg = '--resources.%s=<%s>' % (k, type(v).__name__)
-        param_str.append(arg)
-    return ' '.join(param_str)
-
-
 TYPE_MAP = {
     'Job': Job.from_dict,
     'IO': IO.from_dict
@@ -86,6 +77,10 @@ def init_context():
 
     return context
 
+
+###
+# input massage
+###
 
 def fix_types(tool):
     requirements = tool.get('requirements', {})
@@ -115,32 +110,85 @@ def fix_types(tool):
         outputs['@type'] = 'JsonSchema'
 
 
+def rebase_input_path(input, value, base):
+    if isinstance(input.constructor, ObjectConstructor):
+
+        def do_rebase_obj(val):
+            ret = {}
+            for k, v in six.iteritems(val):
+                rebased = rebase_input_path(input.properties[k], v, base)
+                if rebased:
+                    ret[k] = rebased
+            return ret
+
+        return map_or_apply(dot_update_dict, value)
+
+    if isinstance(input.constructor, ArrayConstructor):
+        ret = []
+        for item in value:
+            rebased = rebase_input_path(input.item_constructor, item, base)
+            if rebased:
+                ret.append(rebased)
+        return ret
+
+    def do_rebase(v):
+        if isinstance(v, dict):
+            v['path'] = to_abspath(v['path'], base)
+            return v
+        return to_abspath(v, base)
+
+    if input.constructor == FileConstructor:
+        return map_or_apply(do_rebase, value)
+
+    return None
+
+
+def rebase_paths(app, input_values, base):
+    file_inputs = {}
+    for input_name, val in six.iteritems(input_values):
+        input = app.get_input(input_name)
+        rebased = rebase_input_path(input, val, base)
+        if rebased:
+            file_inputs[input_name] = rebased
+
+    return dot_update_dict(input_values, file_inputs)
+
+
+###
+# usage strings
+###
+
+def make_resources_usage_string(template=TEMPLATE_RESOURCES):
+    param_str = []
+    for k, v in six.iteritems(template):
+        if type(v) is bool:
+            arg = '--resources.%s' % k
+        else:
+            arg = '--resources.%s=<%s>' % (k, type(v).__name__)
+        param_str.append(arg)
+    return ' '.join(param_str)
+
+
 def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
 
     inp = inp or {}
 
     def resolve(k, v, usage_str, param_str, inp):
-        if v.constructor == 'array':
-            if v.itemType == 'object':
-                pass
-            elif (v.itemType in ['file', 'directory']):
-                arg = '--%s=<file>...' % k
-                usage_str.append(arg if (v.required and v.id not in inp) else
-                                 '[%s]' % arg)
-            else:
-                arg = '--%s=<array_%s_separator(%s)>...' % (
-                    k, v.itemType, v.annotations.get('itemSeparator')
-                )
-                param_str.append(arg if (v.required and v.id not in inp) else
-                                 '[%s]' % arg)
-        elif v.constructor == 'file':
+
+        if v.constructor == FileConstructor:
             arg = '--%s=<file>' % k
-            usage_str.append(arg if (v.required and v.id not in inp) else
-                             '[%s]' % arg)
+            to_append = usage_str
         else:
-            arg = '--%s=<%s>' % (k, v.constructor)
-            param_str.append(arg if (v.required and v.id not in inp) else
-                             '[%s]' % arg)
+            arg = '--%s=<%s>' % (k, v.constructor.__name__)
+            to_append = param_str
+
+        if v.depth > 0:
+            arg += '... '
+
+        if not v.required or v.id in inp:
+            arg = '['+arg+']'
+
+        to_append.append(arg)
 
     def resolve_object(obj, usage_str, param_str, inp, root=False):
         properties = obj.inputs.io if root else obj.objects
@@ -157,81 +205,16 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
                            inputs=' '.join(usage_str))
 
 
-def resolve_values(inp, nval, inputs, startdir=None, type='CommandLine'):
-    if isinstance(nval, list):
-        if inp.constructor != 'array' and type != 'CommandLine':
-            inputs[inp.id] = []
-            for nv in nval:
-                if inp.constructor in ['file', 'directory']:
-                    if startdir and url_type(nv) == 'file' and \
-                            not os.path.isabs(nv):
-                        nv = os.path.join(startdir, nv)
-                    inputs[inp.id].append({'path': nv})
-                elif inp.constructor == 'integer':
-                    inputs[inp.id].append(int(nval))
-                elif inp.constructor == 'number':
-                    inputs[inp.id].append(float(nval))
-                else:
-                    inputs[inp.id].append(nval)
-        elif inp.constructor == 'array':
-            inputs[inp.id] = []
-            for nv in nval:
-                if (inp.itemType in ['file', 'directory']):
-                    if startdir and url_type(nv) == 'file' and \
-                            not os.path.isabs(nv):
-                        nv = os.path.join(startdir, nv)
-                    inputs[inp.id].append({'path': nv})
-                else:
-                    inputs[inp.id].append(nv)
-        else:
-            raise Exception('Too many values')
-    else:
-        if inp.constructor in ['file', 'directory']:
-            if startdir and url_type(nval) == 'file' and not os.path.isabs(
-                    nval):
-                nval = os.path.join(startdir, nval)
-            inputs[inp.id] = {'path': nval}
-        elif inp.constructor == 'integer':
-            inputs[inp.id] = int(nval)
-        elif inp.constructor == 'number':
-            inputs[inp.id] = float(nval)
-        else:
-            inputs[inp.id] = nval
+def get_inputs(app, args):
 
+    def get_arg(name):
+        return args.get('--' + name) or args.get(name)
 
-def get_inputs_from_file(app, args, startdir, type='CommandLine'):
-    inp = {}
-    inputs = app.inputs.io
-    resolve_nested_paths(inp, inputs, args, startdir, type)
-    return {'inputs': inp}
-
-
-def resolve_nested_paths(inp, inputs, args, startdir, type='CommandLine'):
-    for input in inputs:
-        nval = args.get(input.id)
-        if nval:
-            if input.constructor == 'array' and input.itemType == 'object':
-                inp[input.id] = []
-                for sk, sv in enumerate(nval):
-                    inp[input.id].append({})
-                    resolve_nested_paths(
-                        inp[input.id][sk],
-                        input.objects,
-                        args[input.id],
-                        startdir
-                    )
-            else:
-                resolve_values(input, nval, inp, startdir, type)
-
-
-def get_inputs(app, args, type='CommandLine'):
-    inputs = {}
-    properties = app.inputs.io
-    for input in properties:
-        nval = args.get('--' + input.id) or args.get(input.id)
-        if nval:
-            resolve_values(input, nval, inputs, type=type)
-    return {'inputs': inputs}
+    return {'inputs': {
+        input.id: map_or_apply(input.constructor, get_arg(input.id))
+        for input in app.inputs.io
+        if get_arg(input.id)
+    }}
 
 
 def get_tool(args):
@@ -248,6 +231,33 @@ def dry_run_parse(args=None):
         return docopt.docopt(usage, args, version=version, help=False)
     except docopt.DocoptExit:
         return
+
+
+def conformance_test(context, app, job_dict, basedir):
+    job_dict['@type'] = 'Job'
+    job_dict['@id'] = basedir
+    job_dict['app'] = app
+
+    if not app.outputs:
+        app.outputs = rabix.schema.JsonSchema(context, {
+            'type': 'object',
+            'properties': {}
+        })
+
+    inputs = rebase_paths(app, job_dict['inputs'], basedir)
+    inputs = get_inputs(app, inputs)
+
+    dot_update_dict(job_dict, inputs)
+
+    job = context.from_dict(job_dict)
+
+    adapter = CLIJob(job)
+
+    print(json.dumps({
+        'args': adapter.make_arg_list(),
+        'stdin': adapter.stdin,
+        'stdout': adapter.stdout,
+    }))
 
 
 def main():
@@ -290,23 +300,29 @@ def main():
         print("Install successful.")
         return
 
+    if dry_run_args['--conformance-test']:
+        job_dict = from_url(dry_run_args['<job>'])
+        conformance_test(context, app, job_dict, dry_run_args.get('--basedir'))
+        return
+
     try:
         args = docopt.docopt(usage, version=version, help=False)
-        job = TEMPLATE_JOB
-        set_log_level(dry_run_args['--verbose'])
+        job_dict = TEMPLATE_JOB
+        logging.root.setLevel(log_level(dry_run_args['--verbose']))
 
         if args['--inp-file']:
             startdir = os.path.dirname(args.get('--inp-file'))
             input_file = from_url(args.get('--inp-file'))
+            rebased = rebase_paths(app, input_file, startdir)
             dot_update_dict(
-                job['inputs'],
-                get_inputs_from_file(app, input_file, startdir, type=tool.get('@type'))['inputs']
+                job_dict,
+                get_inputs(app, rebased)
             )
 
         app_inputs_usage = make_app_usage_string(
-            app, template=TOOL_TEMPLATE, inp=job['inputs'])
+            app, template=TOOL_TEMPLATE, inp=job_dict['inputs'])
 
-        app_usage = make_app_usage_string(app, USAGE, job['inputs'])
+        app_usage = make_app_usage_string(app, USAGE, job_dict['inputs'])
 
         app_inputs = docopt.docopt(app_inputs_usage, args['<inputs>'])
 
@@ -314,23 +330,28 @@ def main():
             print(app_usage)
             return
 
-        inp = get_inputs(app, app_inputs, type=tool.get('@type'))
-        job['inputs'].update(inp['inputs'])
+        inp = get_inputs(app, app_inputs)
+        job_dict['inputs'].update(inp['inputs'])
+        job_dict['@id'] = args.get('--dir')
+        job_dict['app'] = app
+        job = Job.from_dict(context, job_dict)
 
         if args['--print-cli']:
             if not isinstance(app, CliApp):
                 print(dry_run_args['<tool>'] + " is not a command line app")
                 return
-            job['@id'] = args.get('--dir')
-            job['app'] = app.to_dict()
-            j = Job.from_dict(context, job)
-            adapter = CLIJob(j.to_dict(), j.app)
-            print(adapter.cmd_line())
+
+            print(app.command_line(job))
             return
 
-        job['@id'] = args.get('--dir')
-        job['app'] = app.to_dict()
-        print(app.run(Job.from_dict(context, job)))
+        if not job.inputs and not args['--']:
+            print(app_usage)
+            return
+
+        try:
+            context.executor.execute(job, lambda _, result: print(result))
+        except RabixError as err:
+            print(err.message)
 
     except docopt.DocoptExit:
         print(app_usage)

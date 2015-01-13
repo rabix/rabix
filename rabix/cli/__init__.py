@@ -1,4 +1,5 @@
 from .cli_app import CliApp, Requirements
+from .adapter import CLIJob
 
 
 def init(context):

@@ -1,39 +1,34 @@
 import os
 import six
-import copy
 import shlex
 import logging
 import docker
+
 from docker.errors import APIError
+from six.moves.urllib.parse import urlparse
+
+from rabix.common.models import FileConstructor
 from rabix.cli.cli_app import Container
+from rabix.docker.container import get_image
 from rabix.common.errors import ResourceUnavailable
 
 
 log = logging.getLogger(__name__)
 
-
-def ensure_image(docker_client, image_id, uri):
-    if image_id and [x for x in docker_client.images() if x['Id'].startswith(
-            image_id)]:
-        log.debug("Provide image: found %s" % image_id)
-        return
-    else:
-        if not uri:
-            log.error('Image cannot be pulled: no URI given')
-            raise Exception('Cannot pull image')
-        repo, tag = parse_docker_uri(uri)
-        log.info("Pulling image %s:%s" % (repo, tag))
-        docker_client.pull(repo, tag)
-        if filter(lambda x: (image_id in x['Id']),
-                  docker_client.images()):
-            return
-        raise Exception('Image not found')
+DOCKER_DEFAULT_API_VERSION = "1.12"
+DOCKER_DEFAULT_TIMEOUT = 60
 
 
-def parse_docker_uri(uri):
-    repo, tag = uri.split(':')
-    repo = repo.lstrip('docker://')
-    return repo, tag
+def docker_client(docker_host=None,
+                  api_version=DOCKER_DEFAULT_API_VERSION,
+                  timeout=DOCKER_DEFAULT_TIMEOUT,
+                  tls=None):
+
+    docker_host = docker_host or os.getenv("DOCKER_HOST", None)
+    tls = False if tls is None else os.getenv("DOCKER_TLS_VERIFY", "") != ""
+    docker_cert_path = os.getenv("DOCKER_CERT_PATH", "")  # ???
+
+    return docker.Client(docker_host, api_version, timeout, tls)
 
 
 def make_config(**kwargs):
@@ -69,20 +64,20 @@ class DockerContainer(Container):
 
     def __init__(self, uri, image_id, dockr=None):
         super(DockerContainer, self).__init__()
-        self.uri = uri
+        self.uri = uri.lstrip("docker://")\
+            if uri and uri.startswith('docker:/') else uri
+
         self.image_id = image_id
-        self.docker_client = dockr or docker.Client(os.getenv(
-            "DOCKER_HOST", None), version='1.12')
+        self.docker_client = dockr or docker_client()
         self.config = {}
         self.volumes = {}
         self.binds = {}
 
     def install(self, *args, **kwargs):
         try:
-            ensure_image(self.docker_client,
-                         self.image_id,
-                         self.uri
-                         )
+            get_image(self.docker_client,
+                      image_id=self.image_id,
+                      repo=self.uri)
         except APIError as e:
             if e.response.status_code == 404:
                 log.info('Image %s not found:' % self.image_id)
@@ -96,73 +91,56 @@ class DockerContainer(Container):
         volumes = {}
         binds = {}
 
-        inputs = job.app.inputs.schema['properties']
         input_values = remaped_job
-        self._remap(inputs, input_values, volumes, binds, remaped_job)
-
+        obj_inputs = job.app.inputs.io
+        self._remap_obj(obj_inputs, input_values, volumes, binds, remaped_job)
         return volumes, BindDict(binds)
 
-    def _remap(self, inputs, input_values, volumes, binds, remaped_job,
-               parent=None):
-        is_single = lambda i: any([inputs[i]['type'] == 'directory',
-                                   inputs[i]['type'] == 'file'])
-        is_array = lambda i: inputs[i]['type'] == 'array' and any([
-            inputs[i]['items']['type'] == 'directory',
-            inputs[i]['items']['type'] == 'file'])
-        is_object = lambda i: (inputs[i]['type'] == 'array' and
-                               inputs[i]['items']['type'] == 'object')
+    def _remap_obj(self, inputs, input_values, volumes, binds, remaped_job,
+                   parent=None):
+        is_single = lambda i: i.constructor == FileConstructor and i.depth == 0
+        is_list = lambda i: i.constructor == FileConstructor and i.depth == 1
         if inputs:
             single = filter(is_single, [i for i in inputs])
-            lists = filter(is_array, [i for i in inputs])
-            objects = filter(is_object, [i for i in inputs])
+            lists = filter(is_list, [i for i in inputs])
             for inp in single:
                 self._remap_single(inp, input_values, volumes, binds,
                                    remaped_job, parent)
             for inp in lists:
-                self._remap_list(inp, input_values, volumes, binds,
-                                 remaped_job, parent)
-            for obj in objects:
-                if input_values.get(obj):
-                    for num, o in enumerate(input_values[obj]):
-                        self._remap(inputs[obj]['items']['properties'],
-                                    o, volumes, binds, remaped_job[obj][num],
-                                    parent='/'.join([obj, str(num)]))
+                self._remap_list(
+                    inp, input_values, volumes, binds, remaped_job,
+                    parent, inp.depth)
 
-    def _remap_single(self, inp, input_values, volumes, binds, remaped_job,
-                      parent):
-        if input_values.get(inp):
+    def _remap_single(
+            self, inp, input_values, volumes, binds, remaped_job, parent):
+        if input_values.get(inp.id):
             if parent:
-                docker_dir = '/' + '/'.join([parent, inp])
+                docker_dir = '/' + '/'.join([parent, inp.id])
             else:
-                docker_dir = '/' + inp
+                docker_dir = '/' + inp.id
             dir_name, file_name = os.path.split(
-                os.path.abspath(input_values[inp]['path']))
+                os.path.abspath(input_values[inp.id].path))
             volumes[docker_dir] = {}
             binds[docker_dir] = dir_name
-            remaped_job[inp]['path'] = '/'.join(
+            remaped_job[inp.id].path = '/'.join(
                 [docker_dir, file_name])
 
-    def _remap_list(self, inp, input_values, volumes, binds, remaped_job,
-                    parent):
-        if input_values[inp]:
-            for num, inv in enumerate(input_values[inp]):
+    def _remap_list(
+            self, inp, input_values, volumes, binds, remaped_job,
+            parent, depth):
+        if input_values.get(inp.id):
+
+            for num, inv in enumerate(input_values[inp.id]):
                 if parent:
-                    docker_dir = '/' + '/'.join([parent, inp, str(num)])
+                    docker_dir = '/' + '/'.join([parent, inp.id, str(num)])
                 else:
-                    docker_dir = '/' + '/'.join([inp, str(num)])
+                    docker_dir = '/' + '/'.join([inp.id, str(num)])
                 dir_name, file_name = os.path.split(
-                    os.path.abspath(inv['path']))
+                    os.path.abspath(inv.path))
                 volumes[docker_dir] = {}
                 binds[docker_dir] = dir_name
-                remaped_job[inp][num]['path'] = '/'.join(
+                remaped_job[inp.id][num].path = '/'.join(
                     [docker_dir, file_name])
-
-    def _envvars(self, job):
-        envvars = (job.app.annotations or {}).get('environment', {})
-        envlst = []
-        for env, val in six.iteritems(envvars):
-            envlst.append('='.join([env, val]))
-        return envlst
 
     def set_config(self, *args, **kwargs):
         self.prepare_paths(kwargs.get('job'))
@@ -257,7 +235,7 @@ class DockerContainer(Container):
             print(self.docker_client.logs(self.container))
         return self
 
-    def to_dict(self):
+    def to_dict(self, context=None):
         return {
             "@type": "Docker",
             "type": "docker",
@@ -267,4 +245,4 @@ class DockerContainer(Container):
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d['uri'], d.get('imageId'))
+        return cls(d.get('uri'), d.get('imageId'))

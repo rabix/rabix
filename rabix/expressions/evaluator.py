@@ -4,10 +4,7 @@ from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from yapsy.VersionedPluginManager import VersionedPluginManager
 from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.IPlugin import IPlugin
-try:
-    from configparser import SafeConfigParser
-except ImportError:
-    from ConfigParser import SafeConfigParser
+from six.moves.configparser import SafeConfigParser
 
 
 class ExpressionEvalPlugin(IPlugin):
