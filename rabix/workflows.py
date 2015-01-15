@@ -196,6 +196,7 @@ class PartialJob(object):
         return True
 
     def resolve_input(self, input_port, results):
+        print("Resolving input '%s' with value %s" % (input_port, results))
         log.debug("Resolving input '%s' with value %s" % (input_port, results))
         input_count = self.input_counts[input_port]
         if input_count <= 0:
@@ -216,7 +217,8 @@ class PartialJob(object):
         self.result = result
         for k, v in six.iteritems(result):
             log.debug("Propagating result: %s, %s" % (k, v))
-            self.outputs[k].resolve_input(v)
+            for out in self.outputs[k]:
+                out.resolve_input(v)
 
     def job(self):
         return Job(self.node_id, self.app, self.inputs, {}, self.context)
@@ -264,6 +266,12 @@ class ExecutionGraph(object):
 
         self.order = graph.back_topo_sort()[1]
 
+    def add_output(self, outputs, port, relation):
+        if not outputs.get(port):
+            outputs[port] = [relation]
+        else:
+            outputs[port].append(relation)
+
     def make_executable(self, node_id):
         node = self.graph.node_data(node_id)
         if isinstance(node, IO):
@@ -278,10 +286,12 @@ class ExecutionGraph(object):
             rel = self.graph.edge_data(out_edge)
             if isinstance(rel, Relation):
                 tail = self.executables[self.graph.tail(out_edge)]
-                outputs[rel.src_port] = ExecRelation(tail, rel.dst_port)
+                self.add_output(outputs, rel.src_port, ExecRelation(
+                    tail, rel.dst_port))
             elif isinstance(rel, OutputRelation):
                 tail = self.graph.tail(out_edge)
-                outputs[rel.src_port] = OutRelation(self, tail)
+                self.add_output(outputs, rel.src_port, OutRelation(
+                    self, tail))
 
         executable = PartialJob(
             node_id, node.app, node.inputs,
