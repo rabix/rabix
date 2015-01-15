@@ -221,7 +221,7 @@ class PartialJob(object):
                 out.resolve_input(v)
 
     def job(self):
-        return Job(self.node_id, self.app, self.inputs, {}, self.context)
+        return Job(None, self.app, self.inputs, {}, self.context)
 
 
 class ExecRelation(object):

@@ -34,7 +34,7 @@ class InputCollector(object):
         pass
 
     def download(self, url, secondary_files=None, prompt=True):
-        npath = self._download(url, metasearch=True)
+        npath = to_abspath(self._download(url, metasearch=True))
         rbx_path = npath + '.rbx.json'
         if isfile(rbx_path):
             file_dict = from_url(rbx_path)
