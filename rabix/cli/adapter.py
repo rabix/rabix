@@ -170,14 +170,16 @@ class CLIJob(object):
             a += ['>', self.stdout]
         return ' '.join(a)  # TODO: escape
 
-    def get_outputs(self, job_dir):
+    def get_outputs(self, job_dir, job):
         result, outs = {}, self.output_schema.get('properties', {})
         for k, v in six.iteritems(outs):
             adapter = v['adapter']
-
-            files = glob.glob(os.path.join(job_dir, eval_resolve(adapter['glob'], self.job)))
-            result[k] = [{'path': p, 'metadata': self._meta(p, adapter),
+            ret = os.getcwd()
+            os.chdir(job_dir)
+            files = glob.glob(eval_resolve(adapter['glob'], job))
+            result[k] = [{'path': os.path.abspath(p), 'metadata': self._meta(p, adapter),
                           'secondaryFiles': self._secondaryFiles(p, adapter)} for p in files]
+            os.chdir(ret)
             if v['type'] != 'array':
                 result[k] = result[k][0] if result[k] else None
         return result
