@@ -2,6 +2,7 @@ import os
 import six
 import json
 import stat
+import copy
 
 from rabix.cli.adapter import CLIJob
 from rabix.common.models import App, FileConstructor
@@ -116,13 +117,15 @@ class CliApp(App):
 
         if self.requirements.container:
             self.ensure_files(job, job_dir)
+            abspath_job = copy.deepcopy(job)
             self.install(job=job)
 
             cmd_line = self.command_line(job, job_dir)
             self.job_dump(job, job_dir)
             self.requirements.container.run(cmd_line)
             with open(os.path.abspath(job_dir) + '/result.cwl.json', 'w') as f:
-                outputs = self.cli_job.get_outputs(os.path.abspath(job_dir))
+                outputs = self.cli_job.get_outputs(
+                    os.path.abspath(job_dir), abspath_job)
                 for k, v in six.iteritems(outputs):
                     if v:
                         with open(v['path'] + '.rbx.json', 'w') as rx:

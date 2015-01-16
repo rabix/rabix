@@ -190,6 +190,7 @@ class ObjectConstructor(object):
 
 
 def FileConstructor(val):
+    FileConstructor.name = 'file'
     if isinstance(val, six.string_types):
         val = {'path': val}
 
@@ -258,9 +259,7 @@ class IO(object):
 class Job(object):
 
     def __init__(self, job_id, app, inputs, allocated_resources, context):
-        # if not app.validate_inputs(inputs):
-        #     raise ValidationError("Invalid inputs for application %s" % app.id)
-        self.id = job_id
+        self.id = job_id or self.mk_work_dir(app.id)
         self.app = app
         self.inputs = inputs
         self.allocated_resources = allocated_resources
