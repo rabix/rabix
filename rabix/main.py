@@ -174,13 +174,16 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
     inp = inp or {}
 
     def resolve(k, v, usage_str, param_str, inp):
+        if isinstance(v.constructor, ObjectConstructor):
+            return
 
-        if v.constructor == FileConstructor:
-            arg = '--%s=<file>' % k
-            to_append = usage_str
-        else:
-            arg = '--%s=<%s>' % (k, v.constructor.__name__)
-            to_append = param_str
+        to_append = usage_str if v.constructor == FileConstructor\
+            else param_str
+
+        cname = getattr(v.constructor, 'name', None) or \
+            getattr(v.constructor, '__name__', 'val')
+
+        arg = '--%s=<%s>' % (k, cname)
 
         if v.depth > 0:
             arg += '... '
@@ -341,7 +344,7 @@ def main():
                 print(dry_run_args['<tool>'] + " is not a command line app")
                 return
 
-            print(app.command_line(job))
+            print(CLIJob(job).cmd_line())
             return
 
         if not job.inputs and not args['--']:
