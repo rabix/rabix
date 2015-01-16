@@ -24,7 +24,7 @@ class Context(object):
         type_name = d['@type']
         constructor = self.type_map.get(type_name)
         if not constructor:
-            raise ValidationError("Unknown type: %s" % type_name)
+            return d
         return constructor(self, d)
 
     def to_dict(self, o):
