@@ -1,0 +1,130 @@
+{
+    "allocatedResources": {
+        "mem": 5000,
+        "cpu": 4
+    },
+    "inputs": {
+        
+    },
+    "app": {
+        "inputs": {
+            "required": [
+                "reference",
+                "reads"
+            ],
+            "type": "object",
+            "properties": {
+                "reads": {
+                    "minItems": 1,
+                    "items": {
+                        "type": "file"
+                    },
+                    "adapter": {
+                        "streamable": true
+                    },
+                    "type": "array",
+                    "maxItems": 2
+                },
+                "minimum_seed_length": {
+                    "adapter": {
+                        "prefix": "-m",
+                        "separator": " ",
+                        "order": 1
+                    },
+                    "type": "integer"
+                },
+                "reference": {
+                    "adapter": {
+                        "secondaryFiles": [
+                            "amb",
+                            "ann",
+                            "bwt",
+                            "pac",
+                            "sa"
+                        ],
+                        "order": 2
+                    },
+                    "type": "file"
+                },
+                "min_std_max_min": {
+                    "minItems": 1,
+                    "items": {
+                        "type": "number"
+                    },
+                    "adapter": {
+                        "prefix": "-I",
+                        "itemSeparator": ",",
+                        "order": 1
+                    },
+                    "type": "array",
+                    "maxItems": 4
+                }
+            },
+            "@type": "JsonSchema"
+        },
+        "platformFeatures": null,
+        "requirements": {
+            "environment": {
+                "container": {
+                    "imageId": "9d3b9b0359cf",
+                    "type": "docker",
+                    "@type": "Docker",
+                    "uri": "images.sbgenomics.com/rabix/bwa_mem:9d3b9b0359cf"
+                }
+            },
+            "platformFeatures": [
+                "http://example.org/transforms#strip_ext"
+            ],
+            "@type": "Requirements",
+            "resources": {
+                "mem": 5000,
+                "cpu": 0
+            }
+        },
+        "name": "BWA_MEM",
+        "outputs": {
+            "required": [
+                "sam"
+            ],
+            "type": "object",
+            "properties": {
+                "sam": {
+                    "adapter": {
+                        "glob": "output.sam",
+                        "meta": {
+                            "file_type": "sam",
+                            "__inherit__": "reads"
+                        },
+                        "streamable": true,
+                        "stdout": true
+                    },
+                    "type": "file"
+                }
+            },
+            "@type": "JsonSchema"
+        },
+        "adapter": {
+            "args": [
+                {
+                    "prefix": "-t",
+                    "order": 1,
+                    "value": {
+                        "$expr": "$job['allocatedResources']['cpu']"
+                    }
+                }
+            ],
+            "baseCmd": [
+                "bwa",
+                "mem"
+            ],
+            "stdout": "output.sam"
+        },
+        "appDescription": null,
+        "@type": "CommandLine",
+        "platform_features": null,
+        "@id": "BWA_MEM",
+        "annotations": null
+    },
+    "@id": "BWA_MEM_164547",
+    "@type": "Job"
+}
