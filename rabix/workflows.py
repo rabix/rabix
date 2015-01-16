@@ -116,7 +116,8 @@ class WorkflowApp(App):
                     # TODO: merge input schemas if one input goes to different apps
 
                     input = step.app.get_input(input_name)
-                    self.add_node(inp, input)
+                    if inp not in self.graph.nodes:
+                        self.add_node(inp, input)
                     self.graph.add_edge(
                         inp, node_id, InputRelation(input_name)
                     )
