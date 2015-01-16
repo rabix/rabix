@@ -8,7 +8,7 @@ import json
 
 from rabix import __version__ as version
 from rabix.common.util import log_level, dot_update_dict, map_or_apply,\
-    map_rec_collection, to_abspath
+    map_rec_list, to_abspath
 from rabix.common.models import Job, IO, ObjectConstructor, ArrayConstructor, FileConstructor
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
@@ -83,6 +83,11 @@ def init_context():
 ###
 
 def fix_types(tool):
+
+    if tool.get('@type') == 'Job':
+        fix_types(tool['app'])
+        return
+
     requirements = tool.get('requirements', {})
     environment = requirements.get('environment')
 
@@ -213,11 +218,11 @@ def get_inputs(app, args):
     def get_arg(name):
         return args.get('--' + name) or args.get(name)
 
-    return {'inputs': {
-        input.id: map_or_apply(input.constructor, get_arg(input.id))
+    return {
+        input.id: map_rec_list(input.constructor, get_arg(input.id))
         for input in app.inputs.io
         if get_arg(input.id)
-    }}
+    }
 
 
 def get_tool(args):
@@ -250,7 +255,7 @@ def conformance_test(context, app, job_dict, basedir):
     inputs = rebase_paths(app, job_dict['inputs'], basedir)
     inputs = get_inputs(app, inputs)
 
-    dot_update_dict(job_dict, inputs)
+    dot_update_dict(job_dict['inputs'], inputs)
 
     job = context.from_dict(job_dict)
 
@@ -297,6 +302,11 @@ def main():
 
     context = init_context()
     app = context.from_dict(tool)
+    job = None
+
+    if isinstance(app, Job):
+        job = app
+        app = job.app
 
     if dry_run_args['--install']:
         app.install()
@@ -314,30 +324,44 @@ def main():
         logging.root.setLevel(log_level(dry_run_args['--verbose']))
 
         if args['--inp-file']:
-            startdir = os.path.dirname(args.get('--inp-file'))
+            basedir = os.path.dirname(args.get('--inp-file'))
             input_file = from_url(args.get('--inp-file'))
-            rebased = rebase_paths(app, input_file, startdir)
+            rebased = rebase_paths(app, input_file, basedir)
             dot_update_dict(
-                job_dict,
+                job_dict['inputs'],
                 get_inputs(app, rebased)
             )
+
+        if job:
+            basedir = os.path.dirname(args.get('<tool>'))
+            rebased = rebase_paths(app, job.inputs, basedir)
+            dot_update_dict(job.inputs, rebased)
+            job.inputs.update(get_inputs(app, job.inputs))
 
         app_inputs_usage = make_app_usage_string(
             app, template=TOOL_TEMPLATE, inp=job_dict['inputs'])
 
         app_usage = make_app_usage_string(app, USAGE, job_dict['inputs'])
 
-        app_inputs = docopt.docopt(app_inputs_usage, args['<inputs>'])
+        try:
+            app_inputs = docopt.docopt(app_inputs_usage, args['<inputs>'])
+        except docopt.DocoptExit:
+            if not job:
+                raise
+            app_inputs = {}
 
         if args['--help']:
             print(app_usage)
             return
 
         inp = get_inputs(app, app_inputs)
-        job_dict['inputs'].update(inp['inputs'])
-        job_dict['@id'] = args.get('--dir')
-        job_dict['app'] = app
-        job = Job.from_dict(context, job_dict)
+        if not job:
+            job_dict['inputs'].update(inp)
+            job_dict['@id'] = args.get('--dir')
+            job_dict['app'] = app
+            job = Job.from_dict(context, job_dict)
+        else:
+            job.inputs.update(inp)
 
         if args['--print-cli']:
             if not isinstance(app, CliApp):
