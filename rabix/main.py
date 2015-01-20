@@ -118,23 +118,27 @@ def fix_types(tool, toplevelType=None):
         outputs['@type'] = 'JsonSchema'
 
 
-def rebase_input_path(input, value, base):
-    if isinstance(input.constructor, ObjectConstructor):
+def rebase_input_path(constructor, value, base):
+    if isinstance(constructor, ObjectConstructor):
 
         def do_rebase_obj(val):
             ret = {}
+            # print(constructor.properties)
             for k, v in six.iteritems(val):
-                rebased = rebase_input_path(input.properties[k], v, base)
+                c = constructor.properties.get(k)
+                rebased = None
+                if c:
+                    rebased = rebase_input_path(constructor.properties[k], v, base)
                 if rebased:
                     ret[k] = rebased
             return ret
 
-        return map_or_apply(dot_update_dict, value)
+        return map_rec_list(do_rebase_obj, value)
 
-    if isinstance(input.constructor, ArrayConstructor):
+    if isinstance(constructor, ArrayConstructor):
         ret = []
         for item in value:
-            rebased = rebase_input_path(input.item_constructor, item, base)
+            rebased = rebase_input_path(constructor.item_constructor, item, base)
             if rebased:
                 ret.append(rebased)
         return ret
@@ -145,8 +149,8 @@ def rebase_input_path(input, value, base):
             return v
         return to_abspath(v, base)
 
-    if input.constructor == FileConstructor:
-        return map_or_apply(do_rebase, value)
+    if constructor == FileConstructor:
+        return map_rec_list(do_rebase, value)
 
     return None
 
@@ -155,7 +159,7 @@ def rebase_paths(app, input_values, base):
     file_inputs = {}
     for input_name, val in six.iteritems(input_values):
         input = app.get_input(input_name)
-        rebased = rebase_input_path(input, val, base)
+        rebased = rebase_input_path(input.constructor, val, base)
         if rebased:
             file_inputs[input_name] = rebased
 

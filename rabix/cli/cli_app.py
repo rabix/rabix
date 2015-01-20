@@ -71,12 +71,14 @@ class Requirements(object):
         self.platform_features = platform_features
 
     def to_dict(self, context):
-        return {
+        d = {
             "@type": "Requirements",
-            "environment": {"container": self.container.to_dict(context)},
             "resources": context.to_dict(self.resources),
             "platformFeatures": self.platform_features
         }
+        if self.container:
+            d["environment"] = {"container": self.container.to_dict(context)}
+        return d
 
     @classmethod
     def from_dict(cls, context, d):
