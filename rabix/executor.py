@@ -2,7 +2,6 @@ import copy
 import six
 import os
 
-from rabix.common.util import wrap_in_list
 from rabix.common.errors import RabixError
 from rabix.common.models import Job
 

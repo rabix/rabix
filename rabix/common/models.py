@@ -292,6 +292,9 @@ class Job(object):
                 num += 1
         return try_path
 
+    def __repr__(self):
+        return "Job(%s)" % self.to_dict()
+
     @classmethod
     def from_dict(cls, context, d):
         app = context.from_dict(d['app'])

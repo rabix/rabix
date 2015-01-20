@@ -164,7 +164,7 @@ class WorkflowApp(App):
             for step in d['steps']]
 
         return cls(
-            d.get('@id', str(uuid4())),
+            d.get('@id', six.text_type(uuid4())),
             steps,
             context
         )
