@@ -145,8 +145,8 @@ class CLIJob(object):
         self.job = job
         self.app = job.app
         self.adapter = self.app.adapter or {}
-        self.stdin = eval_resolve(self.adapter.get('stdin'), self.job)
-        self.stdout = eval_resolve(self.adapter.get('stdout'), self.job)
+        self.stdin = self.adapter.get('stdin')
+        self.stdout = self.adapter.get('stdout')
         self.base_cmd = self.adapter.get('baseCmd', [])
         if isinstance(self.base_cmd, six.string_types):
             self.base_cmd = self.base_cmd.split(' ')
@@ -165,9 +165,10 @@ class CLIJob(object):
     def cmd_line(self):
         a = self.make_arg_list()
         if self.stdin:
-            a += ['<', self.stdin]
+
+            a += ['<', eval_resolve(self.stdin, self.job)]
         if self.stdout:
-            a += ['>', self.stdout]
+            a += ['>', eval_resolve(self.stdout, self.job)]
         return ' '.join(a)  # TODO: escape
 
     def get_outputs(self, job_dir, job):
