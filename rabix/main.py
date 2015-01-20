@@ -37,7 +37,7 @@ TEMPLATE_JOB = {
 
 USAGE = '''
 Usage:
-    rabix <tool> [-v...] [-hcI] [-d <dir>] [-i <inp>] [{resources}] [-- {inputs}...]
+    rabix <tool> [-v...] [-hcI] [-t <type>] [-d <dir>] [-i <inp>] [{resources}] [-- {inputs}...]
     rabix --conformance-test [--basedir=<basedir>] [--no-container] <tool> <job> [-- <input>...]
     rabix --version
 
@@ -50,6 +50,7 @@ Usage:
   -I --install         Only install referenced tools. Do not run anything.
   -i --inp-file=<inp>  Inputs
   -c --print-cli       Only print calculated command line. Do not run anything.
+  -t --type=<type>     Interpret given tool json as <type>.
   -v --verbose         Verbosity. More Vs more output.
      --version         Print version and exit.
 '''
@@ -82,7 +83,13 @@ def init_context():
 # input massage
 ###
 
-def fix_types(tool):
+def fix_types(tool, toplevelType=None):
+
+    toplevelType = toplevelType or 'CommandLine'
+
+    # tool type
+    if '@type' not in tool:
+        tool['@type'] = toplevelType
 
     if tool.get('@type') == 'Job':
         fix_types(tool['app'])
@@ -96,10 +103,6 @@ def fix_types(tool):
             isinstance(environment.get('container'), dict) and
             environment['container'].get('type') == 'docker'):
         environment['container']['@type'] = 'Docker'
-
-    # tool type
-    if '@type' not in tool:
-        tool['@type'] = 'CommandLine'
 
     if tool['@type'] == 'Workflow':
         for step in tool['steps']:
@@ -298,7 +301,7 @@ def main():
         print("Couldn't find tool.")
         return
 
-    fix_types(tool)
+    fix_types(tool, dry_run_args.get('--type', 'CommandLine'))
 
     context = init_context()
     app = context.from_dict(tool)
@@ -332,14 +335,17 @@ def main():
                 get_inputs(app, rebased)
             )
 
+        input_usage = job_dict['inputs']
+
         if job:
             basedir = os.path.dirname(args.get('<tool>'))
             rebased = rebase_paths(app, job.inputs, basedir)
             dot_update_dict(job.inputs, rebased)
             job.inputs.update(get_inputs(app, job.inputs))
+            input_usage.update(job.inputs)
 
         app_inputs_usage = make_app_usage_string(
-            app, template=TOOL_TEMPLATE, inp=job_dict['inputs'])
+            app, template=TOOL_TEMPLATE, inp=input_usage)
 
         app_usage = make_app_usage_string(app, USAGE, job_dict['inputs'])
 
@@ -348,6 +354,9 @@ def main():
         except docopt.DocoptExit:
             if not job:
                 raise
+            for inp in job.app.inputs:
+                if inp.required and inp.id not in job.inputs:
+                    raise
             app_inputs = {}
 
         if args['--help']:
