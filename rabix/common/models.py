@@ -248,7 +248,7 @@ class IO(object):
 
         constructor = make_constructor(item_schema)
 
-        return cls(d.get('@id', str(uuid4())),
+        return cls(d.get('@id', six.text_type(uuid4())),
                    validator=context.from_dict(d.get('schema')),
                    constructor=constructor,
                    required=d['required'],
@@ -288,7 +288,7 @@ class Job(object):
             num = 0
             try_path = path
             while os.path.exists(try_path):
-                try_path = '_'.join([path, str(num)])
+                try_path = '_'.join([path, six.text_type(num)])
                 num += 1
         return try_path
 

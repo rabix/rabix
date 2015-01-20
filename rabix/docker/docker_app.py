@@ -132,9 +132,9 @@ class DockerContainer(Container):
 
             for num, inv in enumerate(input_values[inp.id]):
                 if parent:
-                    docker_dir = '/' + '/'.join([parent, inp.id, str(num)])
+                    docker_dir = '/' + '/'.join([parent, inp.id, six.text_type(num)])
                 else:
-                    docker_dir = '/' + '/'.join([inp.id, str(num)])
+                    docker_dir = '/' + '/'.join([inp.id, six.text_type(num)])
                 dir_name, file_name = os.path.split(
                     os.path.abspath(inv.path))
                 volumes[docker_dir] = {}
@@ -144,8 +144,8 @@ class DockerContainer(Container):
 
     def set_config(self, *args, **kwargs):
         self.prepare_paths(kwargs.get('job'))
-        user = kwargs.get('user', None) or ':'.join([str(os.getuid()),
-                                                     str(os.getgid())])
+        user = kwargs.get('user', None) or ':'.join([six.text_type(os.getuid()),
+                                                     six.text_type(os.getgid())])
         self.job_dir = kwargs.get('job_dir')
         self.volumes['/' + self.job_dir] = {}
         self.binds['/' + self.job_dir] = os.path.abspath(self.job_dir)
@@ -224,7 +224,7 @@ class DockerContainer(Container):
                                                      stdout=False, stderr=True,
                                                      stream=True, logs=True):
                     if file:
-                        f.write(str(out).rstrip() + '\n')
+                        f.write(six.text_type(out).rstrip() + '\n')
                     else:
                         print(out.rstrip())
             else:

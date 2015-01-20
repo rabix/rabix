@@ -85,7 +85,7 @@ class InputAdapter(object):
         if self.is_file():
             self.value = self.value['path']
 
-    __str__ = lambda self: str(self.value)
+    __str__ = lambda self: six.text_type(self.value)
     __repr__ = lambda self: 'InputAdapter(%s)' % self
     position = property(lambda self: (self.adapter.get('order', 9999999), self.key))
     # transform = property(lambda self: self.adapter.get('value'))
