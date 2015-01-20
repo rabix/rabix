@@ -57,7 +57,8 @@ class Container(object):
                 if val:
                     job[f.id] = map_or_apply(
                         lambda e: self.input_collector.download(
-                            e.url, f.annotations.get('secondaryFiles') if f.annotations is not None else None
+                            e.url, f.annotations.get('secondaryFiles')
+                            if f.annotations is not None else None
                         ),
                         val)
 
