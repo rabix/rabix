@@ -40,6 +40,31 @@ def eval_resolve(val, job, context=None):
     return val
 
 
+def meta(path, job, adapter):
+    meta, result = adapter.get('metadata', {}), {}
+    inherit = meta.pop('__inherit__', None)
+    if inherit:
+        src = job.inputs.get(inherit)
+        if isinstance(src, list):
+            result = reduce(intersect_dicts, [x.meta for x in src]) \
+                if len(src) > 1 else src[0].meta
+        else:
+            result = src.meta
+    result.update(**meta)
+    for k, v in six.iteritems(result):
+        result[k] = eval_resolve(v, job, context=path)
+    return result
+
+
+def secondaryFiles(p, adapter):
+    secondaryFiles = []
+    secFiles = adapter.get('secondaryFiles', [])
+    for s in secFiles:
+        path = sec_files_naming_conv(p, s)
+        secondaryFiles.append({'path': path})
+    return secondaryFiles
+
+
 class InputAdapter(object):
     def __init__(self, value, job, schema, adapter_dict=None, key=''):
         self.job = job
@@ -177,32 +202,9 @@ class CLIJob(object):
             ret = os.getcwd()
             os.chdir(job_dir)
             files = glob.glob(eval_resolve(adapter['glob'], job))
-            result[k] = [{'path': os.path.abspath(p), 'metadata': self._meta(p, adapter),
-                          'secondaryFiles': self._secondaryFiles(p, adapter)} for p in files]
+            result[k] = [{'path': os.path.abspath(p), 'metadata': meta(p, job, adapter),
+                          'secondaryFiles': secondaryFiles(p, adapter)} for p in files]
             os.chdir(ret)
             if v['type'] != 'array':
                 result[k] = result[k][0] if result[k] else None
         return result
-
-    def _meta(self, path, adapter):
-        meta, result = adapter.get('metadata', {}), {}
-        inherit = meta.pop('__inherit__', None)
-        if inherit:
-            src = self.job.inputs.get(inherit)
-            if isinstance(src, list):
-                result = reduce(intersect_dicts, [x.meta for x in src]) \
-                    if len(src) > 1 else src[0].meta
-            elif isinstance(src, dict):
-                result = src.get('metadata', {})
-        result.update(**meta)
-        for k, v in six.iteritems(result):
-            result[k] = eval_resolve(v, self.job, context=path)
-        return result
-
-    def _secondaryFiles(self, p, adapter):
-        secondaryFiles = []
-        secFiles = adapter.get('secondaryFiles', [])
-        for s in secFiles:
-            path = sec_files_naming_conv(p, s)
-            secondaryFiles.append({'path': path})
-        return secondaryFiles

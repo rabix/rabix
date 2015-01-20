@@ -126,12 +126,16 @@ class CliApp(App):
             with open(os.path.abspath(job_dir) + '/result.cwl.json', 'w') as f:
                 outputs = self.cli_job.get_outputs(
                     os.path.abspath(job_dir), abspath_job)
-                for k, v in six.iteritems(outputs):
-                    if v:
-                        with open(v['path'] + '.rbx.json', 'w') as rx:
-                            json.dump(v, rx)
                 json.dump(outputs, f)
-                return outputs
+            for k, v in six.iteritems(outputs):
+                if isinstance(v, list):
+                    for f in v:
+                        with open(f['path'] + '.rbx.json', 'w') as rx:
+                            json.dump(f, rx)
+                elif isinstance(v, dict):
+                    with open(v['path'] + '.rbx.json', 'w') as rx:
+                        json.dump(v, rx)
+            return outputs
 
     def command_line(self, job, job_dir=None):
         if not self._command_line:

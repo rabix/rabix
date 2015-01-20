@@ -191,7 +191,10 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
         cname = getattr(v.constructor, 'name', None) or \
             getattr(v.constructor, '__name__', 'val')
 
-        arg = '--%s=<%s>' % (k, cname)
+        if cname in ('bool'):
+            arg = '--%s' % k
+        else:
+            arg = '--%s=<%s>' % (k, cname)
 
         if v.depth > 0:
             arg += '... '

@@ -206,7 +206,7 @@ def FileConstructor(val):
 
     return File(path=path,
                 size=size,
-                meta=val.get('meta'),
+                meta=val.get('metadata'),
                 secondary_files=[FileConstructor(sf)
                                  for sf in val.get('secondaryFiles', [])])
 

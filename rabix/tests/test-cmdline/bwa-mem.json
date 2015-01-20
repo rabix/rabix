@@ -128,7 +128,7 @@
                         "stdout": true,
                         "glob": "output.sam",
                         "streamable": true,
-                        "meta": {
+                        "metadata": {
                             "file_type": "sam",
                             "__inherit__": "reads"
                         }

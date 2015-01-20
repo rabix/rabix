@@ -1,1 +1,1 @@
-{"path": "./example_human_Illumina.pe_2.fastq", "meta": {"file_type": "fastq", "sample": "Sample1", "paired_end": "2"}}
+{"path": "./example_human_Illumina.pe_2.fastq", "metadata": {"file_type": "fastq", "sample": "Sample1", "paired_end": "2"}}
