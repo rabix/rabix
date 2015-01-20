@@ -3,11 +3,12 @@ import six
 import logging
 import os
 import glob
+import copy
 
 from jsonschema import Draft4Validator
 import jsonschema.exceptions
-
 from six.moves import reduce
+
 from rabix.common.ref_resolver import resolve_pointer
 from rabix.common.util import sec_files_naming_conv
 from rabix.expressions import Evaluator
@@ -42,7 +43,7 @@ class AdapterEvaluator(object):
         return val
 
     def __deepcopy__(self, memo):
-        return AdapterEvaluator(self.job)
+        return AdapterEvaluator(copy.deepcopy(self.job, memo))
 
 
 def intersect_dicts(d1, d2):
