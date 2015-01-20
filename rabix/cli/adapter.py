@@ -24,10 +24,12 @@ class AdapterEvaluator(object):
 
     def evaluate(self, expr_object, context=None):
         if isinstance(expr_object, dict):
-            return self.ev.evaluate(expr_object.get('lang', 'javascript'),
-                               expr_object.get('value'),
-                               self.job.to_dict(),
-                               context)
+            return self.ev.evaluate(
+                expr_object.get('lang', 'javascript'),
+                expr_object.get('value'),
+                self.job.to_dict(),
+                context
+            )
         else:
             return self.ev.evaluate('javascript', expr_object, self.job.to_dict(), context)
 
