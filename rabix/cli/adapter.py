@@ -4,6 +4,7 @@ import logging
 import os
 import glob
 import copy
+import shlex
 
 from jsonschema import Draft4Validator
 import jsonschema.exceptions
@@ -68,7 +69,7 @@ def meta(path, inputs, eval, adapter):
     return result
 
 
-def secondaryFiles(p, adapter):
+def secondary_files(p, adapter):
     secondaryFiles = []
     secFiles = adapter.get('secondaryFiles', [])
     for s in secFiles:
@@ -207,6 +208,7 @@ class CLIJob(object):
 
     def cmd_line(self):
         a = self.make_arg_list()
+
         if self._stdin:
             a += ['<', self.stdin]
         if self._stdout:
@@ -222,7 +224,7 @@ class CLIJob(object):
             files = glob.glob(self.eval.resolve(adapter['glob']))
             result[k] = [{'path': os.path.abspath(p),
                           'metadata': meta(p, job.inputs, self.eval, adapter),
-                          'secondaryFiles': secondaryFiles(p, adapter)} for p in files]
+                          'secondaryFiles': secondary_files(p, adapter)} for p in files]
             os.chdir(ret)
             if v['type'] != 'array':
                 result[k] = result[k][0] if result[k] else None

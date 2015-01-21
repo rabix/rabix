@@ -14,7 +14,7 @@ from os.path import basename, dirname, abspath, join, exists, isfile
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import sec_files_naming_conv, to_json, to_abspath
 from rabix.common.ref_resolver import from_url
-from rabix.common.models import File, URL, FileConstructor
+from rabix.common.models import File, URL, file_constructor
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class InputCollector(object):
             file_dict = from_url(rbx_path)
             startdir = dirname(npath)
             file_dict['path'] = npath
-            file = FileConstructor()(file_dict)
+            file = file_constructor(file_dict)
             file.secondary_files = [
                 File(
                     self._download(

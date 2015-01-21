@@ -146,8 +146,8 @@ def make_constructor(schema):
             'number': float,
             'boolean': bool,
             'string': six.text_type,
-            'file': FileConstructor(),
-            'directory': FileConstructor()
+            'file': file_constructor,
+            'directory': file_constructor
         }
 
         type_name = schema.get('type')
@@ -215,6 +215,8 @@ class FileConstructor(object):
                     meta=val.get('metadata'),
                     secondary_files=[self(sf)
                                      for sf in val.get('secondaryFiles', [])])
+
+file_constructor = FileConstructor()
 
 
 class IO(object):
