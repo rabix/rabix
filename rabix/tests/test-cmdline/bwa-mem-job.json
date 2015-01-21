@@ -159,7 +159,7 @@
                 "sam": {
                     "adapter": {
                         "glob": "output.sam",
-                        "meta": {
+                        "metadata": {
                             "file_type": "sam",
                             "__inherit__": "reads"
                         },
@@ -194,5 +194,5 @@
         "annotations": null
     },
     "@id": "BWA_MEM_164547",
-    "@type": "Job"
+    "@type": "TaskTemplate"
 }

@@ -61,6 +61,7 @@ Usage:
 '''
 
 TYPE_MAP = {
+    'TaskTemplate': Job.from_dict,
     'Job': Job.from_dict,
     'IO': IO.from_dict
 }
@@ -91,7 +92,7 @@ def fix_types(tool, toplevelType=None):
     if '@type' not in tool:
         tool['@type'] = toplevelType
 
-    if tool.get('@type') == 'Job':
+    if tool.get('@type') in ('Job', 'TaskTemplate'):
         fix_types(tool['app'])
         return
 
@@ -123,7 +124,6 @@ def rebase_input_path(constructor, value, base):
 
         def do_rebase_obj(val):
             ret = {}
-            # print(constructor.properties)
             for k, v in six.iteritems(val):
                 c = constructor.properties.get(k)
                 rebased = None
