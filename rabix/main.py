@@ -149,7 +149,7 @@ def rebase_input_path(constructor, value, base):
             return v
         return to_abspath(v, base)
 
-    if constructor == FileConstructor:
+    if isinstance(constructor, FileConstructor):
         return map_rec_list(do_rebase, value)
 
     return None
@@ -189,16 +189,16 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
         if isinstance(v.constructor, ObjectConstructor):
             return
 
-        to_append = usage_str if v.constructor == FileConstructor\
+        to_append = usage_str if isinstance(v.constructor, FileConstructor)\
             else param_str
 
         cname = getattr(v.constructor, 'name', None) or \
             getattr(v.constructor, '__name__', 'val')
 
-        if cname in ('bool'):
-            arg = '--%s' % k
-        else:
-            arg = '--%s=<%s>' % (k, cname)
+        prefix = '--%s' % k
+        suffix = '' if v.constructor == bool else '=<%s>' % cname
+
+        arg = prefix + suffix
 
         if v.depth > 0:
             arg += '... '

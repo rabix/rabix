@@ -98,8 +98,8 @@ class DockerContainer(Container):
 
     def _remap_obj(self, inputs, input_values, volumes, binds, remaped_job,
                    parent=None):
-        is_single = lambda i: i.constructor == FileConstructor and i.depth == 0
-        is_list = lambda i: i.constructor == FileConstructor and i.depth == 1
+        is_single = lambda i: isinstance(i.constructor, FileConstructor) and i.depth == 0
+        is_list = lambda i: isinstance(i.constructor, FileConstructor) and i.depth == 1
         if inputs:
             single = filter(is_single, [i for i in inputs])
             lists = filter(is_list, [i for i in inputs])

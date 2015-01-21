@@ -41,7 +41,7 @@ class InputCollector(object):
             file_dict = from_url(rbx_path)
             startdir = dirname(npath)
             file_dict['path'] = npath
-            file = FileConstructor(file_dict)
+            file = FileConstructor()(file_dict)
             file.secondary_files = [
                 File(
                     self._download(

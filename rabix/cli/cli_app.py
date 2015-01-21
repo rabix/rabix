@@ -51,7 +51,7 @@ class Container(object):
     def _resolve(self, inputs, input_values, job):
 
         if inputs:
-            file_ins = [i for i in inputs if i.constructor == FileConstructor]
+            file_ins = [i for i in inputs if isinstance(i.constructor, FileConstructor)]
             for f in file_ins:
                 val = input_values.get(f.id)
                 if val:
