@@ -10,7 +10,7 @@ from six.moves.urllib.parse import urlparse
 from rabix.common.models import FileConstructor
 from rabix.cli.cli_app import Container
 from rabix.docker.container import get_image
-from rabix.common.errors import ResourceUnavailable
+from rabix.common.errors import ResourceUnavailable, RabixError
 
 
 log = logging.getLogger(__name__)
@@ -177,7 +177,7 @@ class DockerContainer(Container):
         self.get_stderr(file='/'.join([os.path.abspath(self.job_dir),
                                        self.stderr]))
         if not self.is_success():
-            raise RuntimeError("err %s" % self.get_stderr())
+            raise RabixError("Tool failed:\n%s" % self.get_stderr())
 
     def remove(self, success_only=False):
         self.wait()

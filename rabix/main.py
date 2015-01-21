@@ -395,10 +395,11 @@ def main():
             context.executor.execute(job, lambda _, result: print(result))
         except RabixError as err:
             print(err.message)
+            sys.exit(1)
 
     except docopt.DocoptExit:
         print(app_usage)
-        return
+        sys.exit(1)
 
 
 if __name__ == '__main__':
