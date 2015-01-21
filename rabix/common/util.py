@@ -78,7 +78,7 @@ def map_or_apply(f, lst):
 ###
 
 def import_name(name):
-    name = str(name)
+    name = six.text_type(name)
     if '.' not in name:
         return __import__(name)
     chunks = name.split('.')

@@ -1,1 +1,1 @@
-{"path": "chr20.fa", "meta": {"file_type": "fasta"}, "secondaryFiles": [{"path": "./chr20.fa.amb"}, {"path": "./chr20.fa.ann"}, {"path": "./chr20.fa.bwt"}, {"path": "./chr20.fa.pac"}, {"path": "./chr20.fa.sa"}]}
+{"path": "chr20.fa", "metadata": {"file_type": "fasta"}, "secondaryFiles": [{"path": "./chr20.fa.amb"}, {"path": "./chr20.fa.ann"}, {"path": "./chr20.fa.bwt"}, {"path": "./chr20.fa.pac"}, {"path": "./chr20.fa.sa"}]}

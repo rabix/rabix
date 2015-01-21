@@ -61,6 +61,7 @@ Usage:
 '''
 
 TYPE_MAP = {
+    'TaskTemplate': Job.from_dict,
     'Job': Job.from_dict,
     'IO': IO.from_dict
 }
@@ -91,7 +92,7 @@ def fix_types(tool, toplevelType=None):
     if '@type' not in tool:
         tool['@type'] = toplevelType
 
-    if tool.get('@type') == 'Job':
+    if tool.get('@type') in ('Job', 'TaskTemplate'):
         fix_types(tool['app'])
         return
 
@@ -118,23 +119,26 @@ def fix_types(tool, toplevelType=None):
         outputs['@type'] = 'JsonSchema'
 
 
-def rebase_input_path(input, value, base):
-    if isinstance(input.constructor, ObjectConstructor):
+def rebase_input_path(constructor, value, base):
+    if isinstance(constructor, ObjectConstructor):
 
         def do_rebase_obj(val):
             ret = {}
             for k, v in six.iteritems(val):
-                rebased = rebase_input_path(input.properties[k], v, base)
+                c = constructor.properties.get(k)
+                rebased = None
+                if c:
+                    rebased = rebase_input_path(constructor.properties[k], v, base)
                 if rebased:
                     ret[k] = rebased
             return ret
 
-        return map_or_apply(dot_update_dict, value)
+        return map_rec_list(do_rebase_obj, value)
 
-    if isinstance(input.constructor, ArrayConstructor):
+    if isinstance(constructor, ArrayConstructor):
         ret = []
         for item in value:
-            rebased = rebase_input_path(input.item_constructor, item, base)
+            rebased = rebase_input_path(constructor.item_constructor, item, base)
             if rebased:
                 ret.append(rebased)
         return ret
@@ -145,8 +149,8 @@ def rebase_input_path(input, value, base):
             return v
         return to_abspath(v, base)
 
-    if input.constructor == FileConstructor:
-        return map_or_apply(do_rebase, value)
+    if isinstance(constructor, FileConstructor):
+        return map_rec_list(do_rebase, value)
 
     return None
 
@@ -155,7 +159,7 @@ def rebase_paths(app, input_values, base):
     file_inputs = {}
     for input_name, val in six.iteritems(input_values):
         input = app.get_input(input_name)
-        rebased = rebase_input_path(input, val, base)
+        rebased = rebase_input_path(input.constructor, val, base)
         if rebased:
             file_inputs[input_name] = rebased
 
@@ -185,13 +189,16 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
         if isinstance(v.constructor, ObjectConstructor):
             return
 
-        to_append = usage_str if v.constructor == FileConstructor\
+        to_append = usage_str if isinstance(v.constructor, FileConstructor)\
             else param_str
 
         cname = getattr(v.constructor, 'name', None) or \
             getattr(v.constructor, '__name__', 'val')
 
-        arg = '--%s=<%s>' % (k, cname)
+        prefix = '--%s' % k
+        suffix = '' if v.constructor == bool else '=<%s>' % cname
+
+        arg = prefix + suffix
 
         if v.depth > 0:
             arg += '... '
@@ -388,10 +395,11 @@ def main():
             context.executor.execute(job, lambda _, result: print(result))
         except RabixError as err:
             print(err.message)
+            sys.exit(1)
 
     except docopt.DocoptExit:
         print(app_usage)
-        return
+        sys.exit(1)
 
 
 if __name__ == '__main__':

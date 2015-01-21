@@ -3,46 +3,83 @@ import six
 import logging
 import os
 import glob
+import copy
 
 from jsonschema import Draft4Validator
 import jsonschema.exceptions
-
 from six.moves import reduce
+
 from rabix.common.ref_resolver import resolve_pointer
 from rabix.common.util import sec_files_naming_conv
 from rabix.expressions import Evaluator
 
-ev = Evaluator()
 log = logging.getLogger(__name__)
 
 
-def evaluate(expr_object, job, context=None, *args, **kwargs):
-    if isinstance(expr_object, dict):
-        return ev.evaluate(expr_object.get('lang', 'javascript'), expr_object.get(
-            'value'), job.to_dict(), context, *args, **kwargs)
-    else:
-        return ev.evaluate('javascript', expr_object, job.to_dict(), context, *args, **kwargs)
+class AdapterEvaluator(object):
+
+    def __init__(self, job):
+        self.job = job
+        self.ev = Evaluator()
+
+    def evaluate(self, expr_object, context=None):
+        if isinstance(expr_object, dict):
+            return self.ev.evaluate(
+                expr_object.get('lang', 'javascript'),
+                expr_object.get('value'),
+                self.job.to_dict(),
+                context
+            )
+        else:
+            return self.ev.evaluate('javascript', expr_object, self.job.to_dict(), context)
+
+    def resolve(self, val, context=None):
+        if not isinstance(val, dict):
+            return val
+        if 'expr' in val or '$expr' in val:
+            v = val.get('expr') or val.get('$expr')
+            return self.evaluate(v, context)
+        if 'job' in val or '$job' in val:
+            v = val.get('job') or val.get('$job')
+            return resolve_pointer(self.job.to_dict(), v)
+        return val
+
+    def __deepcopy__(self, memo):
+        return AdapterEvaluator(copy.deepcopy(self.job, memo))
 
 
 def intersect_dicts(d1, d2):
     return {k: v for k, v in six.iteritems(d1) if v == d2.get(k)}
 
 
-def eval_resolve(val, job, context=None):
-    if not isinstance(val, dict):
-        return val
-    if 'expr' in val or '$expr' in val:
-        v = val.get('expr') or val.get('$expr')
-        return evaluate(v, job, context)
-    if 'job' in val or '$job' in val:
-        v = val.get('job') or val.get('$job')
-        return resolve_pointer(job.to_dict(context), v)
-    return val
+def meta(path, inputs, eval, adapter):
+    meta, result = adapter.get('metadata', {}), {}
+    inherit = meta.pop('__inherit__', None)
+    if inherit:
+        src = inputs.get(inherit)
+        if isinstance(src, list):
+            result = reduce(intersect_dicts, [x.meta for x in src]) \
+                if len(src) > 1 else src[0].meta
+        else:
+            result = src.meta
+    result.update(**meta)
+    for k, v in six.iteritems(result):
+        result[k] = eval.resolve(v, context=path)
+    return result
+
+
+def secondaryFiles(p, adapter):
+    secondaryFiles = []
+    secFiles = adapter.get('secondaryFiles', [])
+    for s in secFiles:
+        path = sec_files_naming_conv(p, s)
+        secondaryFiles.append({'path': path})
+    return secondaryFiles
 
 
 class InputAdapter(object):
-    def __init__(self, value, job, schema, adapter_dict=None, key=''):
-        self.job = job
+    def __init__(self, value, evaluator, schema, adapter_dict=None, key=''):
+        self.evaluator = evaluator
         self.schema = schema or {}
         self.adapter = adapter_dict or self.schema.get('adapter')
         self.has_adapter = self.adapter is not None
@@ -56,11 +93,9 @@ class InputAdapter(object):
                     self.schema = opt
                 except jsonschema.exceptions.ValidationError:
                     pass
-        self.value = eval_resolve(value, self.job)
-        if self.is_file():
-            self.value = self.value['path']
+        self.value = evaluator.resolve(value)
 
-    __str__ = lambda self: str(self.value)
+    __str__ = lambda self: six.text_type(self.value)
     __repr__ = lambda self: 'InputAdapter(%s)' % self
     position = property(lambda self: (self.adapter.get('order', 9999999), self.key))
     # transform = property(lambda self: self.adapter.get('value'))
@@ -73,9 +108,6 @@ class InputAdapter(object):
         if sep == ' ':
             sep = None
         return sep
-
-    def is_file(self):
-        return isinstance(self.value, dict) and 'path' in self.value
 
     def arg_list(self):
         if isinstance(self.value, dict):
@@ -99,7 +131,7 @@ class InputAdapter(object):
 
     def as_dict(self, mix_with=None):
         sch = lambda key: self.schema.get('properties', {}).get(key, {})
-        adapters = [InputAdapter(v, self.job, sch(k), key=k)
+        adapters = [InputAdapter(v, self.evaluator, sch(k), key=k)
                     for k, v in six.iteritems(self.value)]
         adapters = (mix_with or []) + [adp for adp in adapters if adp.has_adapter]
         return reduce(
@@ -109,7 +141,7 @@ class InputAdapter(object):
         )
 
     def as_list(self):
-        items = [InputAdapter(item, self.job, self.schema.get('items', {}))
+        items = [InputAdapter(item, self.evaluator, self.schema.get('items', {}))
                  for item in self.value]
 
         if not self.prefix:
@@ -145,29 +177,40 @@ class CLIJob(object):
         self.job = job
         self.app = job.app
         self.adapter = self.app.adapter or {}
-        self.stdin = eval_resolve(self.adapter.get('stdin'), self.job)
-        self.stdout = eval_resolve(self.adapter.get('stdout'), self.job)
+        self._stdin = self.adapter.get('stdin')
+        self._stdout = self.adapter.get('stdout')
         self.base_cmd = self.adapter.get('baseCmd', [])
         if isinstance(self.base_cmd, six.string_types):
             self.base_cmd = self.base_cmd.split(' ')
         self.args = self.adapter.get('args', [])
         self.input_schema = self.app.inputs.schema
         self.output_schema = self.app.outputs.schema
+        self.eval = AdapterEvaluator(job)
+
+    @property
+    def stdin(self):
+        if self._stdin:
+            return self.eval.resolve(self._stdin)
+
+    @property
+    def stdout(self):
+        if self._stdout:
+            return self.eval.resolve(self._stdout)
 
     def make_arg_list(self):
-        adapters = [InputAdapter(a['value'], self.job, {}, a)
+        adapters = [InputAdapter(a['value'], self.eval, {}, a)
                     for a in self.args]
-        args = InputAdapter(self.job.inputs, self.job, self.input_schema).as_dict(adapters)
-        base_cmd = [eval_resolve(item, self.job) for item in self.base_cmd]
+        args = InputAdapter(self.job.inputs, self.eval, self.input_schema).as_dict(adapters)
+        base_cmd = [self.eval.resolve(item) for item in self.base_cmd]
 
         return [six.text_type(arg) for arg in base_cmd + args]
 
     def cmd_line(self):
         a = self.make_arg_list()
-        if self.stdin:
+        if self._stdin:
             a += ['<', self.stdin]
-        if self.stdout:
-            a += ['>', self.stdout]
+        if self._stdout:
+            a += ['>', self.eval.resolve(self.stdout)]
         return ' '.join(a)  # TODO: escape
 
     def get_outputs(self, job_dir, job):
@@ -176,33 +219,11 @@ class CLIJob(object):
             adapter = v['adapter']
             ret = os.getcwd()
             os.chdir(job_dir)
-            files = glob.glob(eval_resolve(adapter['glob'], job))
-            result[k] = [{'path': os.path.abspath(p), 'metadata': self._meta(p, adapter),
-                          'secondaryFiles': self._secondaryFiles(p, adapter)} for p in files]
+            files = glob.glob(self.eval.resolve(adapter['glob']))
+            result[k] = [{'path': os.path.abspath(p),
+                          'metadata': meta(p, job.inputs, self.eval, adapter),
+                          'secondaryFiles': secondaryFiles(p, adapter)} for p in files]
             os.chdir(ret)
             if v['type'] != 'array':
                 result[k] = result[k][0] if result[k] else None
         return result
-
-    def _meta(self, path, adapter):
-        meta, result = adapter.get('metadata', {}), {}
-        inherit = meta.pop('__inherit__', None)
-        if inherit:
-            src = self.job.inputs.get(inherit)
-            if isinstance(src, list):
-                result = reduce(intersect_dicts, [x.meta for x in src]) \
-                    if len(src) > 1 else src[0].meta
-            elif isinstance(src, dict):
-                result = src.get('metadata', {})
-        result.update(**meta)
-        for k, v in six.iteritems(result):
-            result[k] = eval_resolve(v, self.job, context=path)
-        return result
-
-    def _secondaryFiles(self, p, adapter):
-        secondaryFiles = []
-        secFiles = adapter.get('secondaryFiles', [])
-        for s in secFiles:
-            path = sec_files_naming_conv(p, s)
-            secondaryFiles.append({'path': path})
-        return secondaryFiles

@@ -146,8 +146,8 @@ def make_constructor(schema):
             'number': float,
             'boolean': bool,
             'string': six.text_type,
-            'file': FileConstructor,
-            'directory': FileConstructor
+            'file': FileConstructor(),
+            'directory': FileConstructor()
         }
 
         type_name = schema.get('type')
@@ -169,6 +169,7 @@ class ArrayConstructor(object):
 
     def __init__(self, item_constructor):
         self.item_constructor = item_constructor
+        self.name = 'array'
 
     def __call__(self, val):
         return [self.item_constructor(v) for v in val]
@@ -177,6 +178,7 @@ class ArrayConstructor(object):
 class ObjectConstructor(object):
 
     def __init__(self, properties):
+        self.name = 'object'
         self.properties = {
             k: make_constructor(v)
             for k, v in six.iteritems(properties)
@@ -189,26 +191,30 @@ class ObjectConstructor(object):
         }
 
 
-def FileConstructor(val):
-    FileConstructor.name = 'file'
-    if isinstance(val, six.string_types):
-        val = {'path': val}
+class FileConstructor(object):
 
-    size = val.get('size')
-    if size is not None:
-        size = int(size)
+    def __init__(self):
+        self.name = 'file'
 
-    path = val.get('path')
-    if path is None:
-        raise ValidationError(
-            "Not a valid 'File' object: %s" % str(val)
-        )
+    def __call__(self, val):
+        if isinstance(val, six.string_types):
+            val = {'path': val}
 
-    return File(path=path,
-                size=size,
-                meta=val.get('meta'),
-                secondary_files=[FileConstructor(sf)
-                                 for sf in val.get('secondaryFiles', [])])
+        size = val.get('size')
+        if size is not None:
+            size = int(size)
+
+        path = val.get('path')
+        if path is None:
+            raise ValidationError(
+                "Not a valid 'File' object: %s" % str(val)
+            )
+
+        return File(path=path,
+                    size=size,
+                    meta=val.get('metadata'),
+                    secondary_files=[self(sf)
+                                     for sf in val.get('secondaryFiles', [])])
 
 
 class IO(object):
@@ -248,7 +254,7 @@ class IO(object):
 
         constructor = make_constructor(item_schema)
 
-        return cls(d.get('@id', str(uuid4())),
+        return cls(d.get('@id', six.text_type(uuid4())),
                    validator=context.from_dict(d.get('schema')),
                    constructor=constructor,
                    required=d['required'],
@@ -288,9 +294,12 @@ class Job(object):
             num = 0
             try_path = path
             while os.path.exists(try_path):
-                try_path = '_'.join([path, str(num)])
+                try_path = '_'.join([path, six.text_type(num)])
                 num += 1
         return try_path
+
+    def __repr__(self):
+        return "Job(%s)" % self.to_dict()
 
     @classmethod
     def from_dict(cls, context, d):

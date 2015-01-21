@@ -51,13 +51,14 @@ class Container(object):
     def _resolve(self, inputs, input_values, job):
 
         if inputs:
-            file_ins = [i for i in inputs if i.constructor == FileConstructor]
+            file_ins = [i for i in inputs if isinstance(i.constructor, FileConstructor)]
             for f in file_ins:
                 val = input_values.get(f.id)
                 if val:
                     job[f.id] = map_or_apply(
                         lambda e: self.input_collector.download(
                             e.url, f.annotations.get('secondaryFiles')
+                            if f.annotations is not None else None
                         ),
                         val)
 
@@ -70,12 +71,14 @@ class Requirements(object):
         self.platform_features = platform_features
 
     def to_dict(self, context):
-        return {
+        d = {
             "@type": "Requirements",
-            "environment": {"container": self.container.to_dict(context)},
             "resources": context.to_dict(self.resources),
             "platformFeatures": self.platform_features
         }
+        if self.container:
+            d["environment"] = {"container": self.container.to_dict(context)}
+        return d
 
     @classmethod
     def from_dict(cls, context, d):
@@ -126,12 +129,16 @@ class CliApp(App):
             with open(os.path.abspath(job_dir) + '/result.cwl.json', 'w') as f:
                 outputs = self.cli_job.get_outputs(
                     os.path.abspath(job_dir), abspath_job)
-                for k, v in six.iteritems(outputs):
-                    if v:
-                        with open(v['path'] + '.rbx.json', 'w') as rx:
-                            json.dump(v, rx)
                 json.dump(outputs, f)
-                return outputs
+            for k, v in six.iteritems(outputs):
+                if isinstance(v, list):
+                    for f in v:
+                        with open(f['path'] + '.rbx.json', 'w') as rx:
+                            json.dump(f, rx)
+                elif isinstance(v, dict):
+                    with open(v['path'] + '.rbx.json', 'w') as rx:
+                        json.dump(v, rx)
+            return outputs
 
     def command_line(self, job, job_dir=None):
         if not self._command_line:
