@@ -10,7 +10,7 @@ from six.moves.urllib.parse import urlparse
 from rabix.common.models import FileConstructor
 from rabix.cli.cli_app import Container
 from rabix.docker.container import get_image
-from rabix.common.errors import ResourceUnavailable
+from rabix.common.errors import ResourceUnavailable, RabixError
 
 
 log = logging.getLogger(__name__)
@@ -98,8 +98,8 @@ class DockerContainer(Container):
 
     def _remap_obj(self, inputs, input_values, volumes, binds, remaped_job,
                    parent=None):
-        is_single = lambda i: i.constructor == FileConstructor and i.depth == 0
-        is_list = lambda i: i.constructor == FileConstructor and i.depth == 1
+        is_single = lambda i: isinstance(i.constructor, FileConstructor) and i.depth == 0
+        is_list = lambda i: isinstance(i.constructor, FileConstructor) and i.depth == 1
         if inputs:
             single = filter(is_single, [i for i in inputs])
             lists = filter(is_list, [i for i in inputs])
@@ -132,9 +132,9 @@ class DockerContainer(Container):
 
             for num, inv in enumerate(input_values[inp.id]):
                 if parent:
-                    docker_dir = '/' + '/'.join([parent, inp.id, str(num)])
+                    docker_dir = '/' + '/'.join([parent, inp.id, six.text_type(num)])
                 else:
-                    docker_dir = '/' + '/'.join([inp.id, str(num)])
+                    docker_dir = '/' + '/'.join([inp.id, six.text_type(num)])
                 dir_name, file_name = os.path.split(
                     os.path.abspath(inv.path))
                 volumes[docker_dir] = {}
@@ -144,8 +144,8 @@ class DockerContainer(Container):
 
     def set_config(self, *args, **kwargs):
         self.prepare_paths(kwargs.get('job'))
-        user = kwargs.get('user', None) or ':'.join([str(os.getuid()),
-                                                     str(os.getgid())])
+        user = kwargs.get('user', None) or ':'.join([six.text_type(os.getuid()),
+                                                     six.text_type(os.getgid())])
         self.job_dir = kwargs.get('job_dir')
         self.volumes['/' + self.job_dir] = {}
         self.binds['/' + self.job_dir] = os.path.abspath(self.job_dir)
@@ -177,7 +177,7 @@ class DockerContainer(Container):
         self.get_stderr(file='/'.join([os.path.abspath(self.job_dir),
                                        self.stderr]))
         if not self.is_success():
-            raise RuntimeError("err %s" % self.get_stderr())
+            raise RabixError("Tool failed:\n%s" % self.get_stderr())
 
     def remove(self, success_only=False):
         self.wait()
@@ -224,7 +224,7 @@ class DockerContainer(Container):
                                                      stdout=False, stderr=True,
                                                      stream=True, logs=True):
                     if file:
-                        f.write(str(out).rstrip() + '\n')
+                        f.write(six.text_type(out).rstrip() + '\n')
                     else:
                         print(out.rstrip())
             else:

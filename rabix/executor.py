@@ -2,7 +2,6 @@ import copy
 import six
 import os
 
-from rabix.common.util import wrap_in_list
 from rabix.common.errors import RabixError
 from rabix.common.models import Job
 
@@ -46,7 +45,7 @@ class Executor(object):
             for i, val in enumerate(job.inputs[parallel_input]):
                 inputs = copy.deepcopy(job.inputs)
                 inputs[parallel_input] = val
-                jobs.append(Job(job.id+"_"+str(i), job.app, inputs, {}, job.context))
+                jobs.append(Job(job.id+"_"+six.text_type(i), job.app, inputs, {}, job.context))
             return jobs
         else:
             return job

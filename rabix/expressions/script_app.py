@@ -48,7 +48,7 @@ class ScriptApp(App):
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d.get('@id', str(uuid4())),
+        return cls(d.get('@id', six.text_type(uuid4())),
                    context.from_dict(d['inputs']),
                    context.from_dict(d['outputs']),
                    d['script'],

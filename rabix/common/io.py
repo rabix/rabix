@@ -3,6 +3,7 @@ import logging
 import json
 import requests
 import glob
+import six
 
 from copy import copy
 from six.moves.urllib.parse import urlparse, urlunparse
@@ -40,7 +41,7 @@ class InputCollector(object):
             file_dict = from_url(rbx_path)
             startdir = dirname(npath)
             file_dict['path'] = npath
-            file = FileConstructor(file_dict)
+            file = FileConstructor()(file_dict)
             file.secondary_files = [
                 File(
                     self._download(
@@ -159,13 +160,13 @@ class InputCollector(object):
             for sf in autodetected:
                 sf = sf.replace(input.path, '')
                 if sf not in names:
-                    ad.append(str(sf))
+                    ad.append(six.text_type(sf))
             if ad:
                 cont = raw_input('Do you want to include autodetected '
                                  'additional files for file %s %s? [Y/n] '
-                                 % (input, str(ad))).lower().strip()
+                                 % (input, six.text_type(ad))).lower().strip()
                 if cont == 'y' or cont == '':
-                    log.info("Additional files %s included" % str(ad))
+                    log.info("Additional files %s included" % six.text_type(ad))
                     secFiles.extend(self._get_secondary_files(
                         ad, input, autodetect=False, prompt=False))
         if prompt:
