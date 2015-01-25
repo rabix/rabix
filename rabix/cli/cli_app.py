@@ -5,7 +5,7 @@ import stat
 import copy
 
 from rabix.cli.adapter import CLIJob
-from rabix.common.models import App, FileConstructor
+from rabix.common.models import App
 from rabix.common.io import InputCollector
 from rabix.common.util import map_or_apply
 
@@ -51,7 +51,7 @@ class Container(object):
     def _resolve(self, inputs, input_values, job):
 
         if inputs:
-            file_ins = [i for i in inputs if isinstance(i.constructor, FileConstructor)]
+            file_ins = [i for i in inputs if i.constructor.name == 'file']
             for f in file_ins:
                 val = input_values.get(f.id)
                 if val:

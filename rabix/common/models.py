@@ -109,11 +109,39 @@ class URL(object):
 
 class File(object):
 
+    name = 'file'
+
+    @classmethod
+    def match(cls, val):
+        return isinstance(val, dict) and 'path' in val
+
     def __init__(self, path, size=None, meta=None, secondary_files=None):
-        self.url = URL(path) if isinstance(path, six.string_types) else path
         self.size = size
         self.meta = meta or {}
         self.secondary_files = secondary_files or []
+        self.url = None
+
+        if isinstance(path, dict):
+            self.from_dict(path)
+        else:
+            self.path = path
+
+    def from_dict(self, val):
+        size = val.get('size')
+        if size is not None:
+            size = int(size)
+
+        path = val.get('path')
+        if path is None:
+            raise ValidationError(
+                "Not a valid 'File' object: %s" % str(val)
+            )
+
+        self.size = self.size or size
+        self.meta = self.meta or val.get('metadata')
+        self.secondary_files = self.secondary_files or \
+            [File(sf) for sf in val.get('secondaryFiles', [])]
+        self.path = path
 
     def to_dict(self, context=None):
         return {
@@ -137,18 +165,14 @@ class File(object):
 
     @path.setter
     def path(self, val):
-        self.url = val
+        self.url = URL(val) if isinstance(val, six.string_types) else val
 
 
 def make_constructor(schema):
-        constructor_map = {
-            'integer': int,
-            'number': float,
-            'boolean': bool,
-            'string': six.text_type,
-            'file': file_constructor,
-            'directory': file_constructor
-        }
+
+        one_of = schema.get('oneOf')
+        if one_of:
+            return OneOfConstructor(one_of)
 
         type_name = schema.get('type')
 
@@ -162,7 +186,10 @@ def make_constructor(schema):
         if type_name == 'object':
             return ObjectConstructor(schema.get('properties', {}))
 
-        return constructor_map[type_name]
+        if type_name == 'file' or type_name == 'directory':
+            return File
+
+        return PrimitiveConstructor(type_name)
 
 
 class ArrayConstructor(object):
@@ -173,6 +200,10 @@ class ArrayConstructor(object):
 
     def __call__(self, val):
         return [self.item_constructor(v) for v in val]
+
+    def match(self, val):
+        return isinstance(val, list) and all(
+            [self.item_constructor.match(v) for v in val])
 
 
 class ObjectConstructor(object):
@@ -190,33 +221,48 @@ class ObjectConstructor(object):
             for k, v in six.iteritems(val)
         }
 
+    def match(self, val):
+        return isinstance(val, dict) and all(
+            [k in self.properties and self.properties[k].match(v)
+             for k, v in six.iteritems(val)])
 
-class FileConstructor(object):
 
-    def __init__(self):
-        self.name = 'file'
+class PrimitiveConstructor(object):
+
+    CONSTRUCTOR_MAP = {
+        'integer': int,
+        'number': float,
+        'boolean': bool,
+        'string': six.text_type
+    }
+
+    def __init__(self, type_name):
+        self.name = type_name
+        self.type = PrimitiveConstructor.CONSTRUCTOR_MAP.get(type_name)
 
     def __call__(self, val):
-        if isinstance(val, six.string_types):
-            val = {'path': val}
+        return self.type(val)
 
-        size = val.get('size')
-        if size is not None:
-            size = int(size)
+    def match(self, val):
+        return isinstance(val, self.type)
 
-        path = val.get('path')
-        if path is None:
-            raise ValidationError(
-                "Not a valid 'File' object: %s" % str(val)
+
+class OneOfConstructor(object):
+
+    def __init__(self, options):
+        self.options = [make_constructor(opt) for opt in options]
+
+    def match(self, val):
+        return next((x for x in self.options if x.match(val)), None)
+
+    def __call__(self, val):
+        opt = self.match(val)
+        if not opt:
+            raise ValueError(
+                "Value '%s' doesn't match any of the constructors"
+                % str(val)
             )
-
-        return File(path=path,
-                    size=size,
-                    meta=val.get('metadata'),
-                    secondary_files=[self(sf)
-                                     for sf in val.get('secondaryFiles', [])])
-
-file_constructor = FileConstructor()
+        return opt(val)
 
 
 class IO(object):
