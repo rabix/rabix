@@ -125,7 +125,7 @@ class InputAdapter(object):
                 raise ValueError('Boolean arguments must have a prefix.')
             return [self.prefix]
         if not self.prefix:
-            return [self.value]
+            return [six.text_type(self.value)]
         if self.separator in [' ', None]:
             return [self.prefix, self.value]
         return [self.prefix + self.separator + six.text_type(self.value)]
