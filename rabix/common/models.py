@@ -250,6 +250,7 @@ class PrimitiveConstructor(object):
 class OneOfConstructor(object):
 
     def __init__(self, options):
+        self.name = 'oneOf'
         self.options = [make_constructor(opt) for opt in options]
 
     def match(self, val):
