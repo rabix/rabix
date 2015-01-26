@@ -12,7 +12,7 @@ from rabix.common.util import log_level, dot_update_dict, map_or_apply,\
 from rabix.common.models import Job, IO
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
-from rabix.common.errors import RabixError
+from rabix.common.errors import RabixError, ValidationError
 from rabix.executor import Executor
 from rabix.cli import CliApp, CLIJob
 
@@ -119,11 +119,21 @@ def fix_types(tool, toplevelType=None):
 
 
 def rebase_input_path(constructor, value, base):
+
+    if constructor.name == 'oneOf':
+        matched = constructor.match(value)
+
+        if not matched:
+            raise ValidationError(
+                "value: '%s' doesnt match any variant: '%s'"
+                % (value, constructor.options)
+            )
+        constructor = matched
+
     if constructor.name == 'object':
 
         def do_rebase_obj(val):
             ret = {}
-            # print(constructor.properties)
             for k, v in six.iteritems(val):
                 c = constructor.properties.get(k)
                 rebased = None
@@ -133,7 +143,7 @@ def rebase_input_path(constructor, value, base):
                     ret[k] = rebased
             return ret
 
-        return map_rec_list(do_rebase_obj, value)
+        return [v for v in map_rec_list(do_rebase_obj, value) if v]
 
     if constructor.name == 'array':
         ret = []
@@ -159,11 +169,14 @@ def rebase_paths(app, input_values, base):
     file_inputs = {}
     for input_name, val in six.iteritems(input_values):
         input = app.get_input(input_name)
+        if not input:
+            print("Unknown input: %s" % input_name)
+            continue
         rebased = rebase_input_path(input.constructor, val, base)
         if rebased:
             file_inputs[input_name] = rebased
-
-    return dot_update_dict(input_values, file_inputs)
+    rebased = dot_update_dict(input_values, file_inputs)
+    return rebased
 
 
 ###

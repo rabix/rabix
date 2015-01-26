@@ -236,15 +236,26 @@ class PrimitiveConstructor(object):
         'string': six.text_type
     }
 
+    MATCH_MAP = dict(CONSTRUCTOR_MAP)
+    MATCH_MAP.update({
+        'string': six.string_types,
+        'number': (int, float)
+    })
+
     def __init__(self, type_name):
         self.name = type_name
+        self._match = PrimitiveConstructor.MATCH_MAP.get(type_name)
         self.type = PrimitiveConstructor.CONSTRUCTOR_MAP.get(type_name)
 
     def __call__(self, val):
         return self.type(val)
 
     def match(self, val):
-        return isinstance(val, self.type)
+        matches = isinstance(val, self._match)
+        return matches
+
+    def __repr__(self):
+        return self.name
 
 
 class OneOfConstructor(object):
