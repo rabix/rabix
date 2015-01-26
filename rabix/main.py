@@ -175,8 +175,7 @@ def rebase_paths(app, input_values, base):
         rebased = rebase_input_path(input.constructor, val, base)
         if rebased:
             file_inputs[input_name] = rebased
-    rebased = dot_update_dict(input_values, file_inputs)
-    return rebased
+    return dot_update_dict(input_values, file_inputs)
 
 
 ###

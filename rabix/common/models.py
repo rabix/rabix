@@ -106,6 +106,9 @@ class URL(object):
         else:
             return self.geturl()
 
+    def __repr__(self):
+        return "URL(%s)" % self.geturl()
+
 
 class File(object):
 
@@ -205,6 +208,9 @@ class ArrayConstructor(object):
         return isinstance(val, list) and all(
             [self.item_constructor.match(v) for v in val])
 
+    def __repr__(self):
+        return "ArrayConstructor(%s)" % repr(self.item_constructor)
+
 
 class ObjectConstructor(object):
 
@@ -225,6 +231,9 @@ class ObjectConstructor(object):
         return isinstance(val, dict) and all(
             [k in self.properties and self.properties[k].match(v)
              for k, v in six.iteritems(val)])
+
+    def __repr__(self):
+        return "ObjectConstructor(%s)" % repr(self.properties)
 
 
 class PrimitiveConstructor(object):
@@ -276,6 +285,9 @@ class OneOfConstructor(object):
             )
         return opt(val)
 
+    def __repr__(self):
+        return "OneOf(%s)" % repr(self.options)
+
 
 class IO(object):
 
@@ -320,6 +332,9 @@ class IO(object):
                    required=d['required'],
                    annotations=d['annotations'],
                    depth=depth)
+
+    def __repr__(self):
+        return "IO(%s)" % vars(self)
 
 
 class Job(object):
