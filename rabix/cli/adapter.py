@@ -23,23 +23,26 @@ class AdapterEvaluator(object):
         self.job = job
         self.ev = Evaluator()
 
-    def evaluate(self, expr_object, context=None):
+    def evaluate(self, expr_object, context=None, job=None):
         if isinstance(expr_object, dict):
             return self.ev.evaluate(
                 expr_object.get('lang', 'javascript'),
                 expr_object.get('value'),
-                self.job.to_dict(),
+                job.to_dict() if job else self.job.to_dict(),
                 context
             )
         else:
-            return self.ev.evaluate('javascript', expr_object, self.job.to_dict(), context)
+            return self.ev.evaluate('javascript', expr_object,
+                                    job.to_dict() if job else
+                                    self.job.to_dict(), context)
 
-    def resolve(self, val, context=None):
+    def resolve(self, val, context=None, job=None):
         if not isinstance(val, dict):
             return val
         if 'expr' in val or '$expr' in val:
             v = val.get('expr') or val.get('$expr')
-            return self.evaluate(v, context)
+            print job
+            return self.evaluate(v, context, job=job)
         if 'job' in val or '$job' in val:
             v = val.get('job') or val.get('$job')
             return resolve_pointer(self.job.to_dict(), v)
@@ -222,7 +225,8 @@ class CLIJob(object):
             adapter = v['adapter']
             ret = os.getcwd()
             os.chdir(job_dir)
-            files = glob.glob(self.eval.resolve(adapter['glob']))
+            print self.eval.resolve(adapter['glob'], job=job)
+            files = glob.glob(self.eval.resolve(adapter['glob'], job=job))
             result[k] = [{'path': os.path.abspath(p),
                           'metadata': meta(p, job.inputs, self.eval, adapter),
                           'secondaryFiles': secondary_files(p, adapter)} for p in files]
