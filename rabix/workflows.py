@@ -49,7 +49,7 @@ class Step(object):
 class WorkflowApp(App):
 
     def __init__(self, app_id, steps, context,
-                 inputs=None, outputs=None,
+                 inputs=None, outputs=None, to=None,
                  app_description=None,
                  annotations=None,
                  platform_features=None):
@@ -58,6 +58,7 @@ class WorkflowApp(App):
         self.outputs = outputs or []
         self.executor = context.executor
         self.steps = steps
+        self.to = to or {}
         self.context = context
 
         for step in steps:
@@ -73,12 +74,17 @@ class WorkflowApp(App):
             # outputs
             if step.outputs:
                 for output_port, output_val in six.iteritems(step.outputs):
-                    output_node = step.app.get_output(output_port)
+                    self.to[output_val['$to']] = output_port
+                    if isinstance(step.app, WorkflowApp):
+                        output_node = step.app.get_output(step.app.to.get(output_port))
+                    else:
+                        output_node = step.app.get_output(output_port)
                     output_id = output_val['$to']
                     self.add_node(output_id, output_node)
                     self.graph.add_edge(
                         step.id, output_id, OutputRelation(output_port)
                     )
+                    # output_node.id = output_val['$to']
                     self.outputs.append(output_node)
 
         if not self.graph.connected():
