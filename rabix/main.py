@@ -9,10 +9,10 @@ import json
 from rabix import __version__ as version
 from rabix.common.util import log_level, dot_update_dict, map_or_apply,\
     map_rec_list, to_abspath
-from rabix.common.models import Job, IO, ObjectConstructor, ArrayConstructor, FileConstructor
+from rabix.common.models import Job, IO
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
-from rabix.common.errors import RabixError
+from rabix.common.errors import RabixError, ValidationError
 from rabix.executor import Executor
 from rabix.cli import CliApp, CLIJob
 
@@ -120,7 +120,18 @@ def fix_types(tool, toplevelType=None):
 
 
 def rebase_input_path(constructor, value, base):
-    if isinstance(constructor, ObjectConstructor):
+
+    if constructor.name == 'oneOf':
+        matched = constructor.match(value)
+
+        if not matched:
+            raise ValidationError(
+                "value: '%s' doesnt match any variant: '%s'"
+                % (value, constructor.options)
+            )
+        constructor = matched
+
+    if constructor.name == 'object':
 
         def do_rebase_obj(val):
             ret = {}
@@ -133,9 +144,9 @@ def rebase_input_path(constructor, value, base):
                     ret[k] = rebased
             return ret
 
-        return map_rec_list(do_rebase_obj, value)
+        return [v for v in map_rec_list(do_rebase_obj, value) if v]
 
-    if isinstance(constructor, ArrayConstructor):
+    if constructor.name == 'array':
         ret = []
         for item in value:
             rebased = rebase_input_path(constructor.item_constructor, item, base)
@@ -149,7 +160,7 @@ def rebase_input_path(constructor, value, base):
             return v
         return to_abspath(v, base)
 
-    if isinstance(constructor, FileConstructor):
+    if constructor.name == 'file':
         return map_rec_list(do_rebase, value)
 
     return None
@@ -159,10 +170,12 @@ def rebase_paths(app, input_values, base):
     file_inputs = {}
     for input_name, val in six.iteritems(input_values):
         input = app.get_input(input_name)
+        if not input:
+            print("Unknown input: %s" % input_name)
+            continue
         rebased = rebase_input_path(input.constructor, val, base)
         if rebased:
             file_inputs[input_name] = rebased
-
     return dot_update_dict(input_values, file_inputs)
 
 
@@ -186,17 +199,17 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
     inp = inp or {}
 
     def resolve(k, v, usage_str, param_str, inp):
-        if isinstance(v.constructor, ObjectConstructor):
+        if v.constructor.name == 'object':
             return
 
-        to_append = usage_str if isinstance(v.constructor, FileConstructor)\
+        to_append = usage_str if v.constructor.name == 'file'\
             else param_str
 
         cname = getattr(v.constructor, 'name', None) or \
             getattr(v.constructor, '__name__', 'val')
 
         prefix = '--%s' % k
-        suffix = '' if v.constructor == bool else '=<%s>' % cname
+        suffix = '' if v.constructor.name == 'boolean' else '=<%s>' % cname
 
         arg = prefix + suffix
 

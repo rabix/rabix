@@ -5,7 +5,7 @@ import stat
 import copy
 
 from rabix.cli.adapter import CLIJob
-from rabix.common.models import App, FileConstructor
+from rabix.common.models import App
 from rabix.common.io import InputCollector
 from rabix.common.util import map_or_apply
 
@@ -51,7 +51,7 @@ class Container(object):
     def _resolve(self, inputs, input_values, job):
 
         if inputs:
-            file_ins = [i for i in inputs if isinstance(i.constructor, FileConstructor)]
+            file_ins = [i for i in inputs if i.constructor.name == 'file']
             for f in file_ins:
                 val = input_values.get(f.id)
                 if val:
@@ -126,10 +126,15 @@ class CliApp(App):
             cmd_line = self.command_line(job, job_dir)
             self.job_dump(job, job_dir)
             self.requirements.container.run(cmd_line)
-            with open(os.path.abspath(job_dir) + '/result.cwl.json', 'w') as f:
-                outputs = self.cli_job.get_outputs(
-                    os.path.abspath(job_dir), abspath_job)
-                json.dump(outputs, f)
+            result_path = os.path.abspath(job_dir) + '/result.cwl.json'
+            if os.path.exists(result_path):
+                with open(result_path, 'r') as res:
+                    outputs = json.load(res)
+            else:
+                with open(result_path, 'w') as res:
+                    outputs = self.cli_job.get_outputs(
+                        os.path.abspath(job_dir), abspath_job)
+                    json.dump(outputs, res)
             for k, v in six.iteritems(outputs):
                 if isinstance(v, list):
                     for f in v:

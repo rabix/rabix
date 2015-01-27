@@ -4,6 +4,7 @@ import logging
 import os
 import glob
 import copy
+import shlex
 
 from jsonschema import Draft4Validator
 import jsonschema.exceptions
@@ -68,7 +69,7 @@ def meta(path, inputs, eval, adapter):
     return result
 
 
-def secondaryFiles(p, adapter):
+def secondary_files(p, adapter):
     secondaryFiles = []
     secFiles = adapter.get('secondaryFiles', [])
     for s in secFiles:
@@ -124,7 +125,7 @@ class InputAdapter(object):
                 raise ValueError('Boolean arguments must have a prefix.')
             return [self.prefix]
         if not self.prefix:
-            return [self.value]
+            return [six.text_type(self.value)]
         if self.separator in [' ', None]:
             return [self.prefix, self.value]
         return [self.prefix + self.separator + six.text_type(self.value)]
@@ -200,13 +201,15 @@ class CLIJob(object):
     def make_arg_list(self):
         adapters = [InputAdapter(a['value'], self.eval, {}, a)
                     for a in self.args]
-        args = InputAdapter(self.job.inputs, self.eval, self.input_schema).as_dict(adapters)
+        ia = InputAdapter(self.job.inputs, self.eval, self.input_schema)
+        args = ia.as_dict(adapters)
         base_cmd = [self.eval.resolve(item) for item in self.base_cmd]
 
         return [six.text_type(arg) for arg in base_cmd + args]
 
     def cmd_line(self):
         a = self.make_arg_list()
+
         if self._stdin:
             a += ['<', self.stdin]
         if self._stdout:
@@ -222,7 +225,7 @@ class CLIJob(object):
             files = glob.glob(self.eval.resolve(adapter['glob']))
             result[k] = [{'path': os.path.abspath(p),
                           'metadata': meta(p, job.inputs, self.eval, adapter),
-                          'secondaryFiles': secondaryFiles(p, adapter)} for p in files]
+                          'secondaryFiles': secondary_files(p, adapter)} for p in files]
             os.chdir(ret)
             if v['type'] != 'array':
                 result[k] = result[k][0] if result[k] else None
