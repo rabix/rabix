@@ -149,7 +149,6 @@ class CliApp(App):
         if not self._command_line:
             self.set_config(job=job, job_dir=job_dir)
             self._command_line = self.cli_job.cmd_line()
-        # print(self._command_line)
         return self._command_line
 
     def install(self, *args, **kwargs):
