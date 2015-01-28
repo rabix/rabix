@@ -120,7 +120,7 @@ class InputAdapter(object):
         return self.as_primitive()
 
     def as_primitive(self):
-        if self.value in (None, False):
+        if self.value is None or self.value is False:
             return []
         if self.value is True:
             if not self.prefix:
@@ -137,11 +137,12 @@ class InputAdapter(object):
         adapters = [InputAdapter(v, self.evaluator, sch(k), key=k)
                     for k, v in six.iteritems(self.value)]
         adapters = (mix_with or []) + [adp for adp in adapters if adp.has_adapter]
-        return reduce(
+        res = reduce(
             operator.add,
             [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)],
             []
         )
+        return res
 
     def as_list(self):
         items = [InputAdapter(item, self.evaluator, self.schema.get('items', {}))

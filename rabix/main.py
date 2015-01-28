@@ -244,7 +244,7 @@ def get_inputs(app, args):
     return {
         input.id: map_rec_list(input.constructor, get_arg(input.id))
         for input in app.inputs.io
-        if get_arg(input.id)
+        if get_arg(input.id) is not None
     }
 
 
