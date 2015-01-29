@@ -18,5 +18,6 @@ def test_meta():
 
 
 def test_secondary_files():
-    sf = secondary_files("main_path", {"secondaryFiles": [".bai"]})
+    eval = AdapterEvaluator({})
+    sf = secondary_files("main_path", {"secondaryFiles": [".bai"]}, eval)
     assert_equal(sf, [{'path': 'main_path.bai'}])
