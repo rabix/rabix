@@ -8,8 +8,8 @@ import json
 
 from rabix import __version__ as version
 from rabix.common.util import log_level, dot_update_dict, map_or_apply,\
-    map_rec_list, to_abspath
-from rabix.common.models import Job, IO
+    map_rec_list, map_rec_collection
+from rabix.common.models import Job, IO, File
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
 from rabix.common.errors import RabixError, ValidationError
@@ -119,55 +119,6 @@ def fix_types(tool, toplevelType=None):
         outputs['@type'] = 'JsonSchema'
 
 
-def rebase_input_path(constructor, value, base):
-
-    if constructor.name == 'oneOf':
-        matched = constructor.match(value)
-
-        if not matched:
-            raise ValidationError(
-                "value: '%s' doesnt match any variant: '%s'"
-                % (value, constructor.options)
-            )
-        constructor = matched
-
-    rebased = value
-
-    if constructor.name == 'object':
-        rebased = {
-            k: rebase_input_path(constructor.properties[k], v, base)
-            for k, v in six.iteritems(value)
-            if k in constructor.properties
-        }
-
-    elif constructor.name == 'array':
-        rebased = [rebase_input_path(constructor.item_constructor, item, base)
-                   for item in value]
-
-    elif constructor.name == 'file':
-        if isinstance(value, dict):
-            value['path'] = to_abspath(value['path'], base)
-            rebased = value
-        else:
-            rebased = to_abspath(value, base)
-
-    return rebased
-
-
-def rebase_paths(app, input_values, base):
-    rebased = {}
-    for input_name, val in six.iteritems(input_values):
-        input = app.get_input(input_name)
-        if not input:
-            print("Unknown input: %s, skipping" % input_name)
-            continue
-        rebased[input_name] = map_rec_list(
-            lambda v: rebase_input_path(input.constructor, v, base),
-            val
-        )
-    return rebased
-
-
 ###
 # usage strings
 ###
@@ -225,16 +176,30 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
                            inputs=' '.join(usage_str))
 
 
-def get_inputs(app, args):
+def rebase_path(val, base):
+    if isinstance(val, File):
+        return val.rebase(base)
+    return val
+
+
+def get_inputs(app, args, basedir=None):
 
     def get_arg(name):
         return args.get('--' + name) or args.get(name)
 
-    return {
+    inputs = {
         input.id: map_rec_list(input.constructor, get_arg(input.id))
         for input in app.inputs.io
         if get_arg(input.id) is not None
     }
+
+    if basedir:
+        inputs = map_rec_collection(
+            lambda v: rebase_path(v, basedir),
+            inputs
+        )
+
+    return inputs
 
 
 def get_tool(args):
@@ -264,9 +229,7 @@ def conformance_test(context, app, job_dict, basedir):
             'properties': {}
         })
 
-    inputs = rebase_paths(app, job_dict['inputs'], basedir)
-    job_dict['inputs'] = get_inputs(app, inputs)
-
+    job_dict['inputs'] = get_inputs(app, job_dict['inputs'], basedir)
     job = context.from_dict(job_dict)
 
     adapter = CLIJob(job)
@@ -336,15 +299,14 @@ def main():
         if args['--inp-file']:
             basedir = os.path.dirname(args.get('--inp-file'))
             input_file = from_url(args.get('--inp-file'))
-            rebased = rebase_paths(app, input_file, basedir)
-            job_dict['inputs'].update(get_inputs(app, rebased))
+            inputs = get_inputs(app, input_file, basedir)
+            job_dict['inputs'].update(inputs)
 
         input_usage = job_dict['inputs']
 
         if job:
             basedir = os.path.dirname(args.get('<tool>'))
-            rebased = rebase_paths(app, job.inputs, basedir)
-            job.inputs = get_inputs(app, rebased)
+            job.inputs = get_inputs(app, job.inputs, basedir)
             input_usage.update(job.inputs)
 
         app_inputs_usage = make_app_usage_string(
@@ -368,12 +330,11 @@ def main():
 
         inp = get_inputs(app, app_inputs)
         if not job:
-            job_dict['inputs'].update(inp)
             job_dict['@id'] = args.get('--dir')
             job_dict['app'] = app
             job = Job.from_dict(context, job_dict)
-        else:
-            job.inputs.update(inp)
+
+        job.inputs.update(inp)
 
         if args['--print-cli']:
             if not isinstance(app, CliApp):

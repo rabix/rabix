@@ -7,10 +7,11 @@ import datetime
 
 from uuid import uuid4
 from jsonschema.validators import Draft4Validator
-from six.moves.urllib.parse import urlparse, urlunparse, unquote
+from six.moves.urllib.parse import urlparse, urlunparse, unquote, urljoin
 from base64 import b64decode
+from os.path import isabs
 
-from rabix.common.errors import ValidationError
+from rabix.common.errors import ValidationError, RabixError
 
 
 log = logging.getLogger(__name__)
@@ -100,6 +101,23 @@ class URL(object):
     def isdata(self):
         return self.scheme == 'data'
 
+    def join(self, base):
+        base += '' if base.endswith('/') else '/'
+        return URL(urljoin(base, str(self)))
+
+    def remap(self, mappings):
+        if not self.islocal():
+            raise RabixError("Can't remap non-local paths")
+        if not isabs(self.path):
+            raise RabixError("Can't remap non-absolute paths")
+
+        for k, v in six.iteritems(mappings):
+            if self.path.startswith(k):
+                v += '' if v.endswith('/') else '/'
+                return URL(urljoin(v, self.path.lstrip(k)))
+
+        return self
+
     def __str__(self):
         if self.islocal():
             return self.path
@@ -159,6 +177,14 @@ class File(object):
     @property
     def path(self):
         return six.text_type(self.url)
+
+    def rebase(self, base):
+        self.url = self.url.join(base)
+        return self
+
+    def remap(self, mappings):
+        self.url = self.url.remap(mappings)
+        return self
 
     def __str__(self):
         return self.path
