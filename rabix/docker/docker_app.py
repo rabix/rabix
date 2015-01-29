@@ -5,11 +5,14 @@ import logging
 import docker
 
 from docker.errors import APIError
+from os.path import dirname
 from six.moves.urllib.parse import urlparse
 
 from rabix.cli.cli_app import Container
 from rabix.docker.container import get_image
 from rabix.common.errors import ResourceUnavailable, RabixError
+from rabix.common.util import map_rec_collection
+from rabix.common.models import File
 
 
 log = logging.getLogger(__name__)
@@ -51,14 +54,6 @@ def make_config(**kwargs):
     return cfg
 
 
-class BindDict(dict):
-    def items(self):
-        ret = []
-        for k, v in six.iteritems(super(BindDict, self)):
-            ret.append((v, k))
-        return ret
-
-
 class DockerContainer(Container):
 
     def __init__(self, uri, image_id, dockr=None):
@@ -86,60 +81,78 @@ class DockerContainer(Container):
         self.volumes, self.binds = self._volumes(job)
 
     def _volumes(self, job):
-        remaped_job = job.inputs
         volumes = {}
         binds = {}
 
-        input_values = remaped_job
-        obj_inputs = job.app.inputs.io
-        self._remap_obj(obj_inputs, input_values, volumes, binds, remaped_job)
-        return volumes, BindDict(binds)
+        files = []
 
-    def _remap_obj(self, inputs, input_values, volumes, binds, remaped_job,
-                   parent=None):
-        is_single = lambda i: i.constructor.name == 'file' and i.depth == 0
-        is_list = lambda i: i.constructor.name == 'file' and i.depth == 1
-        if inputs:
-            single = filter(is_single, [i for i in inputs])
-            lists = filter(is_list, [i for i in inputs])
-            for inp in single:
-                self._remap_single(inp, input_values, volumes, binds,
-                                   remaped_job, parent)
-            for inp in lists:
-                self._remap_list(
-                    inp, input_values, volumes, binds, remaped_job,
-                    parent, inp.depth)
+        def append_file(v):
+            if isinstance(v, File):
+                files.append(v)
 
-    def _remap_single(
-            self, inp, input_values, volumes, binds, remaped_job, parent):
-        if input_values.get(inp.id):
-            if parent:
-                docker_dir = '/' + '/'.join([parent, inp.id])
-            else:
-                docker_dir = '/' + inp.id
-            dir_name, file_name = os.path.split(
-                os.path.abspath(input_values[inp.id].path))
-            volumes[docker_dir] = {}
-            binds[docker_dir] = dir_name
-            remaped_job[inp.id].path = '/'.join(
-                [docker_dir, file_name])
+        map_rec_collection(append_file, job.inputs)
 
-    def _remap_list(
-            self, inp, input_values, volumes, binds, remaped_job,
-            parent, depth):
-        if input_values.get(inp.id):
+        flattened = self.flatten_files(files)
+        prefixes = self.collect_prefixes([dirname(f.path) for f in flattened])
 
-            for num, inv in enumerate(input_values[inp.id]):
-                if parent:
-                    docker_dir = '/' + '/'.join([parent, inp.id, six.text_type(num)])
+        for idx, p in enumerate(prefixes):
+            mapping = '/inputs/%s/' % idx
+            volumes[mapping] = {}
+            binds[p] = mapping
+
+        for file in files:
+            file.remap(binds)
+
+        return volumes, binds
+
+    @staticmethod
+    def flatten_files(files):
+        flattened = []
+        for file in files:
+            flattened.append(file)
+            flattened.extend(file.secondary_files)
+        return flattened
+
+    @staticmethod
+    def collect_prefixes(paths):
+        """
+        >>> DockerContainer.collect_prefixes(['/a/b', '/a/b/c'])
+        set(['/a/b/'])
+        >>> DockerContainer.collect_prefixes(['/a/b/c', '/a/b/d'])
+        set(['/a/b/d/', '/a/b/c/'])
+        >>> DockerContainer.collect_prefixes(['/a/b', '/c/d'])
+        set(['/a/b/', '/c/d/'])
+        >>> DockerContainer.collect_prefixes(['/a/b', '/a/b/c', '/c/d'])
+        set(['/a/b/', '/c/d/'])
+
+        :param paths:
+        :return:
+        """
+        prefix_tree = {}
+        paths_parts = [path.split('/') for path in paths]
+        for path in paths_parts:
+            cur = prefix_tree
+            last = len(path) - 1
+            for idx, part in enumerate(path):
+                if part not in cur:
+                    cur[part] = (idx == last, {})
+                term, cur = cur[part]
+                if term:
+                    break
+
+        prefixes = set()
+
+        def collapse(prefix, tree):
+            for k, (term, v) in six.iteritems(tree):
+                p = prefix + k + '/'
+                if term:
+                    prefixes.add(p)
                 else:
-                    docker_dir = '/' + '/'.join([inp.id, six.text_type(num)])
-                dir_name, file_name = os.path.split(
-                    os.path.abspath(inv.path))
-                volumes[docker_dir] = {}
-                binds[docker_dir] = dir_name
-                remaped_job[inp.id][num].path = '/'.join(
-                    [docker_dir, file_name])
+                    collapse(p, v)
+
+        collapse('', prefix_tree)
+
+        return prefixes
 
     def set_config(self, *args, **kwargs):
         self.prepare_paths(kwargs.get('job'))
@@ -147,7 +160,7 @@ class DockerContainer(Container):
                                                      six.text_type(os.getgid())])
         self.job_dir = kwargs.get('job_dir')
         self.volumes['/' + self.job_dir] = {}
-        self.binds['/' + self.job_dir] = os.path.abspath(self.job_dir)
+        self.binds[os.path.abspath(self.job_dir)] = '/' + self.job_dir
         self.stderr = kwargs.get('stderr') or 'out.err'
         cfg = {
             "Image": self.image_id,
@@ -245,3 +258,7 @@ class DockerContainer(Container):
     @classmethod
     def from_dict(cls, context, d):
         return cls(d.get('uri'), d.get('imageId'))
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()

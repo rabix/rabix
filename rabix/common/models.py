@@ -110,11 +110,10 @@ class URL(object):
             raise RabixError("Can't remap non-local paths")
         if not isabs(self.path):
             raise RabixError("Can't remap non-absolute paths")
-
         for k, v in six.iteritems(mappings):
             if self.path.startswith(k):
-                v += '' if v.endswith('/') else '/'
-                return URL(urljoin(v, self.path.lstrip(k)))
+                ls = self.path[len(k):]
+                return URL(urljoin(v, ls))
 
         return self
 
@@ -180,10 +179,14 @@ class File(object):
 
     def rebase(self, base):
         self.url = self.url.join(base)
+        for sf in self.secondary_files:
+            sf.rebase(base)
         return self
 
     def remap(self, mappings):
         self.url = self.url.remap(mappings)
+        for sf in self.secondary_files:
+            sf.remap(mappings)
         return self
 
     def __str__(self):
