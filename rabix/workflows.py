@@ -224,8 +224,9 @@ class PartialJob(object):
         self.result = result
         for k, v in six.iteritems(result):
             log.debug("Propagating result: %s, %s" % (k, v))
-            for out in self.outputs[k]:
-                out.resolve_input(v)
+            if self.outputs.get(k):
+                for out in self.outputs[k]:
+                    out.resolve_input(v)
 
     def job(self):
         return Job(None, self.app, self.inputs, {}, self.context)
