@@ -131,52 +131,41 @@ def rebase_input_path(constructor, value, base):
             )
         constructor = matched
 
+    rebased = value
+
     if constructor.name == 'object':
+        rebased = {
+            k: rebase_input_path(constructor.properties[k], v, base)
+            for k, v in six.iteritems(value)
+            if k in constructor.properties
+        }
 
-        def do_rebase_obj(val):
-            ret = {}
-            for k, v in six.iteritems(val):
-                c = constructor.properties.get(k)
-                rebased = None
-                if c:
-                    rebased = rebase_input_path(constructor.properties[k], v, base)
-                if rebased:
-                    ret[k] = rebased
-            return ret
+    elif constructor.name == 'array':
+        rebased = [rebase_input_path(constructor.item_constructor, item, base)
+                   for item in value]
 
-        return [v for v in map_rec_list(do_rebase_obj, value) if v]
+    elif constructor.name == 'file':
+        if isinstance(value, dict):
+            value['path'] = to_abspath(value['path'], base)
+            rebased = value
+        else:
+            rebased = to_abspath(value, base)
 
-    if constructor.name == 'array':
-        ret = []
-        for item in value:
-            rebased = rebase_input_path(constructor.item_constructor, item, base)
-            if rebased:
-                ret.append(rebased)
-        return ret
-
-    def do_rebase(v):
-        if isinstance(v, dict):
-            v['path'] = to_abspath(v['path'], base)
-            return v
-        return to_abspath(v, base)
-
-    if constructor.name == 'file':
-        return map_rec_list(do_rebase, value)
-
-    return None
+    return rebased
 
 
 def rebase_paths(app, input_values, base):
-    file_inputs = {}
+    rebased = {}
     for input_name, val in six.iteritems(input_values):
         input = app.get_input(input_name)
         if not input:
-            print("Unknown input: %s" % input_name)
+            print("Unknown input: %s, skipping" % input_name)
             continue
-        rebased = rebase_input_path(input.constructor, val, base)
-        if rebased:
-            file_inputs[input_name] = rebased
-    return dot_update_dict(input_values, file_inputs)
+        rebased[input_name] = map_rec_list(
+            lambda v: rebase_input_path(input.constructor, v, base),
+            val
+        )
+    return rebased
 
 
 ###
@@ -276,9 +265,7 @@ def conformance_test(context, app, job_dict, basedir):
         })
 
     inputs = rebase_paths(app, job_dict['inputs'], basedir)
-    inputs = get_inputs(app, inputs)
-
-    dot_update_dict(job_dict['inputs'], inputs)
+    job_dict['inputs'] = get_inputs(app, inputs)
 
     job = context.from_dict(job_dict)
 
