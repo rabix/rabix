@@ -337,18 +337,14 @@ def main():
             basedir = os.path.dirname(args.get('--inp-file'))
             input_file = from_url(args.get('--inp-file'))
             rebased = rebase_paths(app, input_file, basedir)
-            dot_update_dict(
-                job_dict['inputs'],
-                get_inputs(app, rebased)
-            )
+            job_dict['inputs'].update(get_inputs(app, rebased))
 
         input_usage = job_dict['inputs']
 
         if job:
             basedir = os.path.dirname(args.get('<tool>'))
             rebased = rebase_paths(app, job.inputs, basedir)
-            dot_update_dict(job.inputs, rebased)
-            job.inputs.update(get_inputs(app, job.inputs))
+            job.inputs = get_inputs(app, rebased)
             input_usage.update(job.inputs)
 
         app_inputs_usage = make_app_usage_string(
