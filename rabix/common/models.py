@@ -12,6 +12,7 @@ from base64 import b64decode
 from os.path import isabs
 
 from rabix.common.errors import ValidationError, RabixError
+from rabix.common.util import map_rec_list
 
 
 log = logging.getLogger(__name__)
@@ -42,6 +43,20 @@ class App(object):
 
     def get_output(self, name):
         return self._outputs.get(name)
+
+    def construct_inputs(self, inputs):
+        return self.construct(self.inputs, inputs)
+
+    def construct_outputs(self, outputs):
+        return self.construct(self.outputs, outputs)
+
+    @staticmethod
+    def construct(defs, vals):
+        return {
+            input.id: map_rec_list(input.constructor, vals.get(input.id))
+            for input in defs
+            if vals.get(input.id) is not None
+        }
 
     def validate_inputs(self, input_values):
         for inp in self.inputs:

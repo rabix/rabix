@@ -184,22 +184,12 @@ def rebase_path(val, base):
 
 def get_inputs(app, args, basedir=None):
 
-    def get_arg(name):
-        return args.get('--' + name) or args.get(name)
-
-    inputs = {
-        input.id: map_rec_list(input.constructor, get_arg(input.id))
-        for input in app.inputs.io
-        if get_arg(input.id) is not None
-    }
-
-    if basedir:
-        inputs = map_rec_collection(
-            lambda v: rebase_path(v, basedir),
-            inputs
-        )
-
-    return inputs
+    basedir = basedir or os.path.abspath('.')
+    inputs = app.construct_inputs(args)
+    return map_rec_collection(
+        lambda v: rebase_path(v, basedir),
+        inputs
+    )
 
 
 def get_tool(args):
@@ -327,6 +317,12 @@ def main():
         if args['--help']:
             print(app_usage)
             return
+        # trim leading --, and ignore empty arays
+        app_inputs = {
+            k[2:]: v
+            for k, v in six.iteritems(app_inputs)
+            if v != []
+        }
 
         inp = get_inputs(app, app_inputs)
         if not job:
