@@ -5,14 +5,10 @@ import logging
 import docker
 
 from docker.errors import APIError
-from os.path import dirname
-from six.moves.urllib.parse import urlparse
 
 from rabix.cli.cli_app import Container
 from rabix.docker.container import get_image
 from rabix.common.errors import ResourceUnavailable, RabixError
-from rabix.common.util import map_rec_collection
-from rabix.common.models import File
 
 
 log = logging.getLogger(__name__)
@@ -56,7 +52,7 @@ def make_config(**kwargs):
 
 class DockerContainer(Container):
 
-    def __init__(self, uri, image_id, dockr=None):
+    def __init__(self, uri, image_id, user=None, dockr=None):
         super(DockerContainer, self).__init__()
         self.uri = uri.lstrip("docker://")\
             if uri and uri.startswith('docker:/') else uri
@@ -66,6 +62,9 @@ class DockerContainer(Container):
         self.config = {}
         self.volumes = {}
         self.binds = {}
+        self.user = user or ':'.join(
+            [six.text_type(os.getuid()), six.text_type(os.getgid())]
+        )
 
     def install(self, *args, **kwargs):
         try:
@@ -77,98 +76,19 @@ class DockerContainer(Container):
                 log.info('Image %s not found:' % self.image_id)
                 raise RuntimeError('Image %s not found:' % self.image_id)
 
-    def prepare_paths(self, job):
-        self.volumes, self.binds = self._volumes(job)
-
-    def _volumes(self, job):
+    def get_mapping(self, paths):
         volumes = {}
         binds = {}
 
-        files = []
-
-        def append_file(v):
-            if isinstance(v, File):
-                files.append(v)
-
-        map_rec_collection(append_file, job.inputs)
-
-        flattened = self.flatten_files(files)
-        prefixes = self.collect_prefixes([dirname(f.path) for f in flattened])
-
-        for idx, p in enumerate(prefixes):
-            mapping = '/inputs/%s/' % idx
+        for idx, p in enumerate(paths):
+            mapping = '/mnt/%s/' % idx
             volumes[mapping] = {}
             binds[p] = mapping
 
-        for file in files:
-            file.remap(binds)
+        self.volumes = volumes
+        self.binds = binds
 
-        return volumes, binds
-
-    @staticmethod
-    def flatten_files(files):
-        flattened = []
-        for file in files:
-            flattened.append(file)
-            flattened.extend(file.secondary_files)
-        return flattened
-
-    @staticmethod
-    def collect_prefixes(paths):
-        """
-        >>> DockerContainer.collect_prefixes(['/a/b', '/a/b/c'])
-        set(['/a/b/'])
-        >>> DockerContainer.collect_prefixes(['/a/b/c', '/a/b/d'])
-        set(['/a/b/d/', '/a/b/c/'])
-        >>> DockerContainer.collect_prefixes(['/a/b', '/c/d'])
-        set(['/a/b/', '/c/d/'])
-        >>> DockerContainer.collect_prefixes(['/a/b', '/a/b/c', '/c/d'])
-        set(['/a/b/', '/c/d/'])
-
-        :param paths:
-        :return:
-        """
-        prefix_tree = {}
-        paths_parts = [path.split('/') for path in paths]
-        for path in paths_parts:
-            cur = prefix_tree
-            last = len(path) - 1
-            for idx, part in enumerate(path):
-                if part not in cur:
-                    cur[part] = (idx == last, {})
-                term, cur = cur[part]
-                if term:
-                    break
-
-        prefixes = set()
-
-        def collapse(prefix, tree):
-            for k, (term, v) in six.iteritems(tree):
-                p = prefix + k + '/'
-                if term:
-                    prefixes.add(p)
-                else:
-                    collapse(p, v)
-
-        collapse('', prefix_tree)
-
-        return prefixes
-
-    def set_config(self, *args, **kwargs):
-        self.prepare_paths(kwargs.get('job'))
-        user = kwargs.get('user', None) or ':'.join([six.text_type(os.getuid()),
-                                                     six.text_type(os.getgid())])
-        self.job_dir = kwargs.get('job_dir')
-        self.volumes['/' + self.job_dir] = {}
-        self.binds[os.path.abspath(self.job_dir)] = '/' + self.job_dir
-        self.stderr = kwargs.get('stderr') or 'out.err'
-        cfg = {
-            "Image": self.image_id,
-            "User": user,
-            "Volumes": self.volumes,
-            "WorkingDir": self.job_dir
-        }
-        self.config = make_config(**cfg)
+        return dict(self.binds)
 
     def _start(self, cmd):
         self.config["Cmd"] = ['bash', '-c', cmd]
@@ -184,10 +104,27 @@ class DockerContainer(Container):
             raise RuntimeError('Unable to run container from image %s:'
                                % self.image_id)
 
-    def run(self, cmd):  # should be run(self, cmd_line, job)
+    def run(self, cmd, job_dir):
+
+        if not os.path.isabs(job_dir):
+            raise RabixError('job_dir must be an abslute path.')
+
+        for k, v in six.iteritems(self.binds):
+            if job_dir.startswith(k):
+                working_dir = '/'.join([v, job_dir[len(k):]])
+                break
+        else:
+            raise RabixError("Invalid working dir: " + job_dir)
+
+        cfg = {
+            "Image": self.image_id,
+            "User": self.user,
+            "Volumes": self.volumes,
+            "WorkingDir": working_dir
+        }
+        self.config = make_config(**cfg)
         self._start(cmd)
-        self.get_stderr(file='/'.join([os.path.abspath(self.job_dir),
-                                       self.stderr]))
+        self.get_stderr(file='/'.join([job_dir, 'out.err']))
         if not self.is_success():
             raise RabixError("Tool failed:\n%s" % self.get_stderr())
 
@@ -258,7 +195,3 @@ class DockerContainer(Container):
     @classmethod
     def from_dict(cls, context, d):
         return cls(d.get('uri'), d.get('imageId'))
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
