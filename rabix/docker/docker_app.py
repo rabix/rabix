@@ -67,14 +67,24 @@ class DockerContainer(Container):
         )
 
     def install(self, *args, **kwargs):
-        try:
-            get_image(self.docker_client,
-                      image_id=self.image_id,
-                      repo=self.uri)
-        except APIError as e:
-            if e.response.status_code == 404:
-                log.info('Image %s not found:' % self.image_id)
-                raise RuntimeError('Image %s not found:' % self.image_id)
+
+        image = get_image(
+                self.docker_client,
+                image_id=self.image_id,
+                repo=self.uri
+        )
+
+        if not image:
+            log.info('Image %s not found:' % self.image_id)
+            raise RabixError('Image %s not found:' % self.image_id)
+
+        if self.image_id and image['Id'] != self.image_id:
+            raise RabixError(
+                'Wrong id of pulled image: expected "%s", got "%s"'
+                % (self.image_id, image['Id'])
+            )
+
+        self.image_id = image['Id']
 
     def get_mapping(self, paths):
         volumes = {}

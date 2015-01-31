@@ -221,7 +221,6 @@ class CliApp(App):
         if not self._command_line:
             self.remap_paths(job.inputs, job_dir)
             self._command_line = self.cli_job.cmd_line()
-        # print(self._command_line)
         return self._command_line
 
     def install(self, *args, **kwargs):
