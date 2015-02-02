@@ -78,7 +78,7 @@ class DockerContainer(Container):
             log.info('Image %s not found:' % self.image_id)
             raise RabixError('Image %s not found:' % self.image_id)
 
-        if self.image_id and image['Id'] != self.image_id:
+        if self.image_id and not image['Id'].startswith(self.image_id):
             raise RabixError(
                 'Wrong id of pulled image: expected "%s", got "%s"'
                 % (self.image_id, image['Id'])

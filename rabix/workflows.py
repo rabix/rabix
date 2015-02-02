@@ -7,7 +7,7 @@ from collections import namedtuple, defaultdict
 from altgraph.Graph import Graph
 
 from rabix.common.errors import ValidationError, RabixError
-from rabix.common.util import wrap_in_list, map_rec_list
+from rabix.common.util import wrap_in_list
 from rabix.common.models import App, IO, Job
 from rabix.schema import JsonSchema
 
@@ -239,9 +239,7 @@ class ExecRelation(object):
         self.input_port = input_port
 
     def resolve_input(self, result):
-        io = self.node.app.get_input(self.input_port)
-        res = map_rec_list(io.constructor, result)
-        self.node.resolve_input(self.input_port, res)
+        self.node.resolve_input(self.input_port, result)
 
 
 class OutRelation(object):

@@ -158,6 +158,9 @@ class File(object):
 
         if isinstance(path, dict):
             self.from_dict(path)
+        elif isinstance(path, File):
+            self.size, self.meta, self.secondary_files, self.url = \
+                path.size, path.meta, path.secondary_files, path.url
         else:
             self.path = path
 
