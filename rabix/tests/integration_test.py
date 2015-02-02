@@ -78,3 +78,12 @@ def test_override_input():
     main()
     assert os.path.exists(os.path.abspath('./test_override_input') + '/output.sam')
     shutil.rmtree(os.path.abspath('./test_override_input'))
+
+if __name__ == '__main__':
+    # sys.argv = ['rabix', '-i', 'rabix/tests/test-cmdline/bwa-mem_obj.json#inputs',
+    # 'rabix/tests/test-cmdline/bwa-mem_obj.json#tool']
+    # sys.argv = ['rabix', 'rabix/tests/test-cmdline/tmap.json#mapall']
+    sys.argv = ['rabix',
+                '/home/sinisa/devel/CWL/mock_tools/test_workflow.json',
+                '--', '--input', '/home/sinisa/devel/CWL/mock_tools/test-files/input1.txt']
+    main()
