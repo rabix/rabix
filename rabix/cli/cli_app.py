@@ -218,9 +218,8 @@ class CliApp(App):
             return outputs
 
     def command_line(self, job, job_dir=None):
-        if not self._command_line:
-            self.remap_paths(job.inputs, job_dir)
-            self._command_line = self.cli_job.cmd_line()
+        self.remap_paths(job.inputs, job_dir)
+        self._command_line = self.cli_job.cmd_line()
         return self._command_line
 
     def install(self, *args, **kwargs):

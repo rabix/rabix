@@ -224,7 +224,8 @@ class CLIJob(object):
             adapter = v['adapter']
             ret = os.getcwd()
             os.chdir(job_dir)
-            files = glob.glob(self.eval.resolve(adapter['glob'], job=job))
+            pattern = self.eval.resolve(adapter.get('glob'), job=job) or ""
+            files = glob.glob(pattern)
             result[k] = [{'path': os.path.abspath(p),
                           'metadata': meta(p, job.inputs, self.eval, adapter),
                           'secondaryFiles': secondary_files(p, adapter, self.eval)} for p in files]
