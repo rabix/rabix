@@ -108,3 +108,39 @@ mock_app_bad_repo = {
         }
     }
 }
+
+result_parallel_workflow = {
+    "output_file": {
+        "path": "chr20.file_prefix.lst.\d.fa",
+        "secondaryFiles": {
+            "path": "chr20.file_prefix.lst.\d.fa.idx"
+        },
+        "metadata": {
+            "file_type": "text"
+        }
+    },
+    "index_file": {
+        "path": "chr20.file_prefix.lst.\d.fa.idx",
+        "metadata": {
+            "file_type": "text"
+        }
+    }
+}
+
+result_nested_workflow = {
+    "output_file": {
+        "path": "result",
+        "secondaryFiles": {
+            "path": "result.bai"
+        },
+        "metadata": {
+            "file_type": "text"
+        }
+    },
+    "index_file": {
+        "path": "result.bai",
+        "metadata": {
+            "file_type": "text"
+        }
+    }
+}

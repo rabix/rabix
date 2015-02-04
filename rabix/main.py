@@ -5,14 +5,15 @@ import sys
 import logging
 import six
 import json
+import copy
 
 from rabix import __version__ as version
 from rabix.common.util import log_level, dot_update_dict, map_or_apply,\
-    map_rec_list, to_abspath
-from rabix.common.models import Job, IO, ObjectConstructor, ArrayConstructor, FileConstructor
+    map_rec_list, map_rec_collection
+from rabix.common.models import Job, IO, File
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
-from rabix.common.errors import RabixError
+from rabix.common.errors import RabixError, ValidationError
 from rabix.executor import Executor
 from rabix.cli import CliApp, CLIJob
 
@@ -119,53 +120,6 @@ def fix_types(tool, toplevelType=None):
         outputs['@type'] = 'JsonSchema'
 
 
-def rebase_input_path(constructor, value, base):
-    if isinstance(constructor, ObjectConstructor):
-
-        def do_rebase_obj(val):
-            ret = {}
-            for k, v in six.iteritems(val):
-                c = constructor.properties.get(k)
-                rebased = None
-                if c:
-                    rebased = rebase_input_path(constructor.properties[k], v, base)
-                if rebased:
-                    ret[k] = rebased
-            return ret
-
-        return map_rec_list(do_rebase_obj, value)
-
-    if isinstance(constructor, ArrayConstructor):
-        ret = []
-        for item in value:
-            rebased = rebase_input_path(constructor.item_constructor, item, base)
-            if rebased:
-                ret.append(rebased)
-        return ret
-
-    def do_rebase(v):
-        if isinstance(v, dict):
-            v['path'] = to_abspath(v['path'], base)
-            return v
-        return to_abspath(v, base)
-
-    if isinstance(constructor, FileConstructor):
-        return map_rec_list(do_rebase, value)
-
-    return None
-
-
-def rebase_paths(app, input_values, base):
-    file_inputs = {}
-    for input_name, val in six.iteritems(input_values):
-        input = app.get_input(input_name)
-        rebased = rebase_input_path(input.constructor, val, base)
-        if rebased:
-            file_inputs[input_name] = rebased
-
-    return dot_update_dict(input_values, file_inputs)
-
-
 ###
 # usage strings
 ###
@@ -186,17 +140,17 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
     inp = inp or {}
 
     def resolve(k, v, usage_str, param_str, inp):
-        if isinstance(v.constructor, ObjectConstructor):
+        if v.constructor.name == 'object':
             return
 
-        to_append = usage_str if isinstance(v.constructor, FileConstructor)\
+        to_append = usage_str if v.constructor.name == 'file'\
             else param_str
 
         cname = getattr(v.constructor, 'name', None) or \
             getattr(v.constructor, '__name__', 'val')
 
         prefix = '--%s' % k
-        suffix = '' if v.constructor == bool else '=<%s>' % cname
+        suffix = '' if v.constructor.name == 'boolean' else '=<%s>' % cname
 
         arg = prefix + suffix
 
@@ -223,16 +177,20 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
                            inputs=' '.join(usage_str))
 
 
-def get_inputs(app, args):
+def rebase_path(val, base):
+    if isinstance(val, File):
+        return val.rebase(base)
+    return val
 
-    def get_arg(name):
-        return args.get('--' + name) or args.get(name)
 
-    return {
-        input.id: map_rec_list(input.constructor, get_arg(input.id))
-        for input in app.inputs.io
-        if get_arg(input.id)
-    }
+def get_inputs(app, args, basedir=None):
+
+    basedir = basedir or os.path.abspath('.')
+    inputs = app.construct_inputs(args)
+    return map_rec_collection(
+        lambda v: rebase_path(v, basedir),
+        inputs
+    )
 
 
 def get_tool(args):
@@ -262,11 +220,7 @@ def conformance_test(context, app, job_dict, basedir):
             'properties': {}
         })
 
-    inputs = rebase_paths(app, job_dict['inputs'], basedir)
-    inputs = get_inputs(app, inputs)
-
-    dot_update_dict(job_dict['inputs'], inputs)
-
+    job_dict['inputs'] = get_inputs(app, job_dict['inputs'], basedir)
     job = context.from_dict(job_dict)
 
     adapter = CLIJob(job)
@@ -330,25 +284,20 @@ def main():
 
     try:
         args = docopt.docopt(usage, version=version, help=False)
-        job_dict = TEMPLATE_JOB
+        job_dict = copy.deepcopy(TEMPLATE_JOB)
         logging.root.setLevel(log_level(dry_run_args['--verbose']))
 
         if args['--inp-file']:
             basedir = os.path.dirname(args.get('--inp-file'))
             input_file = from_url(args.get('--inp-file'))
-            rebased = rebase_paths(app, input_file, basedir)
-            dot_update_dict(
-                job_dict['inputs'],
-                get_inputs(app, rebased)
-            )
+            inputs = get_inputs(app, input_file, basedir)
+            job_dict['inputs'].update(inputs)
 
         input_usage = job_dict['inputs']
 
         if job:
             basedir = os.path.dirname(args.get('<tool>'))
-            rebased = rebase_paths(app, job.inputs, basedir)
-            dot_update_dict(job.inputs, rebased)
-            job.inputs.update(get_inputs(app, job.inputs))
+            job.inputs = get_inputs(app, job.inputs, basedir)
             input_usage.update(job.inputs)
 
         app_inputs_usage = make_app_usage_string(
@@ -369,15 +318,20 @@ def main():
         if args['--help']:
             print(app_usage)
             return
+        # trim leading --, and ignore empty arays
+        app_inputs = {
+            k[2:]: v
+            for k, v in six.iteritems(app_inputs)
+            if v != []
+        }
 
         inp = get_inputs(app, app_inputs)
         if not job:
-            job_dict['inputs'].update(inp)
             job_dict['@id'] = args.get('--dir')
             job_dict['app'] = app
             job = Job.from_dict(context, job_dict)
-        else:
-            job.inputs.update(inp)
+
+        job.inputs.update(inp)
 
         if args['--print-cli']:
             if not isinstance(app, CliApp):

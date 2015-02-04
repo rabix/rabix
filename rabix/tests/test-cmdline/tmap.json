@@ -145,6 +145,9 @@
         }
     },
     "mapall": {
+        "name": "TMAP_MAPALL",
+        "softwareDescription": {},
+        "documentAuthor": "boysha",
         "requirements": {
             "environment": {
                 "container": {

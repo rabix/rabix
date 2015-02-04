@@ -4,13 +4,14 @@ import logging
 import os
 import glob
 import copy
+import shlex
 
 from jsonschema import Draft4Validator
 import jsonschema.exceptions
 from six.moves import reduce
 
 from rabix.common.ref_resolver import resolve_pointer
-from rabix.common.util import sec_files_naming_conv
+from rabix.common.util import sec_files_naming_conv, wrap_in_list
 from rabix.expressions import Evaluator
 
 log = logging.getLogger(__name__)
@@ -22,23 +23,25 @@ class AdapterEvaluator(object):
         self.job = job
         self.ev = Evaluator()
 
-    def evaluate(self, expr_object, context=None):
+    def evaluate(self, expr_object, context=None, job=None):
         if isinstance(expr_object, dict):
             return self.ev.evaluate(
                 expr_object.get('lang', 'javascript'),
                 expr_object.get('value'),
-                self.job.to_dict(),
+                job.to_dict() if job else self.job.to_dict(),
                 context
             )
         else:
-            return self.ev.evaluate('javascript', expr_object, self.job.to_dict(), context)
+            return self.ev.evaluate('javascript', expr_object,
+                                    job.to_dict() if job else
+                                    self.job.to_dict(), context)
 
-    def resolve(self, val, context=None):
+    def resolve(self, val, context=None, job=None):
         if not isinstance(val, dict):
             return val
         if 'expr' in val or '$expr' in val:
             v = val.get('expr') or val.get('$expr')
-            return self.evaluate(v, context)
+            return self.evaluate(v, context, job=job)
         if 'job' in val or '$job' in val:
             v = val.get('job') or val.get('$job')
             return resolve_pointer(self.job.to_dict(), v)
@@ -68,9 +71,9 @@ def meta(path, inputs, eval, adapter):
     return result
 
 
-def secondaryFiles(p, adapter):
+def secondary_files(p, adapter, evaluator):
     secondaryFiles = []
-    secFiles = adapter.get('secondaryFiles', [])
+    secFiles = wrap_in_list(evaluator.resolve(adapter.get('secondaryFiles', [])))
     for s in secFiles:
         path = sec_files_naming_conv(p, s)
         secondaryFiles.append({'path': path})
@@ -98,7 +101,6 @@ class InputAdapter(object):
     __str__ = lambda self: six.text_type(self.value)
     __repr__ = lambda self: 'InputAdapter(%s)' % self
     position = property(lambda self: (self.adapter.get('order', 9999999), self.key))
-    # transform = property(lambda self: self.adapter.get('value'))
     prefix = property(lambda self: self.adapter.get('prefix'))
     item_separator = property(lambda self: self.adapter.get('itemSeparator', ','))
 
@@ -117,14 +119,14 @@ class InputAdapter(object):
         return self.as_primitive()
 
     def as_primitive(self):
-        if self.value in (None, False):
+        if self.value is None or self.value is False:
             return []
         if self.value is True:
             if not self.prefix:
                 raise ValueError('Boolean arguments must have a prefix.')
             return [self.prefix]
         if not self.prefix:
-            return [self.value]
+            return [six.text_type(self.value)]
         if self.separator in [' ', None]:
             return [self.prefix, self.value]
         return [self.prefix + self.separator + six.text_type(self.value)]
@@ -134,11 +136,12 @@ class InputAdapter(object):
         adapters = [InputAdapter(v, self.evaluator, sch(k), key=k)
                     for k, v in six.iteritems(self.value)]
         adapters = (mix_with or []) + [adp for adp in adapters if adp.has_adapter]
-        return reduce(
+        res = reduce(
             operator.add,
             [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)],
             []
         )
+        return res
 
     def as_list(self):
         items = [InputAdapter(item, self.evaluator, self.schema.get('items', {}))
@@ -200,13 +203,15 @@ class CLIJob(object):
     def make_arg_list(self):
         adapters = [InputAdapter(a['value'], self.eval, {}, a)
                     for a in self.args]
-        args = InputAdapter(self.job.inputs, self.eval, self.input_schema).as_dict(adapters)
+        ia = InputAdapter(self.job.inputs, self.eval, self.input_schema)
+        args = ia.as_dict(adapters)
         base_cmd = [self.eval.resolve(item) for item in self.base_cmd]
 
         return [six.text_type(arg) for arg in base_cmd + args]
 
     def cmd_line(self):
         a = self.make_arg_list()
+
         if self._stdin:
             a += ['<', self.stdin]
         if self._stdout:
@@ -219,10 +224,11 @@ class CLIJob(object):
             adapter = v['adapter']
             ret = os.getcwd()
             os.chdir(job_dir)
-            files = glob.glob(self.eval.resolve(adapter['glob']))
+            pattern = self.eval.resolve(adapter.get('glob'), job=job) or ""
+            files = glob.glob(pattern)
             result[k] = [{'path': os.path.abspath(p),
                           'metadata': meta(p, job.inputs, self.eval, adapter),
-                          'secondaryFiles': secondaryFiles(p, adapter)} for p in files]
+                          'secondaryFiles': secondary_files(p, adapter, self.eval)} for p in files]
             os.chdir(ret)
             if v['type'] != 'array':
                 result[k] = result[k][0] if result[k] else None

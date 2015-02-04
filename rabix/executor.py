@@ -16,10 +16,10 @@ class Executor(object):
         d = 0
         cur = val
         while isinstance(cur, list):
+            d += 1
             if not cur:
                 break
             cur = cur[0]
-            d += 1
 
         return d
 
