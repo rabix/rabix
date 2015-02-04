@@ -5,6 +5,7 @@ import sys
 import logging
 import six
 import json
+import copy
 
 from rabix import __version__ as version
 from rabix.common.util import log_level, dot_update_dict, map_or_apply,\
@@ -283,7 +284,7 @@ def main():
 
     try:
         args = docopt.docopt(usage, version=version, help=False)
-        job_dict = TEMPLATE_JOB
+        job_dict = copy.deepcopy(TEMPLATE_JOB)
         logging.root.setLevel(log_level(dry_run_args['--verbose']))
 
         if args['--inp-file']:

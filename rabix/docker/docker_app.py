@@ -69,9 +69,9 @@ class DockerContainer(Container):
     def install(self, *args, **kwargs):
 
         image = get_image(
-                self.docker_client,
-                image_id=self.image_id,
-                repo=self.uri
+            self.docker_client,
+            image_id=self.image_id,
+            repo=self.uri
         )
 
         if not image:
