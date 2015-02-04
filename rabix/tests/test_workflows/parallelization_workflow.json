@@ -1,0 +1,323 @@
+{"display": {
+    "canvas": {
+        "x": 2,
+        "y": -1,
+        "zoom": 1
+    },
+    "nodes": {
+        "create_file": {
+            "x": 303.8888854980469,
+            "y": 366.5833435058594
+        },
+        "input": {
+            "x": 96.9930419921875,
+            "y": 365.99999618530273
+        },
+        "create_list_1": {
+            "x": 506.8888854980469,
+            "y": 368.5833435058594
+        },
+        "index_file": {
+            "x": 772.888916015625,
+            "y": 369.5833435058594
+        },
+        "output": {
+            "x": 1371.9930419921875,
+            "y": 216.99999618530273
+        },
+        "output_1": {
+            "x": 1390.9930419921875,
+            "y": 495.99999618530273
+        }
+    }
+}, "@type": "Workflow", "steps": [
+    {
+        "id": "index_file",
+        "app": {
+            "documentAuthor": "",
+            "requirements": {
+                "resources": {
+                    "network": false,
+                    "diskSpace": 0,
+                    "ports": [],
+                    "mem": 5000,
+                    "cpu": 0
+                },
+                "environment": {
+                    "container": {
+                        "imageId": "780e89383c67",
+                        "uri": "index_file:latest",
+                        "type": "docker"
+                    }
+                }
+            },
+            "inputs": {
+                "type": "object",
+                "required": [],
+                "properties": {
+                    "suffix": {
+                        "type": "string",
+                        "adapter": {
+                            "separator": " ",
+                            "order": 1
+                        }
+                    },
+                    "input_file": {
+                        "type": "file",
+                        "adapter": {
+                            "separator": " ",
+                            "prefix": "",
+                            "order": 0,
+                            "streamable": false
+                        }
+                    }
+                }
+            },
+            "outputs": {
+                "type": "object",
+                "required": [],
+                "properties": {
+                    "output_file": {
+                        "adapter": {
+                            "glob": {
+                                "$expr": "{ \n  return $job.inputs.input_file.path\n}"
+                            },
+                            "secondaryFiles": {
+                                "$expr": "\".\" + $job.inputs.suffix"
+                            },
+                            "metadata": {
+                                "file_type": "text"
+                            }
+                        },
+                        "type": "file"
+                    },
+                    "index_file": {
+                        "type": "file",
+                        "adapter": {
+                            "metadata": {
+                                "__inherit__": "input_file",
+                                "file_type": "text"
+                            },
+                            "glob": {
+                                "$expr": "{ \n  var filename = $job.inputs.input_file.path\n  var lst = filename.split('.')\n  lst[lst.length] = $job.inputs.suffix\n  return lst.join('.')\n}"
+                            }
+                        }
+                    }
+                }
+            },
+            "adapter": {
+                "args": [],
+                "stdout": "",
+                "baseCmd": ["python3", "/opt/index_file.py"]
+            },
+            "@type": "CommandLine",
+            "description": "",
+            "schema": "https://github.com/common-workflow-language/common-workflow-language/blob/draft-1/specification/tool-description.md",
+            "name": "index_file"
+        },
+        "inputs": {
+            "input_file": {
+                "$from": "create_list_1.output_file"
+            },
+            "suffix": "idx"
+        },
+        "outputs": {
+            "output_file": {
+                "$to": "output"
+            },
+            "index_file": {
+                "$to": "output_1"
+            }
+        }
+    },
+    {
+        "id": "create_file",
+        "app": {
+            "@type": "CommandLine",
+            "adapter": {
+                "args": [],
+                "stdout": "",
+                "baseCmd": ["python3", "/opt/create_file.py"]
+            },
+            "outputs": {
+                "properties": {
+                    "output_file": {
+                        "adapter": {
+                            "glob": {
+                                "$expr": "{ \n  var filename = $job.inputs.input_file.path.split('/') \n  var lst = filename[filename.length-1].split('.')\n  lst[lst.length] = lst[lst.length-1]\n  lst[lst.length-2] = $job.inputs.name_prefix\n  return lst.join('.')\n}"
+                            },
+                            "metadata": {
+                                "file_type": "text",
+                                "__inherit__": "input_file"
+                            }
+                        },
+                        "type": "file"
+                    }
+                },
+                "required": [],
+                "type": "object"
+            },
+            "inputs": {
+                "properties": {
+                    "name_prefix": {
+                        "adapter": {
+                            "order": 1,
+                            "separator": " "
+                        },
+                        "type": "string"
+                    },
+                    "input_file": {
+                        "adapter": {
+                            "streamable": false,
+                            "order": 0,
+                            "prefix": "",
+                            "separator": " "
+                        },
+                        "type": "file"
+                    }
+                },
+                "required": [],
+                "type": "object"
+            },
+            "requirements": {
+                "resources": {
+                    "network": false,
+                    "diskSpace": 0,
+                    "ports": [],
+                    "mem": 5000,
+                    "cpu": 0
+                },
+                "environment": {
+                    "container": {
+                        "imageId": "fd5ad5183651",
+                        "uri": "create_file:latest",
+                        "type": "docker"
+                    }
+                }
+            },
+            "documentAuthor": "",
+            "description": "",
+            "name": "create_file"
+        },
+        "inputs": {
+            "input_file": {
+                "$from": "input"
+            },
+            "name_prefix": "file_prefix"
+        },
+        "outputs": {}
+    },
+    {
+        "id": "create_list_1",
+        "app": {
+            "@type": "CommandLine",
+            "adapter": {
+                "args": [],
+                "stdout": "",
+                "baseCmd": ["python3", "/opt/create_list.py"]
+            },
+            "outputs": {
+                "properties": {
+                    "output_file": {
+                        "items": {
+                            "type": "file"
+                        },
+                        "adapter": {
+                            "streamable": false,
+                            "glob": {
+                                "$expr": "{ \n  var filename = $job.inputs.input_file.path.split('/') \n  var lst = filename[filename.length-1].split('.')\n  lst[lst.length+1] = lst[lst.length-1]\n  lst[lst.length-2] = '*' \n  lst[lst.length-3] = $job.inputs.name_prefix\n  return lst.join('.')\n}"
+                            },
+                            "metadata": {
+                                "file_type": "text",
+                                "__inherit__": "input_file"
+                            }
+                        },
+                        "type": "array"
+                    }
+                },
+                "required": [],
+                "type": "object"
+            },
+            "inputs": {
+                "properties": {
+                    "number_of_files": {
+                        "adapter": {
+                            "order": 2,
+                            "prefix": "",
+                            "separator": " "
+                        },
+                        "type": "integer"
+                    },
+                    "name_prefix": {
+                        "adapter": {
+                            "order": 1,
+                            "separator": " "
+                        },
+                        "type": "string"
+                    },
+                    "input_file": {
+                        "adapter": {
+                            "streamable": false,
+                            "order": 0,
+                            "prefix": "",
+                            "separator": " "
+                        },
+                        "type": "file"
+                    }
+                },
+                "required": [],
+                "type": "object"
+            },
+            "requirements": {
+                "resources": {
+                    "network": false,
+                    "diskSpace": 0,
+                    "ports": [],
+                    "mem": 5000,
+                    "cpu": 0
+                },
+                "environment": {
+                    "container": {
+                        "imageId": "be7e18a6bfa8",
+                        "uri": "images.sbgenomics.com/sinisa/create_list:latest",
+                        "type": "docker"
+                    }
+                }
+            },
+            "documentAuthor": "",
+            "description": "",
+            "name": "create_list"
+        },
+        "inputs": {
+            "input_file": {
+                "$from": "create_file.output_file"
+            },
+            "number_of_files": 3,
+            "name_prefix": "lst"
+        },
+        "outputs": {}
+    }
+], "inputs": {
+    "type": "object",
+    "properties": {
+        "input": {
+            "name": "input",
+            "id": "input",
+            "type": "file"
+        }
+    }
+}, "outputs": {
+    "type": "object",
+    "properties": {
+        "output": {
+            "name": "output",
+            "id": "output",
+            "type": "file"
+        },
+        "output_1": {
+            "name": "output_1",
+            "id": "output_1",
+            "type": "file"
+        }
+    }
+}}

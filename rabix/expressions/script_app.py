@@ -34,7 +34,7 @@ class ScriptApp(App):
             raise RabixError("invalid script")
 
         result = self.evaluator.evaluate(lang, expr, job.to_dict(self.context), None)
-        return result
+        return self.construct_outputs(result)
 
     def to_dict(self, context):
         d = super(ScriptApp, self).to_dict(context)

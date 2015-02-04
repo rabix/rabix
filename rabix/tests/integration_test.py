@@ -1,11 +1,14 @@
 import os
+import re
 import sys
+import six
 import json
 import shutil
 
 from nose.tools import raises
 
-from rabix.tests import mock_app_bad_repo, mock_app_good_repo
+from rabix.tests import mock_app_bad_repo, mock_app_good_repo, \
+    result_parallel_workflow, result_nested_workflow
 from rabix.main import main
 from rabix.docker import docker_client, get_image
 
@@ -78,3 +81,69 @@ def test_override_input():
     main()
     assert os.path.exists(os.path.abspath('./test_override_input') + '/output.sam')
     shutil.rmtree(os.path.abspath('./test_override_input'))
+
+
+def check_result(dir, res):
+
+    def compare_file(myfile, resfile):
+        for k, v in six.iteritems(myfile):
+            if k == 'path':
+                print resfile
+                assert re.match(resfile.get('path'), os.path.basename(v))
+            elif k == 'secondaryFiles':
+                compare_output(v, resfile.get('secondaryFiles'))
+            else:
+                assert v == resfile.get(k)
+
+    def compare_output(myoutput, resoutput):
+        if isinstance(myoutput, list):
+            for out in myoutput:
+                compare_file(out, resoutput)
+        else:
+            compare_file(myoutput, resoutput)
+
+    with open('/'.join([dir, 'result.cwl.json']), 'r') as f:
+        dct = json.load(f)
+        for k, v in six.iteritems(dct):
+            compare_output(v, res.get(k))
+
+
+def test_parallelization():
+    '''
+    Testing implicit parallelization in workflows
+    '''
+    cwd = os.getcwd()
+    try:
+        os.mkdir('test_parralelization')
+        sys.argv = ['rabix', '../rabix/tests/test_workflows/parallelization_workflow.json',
+                    '--', '--input', '../rabix/tests/test-files/chr20.fa']
+
+        os.chdir('./test_parralelization')
+        main()
+        dir = filter(lambda x: os.path.isdir(x) and 'index_file' in x, os.walk('.').next()[1])
+        for d in dir:
+            check_result(d, result_parallel_workflow)
+    finally:
+        os.chdir(cwd)
+        shutil.rmtree(os.path.abspath('./test_parralelization'))
+
+
+def test_nested_workflow():
+    '''
+    Testing nested workflows, inputs type directory and
+    tools which creates index files
+    '''
+    cwd = os.getcwd()
+    try:
+        os.mkdir('test_workflow')
+        sys.argv = ['rabix', '../rabix/tests/test_workflows/nested_workflow.json',
+                    '--', '--input', '../rabix/tests/test-files/chr20.fa']
+        os.chdir('./test_workflow')
+        main()
+        dir = filter(lambda x: os.path.isdir(x) and 'index_file' in x,
+                     os.walk('.').next()[1])
+        for d in dir:
+            check_result(d, result_nested_workflow)
+    finally:
+        os.chdir(cwd)
+        shutil.rmtree(os.path.abspath('./test_workflow'))
