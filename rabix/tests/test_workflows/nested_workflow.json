@@ -1,0 +1,416 @@
+{"display": {
+    "nodes": {
+        "workflow_input_dir_and_index": {
+            "x": 843.888916015625,
+            "y": 418.5833435058594
+        },
+        "output": {
+            "x": 1411.9930419921875,
+            "y": 252.99999618530273
+        },
+        "output_1": {
+            "x": 1388.9930419921875,
+            "y": 569.9999961853027
+        },
+        "create_dir": {
+            "x": 513.888916015625,
+            "y": 421.5833435058594
+        },
+        "input": {
+            "x": 71.99301147460938,
+            "y": 417.99998474121094
+        }
+    },
+    "canvas": {
+        "zoom": 1,
+        "y": 0,
+        "x": 0
+    }
+}, "@type": "Workflow", "steps": [
+    {
+        "id": "create_dir",
+        "app": {
+            "name": "create_dir",
+            "schema": "https://github.com/common-workflow-language/common-workflow-language/blob/draft-1/specification/tool-description.md",
+            "description": "",
+            "documentAuthor": "",
+            "requirements": {
+                "environment": {
+                    "container": {
+                        "type": "docker",
+                        "uri": "create_dir:latest",
+                        "imageId": "a88f7c31b367"
+                    }
+                },
+                "resources": {
+                    "cpu": 0,
+                    "mem": 5000,
+                    "ports": [],
+                    "diskSpace": 0,
+                    "network": false
+                }
+            },
+            "inputs": {
+                "type": "object",
+                "required": [],
+                "properties": {
+                    "input_file": {
+                        "type": "file",
+                        "adapter": {
+                            "separator": " ",
+                            "prefix": "",
+                            "order": 0,
+                            "streamable": false
+                        },
+                        "name": "input_file",
+                        "id": "input_file"
+                    },
+                    "suffix_2": {
+                        "type": "string",
+                        "adapter": {
+                            "separator": " "
+                        },
+                        "name": "suffix_2",
+                        "id": "suffix_2"
+                    },
+                    "suffix_1": {
+                        "type": "string",
+                        "adapter": {
+                            "separator": " ",
+                            "order": 1
+                        },
+                        "name": "suffix_1",
+                        "id": "suffix_1"
+                    }
+                }
+            },
+            "outputs": {
+                "type": "object",
+                "required": [],
+                "properties": {
+                    "output_file": {
+                        "adapter": {
+                            "glob": {
+                                "$expr": "{ \n  var name = $job.inputs.input_file.path.split(\"/\")\n  name = name[name.length -1]\n  var split = name.split(\".\")\n  ext = split[split.length-1]\n  file_name = split.slice(0, split.length-1)\n  file_name = file_name.join('.')\n  return file_name\n}"
+                            },
+                            "metadata": {
+                                "file_type": "text"
+                            }
+                        },
+                        "type": "directory",
+                        "name": "output_file",
+                        "id": "output_file"
+                    }
+                }
+            },
+            "adapter": {
+                "baseCmd": ["python3", "/opt/create_dir.py"],
+                "stdout": "",
+                "args": []
+            },
+            "@type": "CommandLine",
+            "id": "create_dir"
+        },
+        "inputs": {
+            "input_file": {
+                "$from": "input"
+            },
+            "suffix_1": "bla1",
+            "suffix_2": "bla2"
+        },
+        "outputs": {}
+    },
+    {
+        "id": "workflow_input_dir_and_index",
+        "app": {
+            "type": "workflow",
+            "name": "workflow_input_dir_and_index",
+            "outputs": {
+                "properties": {
+                    "output": {
+                        "type": "file",
+                        "id": "output",
+                        "name": "output"
+                    },
+                    "output_1": {
+                        "type": "file",
+                        "id": "output_1",
+                        "name": "output_1"
+                    }
+                },
+                "type": "object"
+            },
+            "inputs": {
+                "properties": {
+                    "input": {
+                        "type": "file",
+                        "id": "input",
+                        "name": "input"
+                    }
+                },
+                "type": "object"
+            },
+            "steps": [
+                {
+                    "inputs": {
+                        "suffix": "result",
+                        "input_file": {
+                            "$from": "input"
+                        }
+                    },
+                    "app": {
+                        "name": "input_dir",
+                        "schema": "https://github.com/common-workflow-language/common-workflow-language/blob/draft-1/specification/tool-description.md",
+                        "description": "",
+                        "documentAuthor": "",
+                        "requirements": {
+                            "environment": {
+                                "container": {
+                                    "type": "docker",
+                                    "uri": "input_dir:latest",
+                                    "imageId": "4b397786f9e8"
+                                }
+                            },
+                            "resources": {
+                                "cpu": 0,
+                                "mem": 5000,
+                                "ports": [],
+                                "diskSpace": 0,
+                                "network": false
+                            }
+                        },
+                        "inputs": {
+                            "type": "object",
+                            "required": [],
+                            "properties": {
+                                "input_file": {
+                                    "type": "file",
+                                    "adapter": {
+                                        "separator": " ",
+                                        "prefix": "",
+                                        "order": 0,
+                                        "streamable": false
+                                    },
+                                    "name": "input_file",
+                                    "id": "input_file"
+                                },
+                                "suffix": {
+                                    "type": "string",
+                                    "adapter": {
+                                        "separator": " ",
+                                        "order": 1
+                                    },
+                                    "name": "suffix",
+                                    "id": "suffix"
+                                }
+                            }
+                        },
+                        "outputs": {
+                            "type": "object",
+                            "required": [],
+                            "properties": {
+                                "output_file": {
+                                    "adapter": {
+                                        "glob": {
+                                            "$expr": "$job.inputs.suffix"
+                                        },
+                                        "metadata": {
+                                            "file_type": "text"
+                                        },
+                                        "streamable": false
+                                    },
+                                    "type": "file",
+                                    "name": "output_file",
+                                    "id": "output_file"
+                                }
+                            }
+                        },
+                        "adapter": {
+                            "baseCmd": ["python3", "/opt/input_dir.py"],
+                            "stdout": "",
+                            "args": []
+                        },
+                        "@type": "CommandLine",
+                        "id": "input_dir"
+                    },
+                    "id": "input_dir"
+                },
+                {
+                    "outputs": {
+                        "output_file": {
+                            "$to": "output"
+                        },
+                        "index_file": {
+                            "$to": "output_1"
+                        }
+                    },
+                    "inputs": {
+                        "suffix": "bai",
+                        "input_file": {
+                            "$from": "input_dir.output_file"
+                        }
+                    },
+                    "app": {
+                        "name": "index_file",
+                        "schema": "https://github.com/common-workflow-language/common-workflow-language/blob/draft-1/specification/tool-description.md",
+                        "description": "",
+                        "@type": "CommandLine",
+                        "adapter": {
+                            "baseCmd": ["python3", "/opt/index_file.py"],
+                            "stdout": "",
+                            "args": []
+                        },
+                        "outputs": {
+                            "properties": {
+                                "index_file": {
+                                    "adapter": {
+                                        "glob": {
+                                            "$expr": "{ \n  var filename = $job.inputs.input_file.path\n  var lst = filename.split('.')\n  lst[lst.length] = $job.inputs.suffix\n  return lst.join('.')\n}"
+                                        },
+                                        "metadata": {
+                                            "file_type": "text",
+                                            "__inherit__": "input_file"
+                                        }
+                                    },
+                                    "type": "file",
+                                    "name": "index_file",
+                                    "id": "index_file"
+                                },
+                                "output_file": {
+                                    "type": "file",
+                                    "adapter": {
+                                        "metadata": {
+                                            "file_type": "text"
+                                        },
+                                        "secondaryFiles": {
+                                            "$expr": "\".\" + $job.inputs.suffix"
+                                        },
+                                        "glob": {
+                                            "$expr": "{ \n  return $job.inputs.input_file.path\n}"
+                                        }
+                                    },
+                                    "name": "output_file",
+                                    "id": "output_file"
+                                }
+                            },
+                            "required": [],
+                            "type": "object"
+                        },
+                        "inputs": {
+                            "properties": {
+                                "input_file": {
+                                    "adapter": {
+                                        "streamable": false,
+                                        "order": 0,
+                                        "prefix": "",
+                                        "separator": " "
+                                    },
+                                    "type": "file",
+                                    "name": "input_file",
+                                    "id": "input_file"
+                                },
+                                "suffix": {
+                                    "adapter": {
+                                        "order": 1,
+                                        "separator": " "
+                                    },
+                                    "type": "string",
+                                    "name": "suffix",
+                                    "id": "suffix"
+                                }
+                            },
+                            "required": [],
+                            "type": "object"
+                        },
+                        "requirements": {
+                            "environment": {
+                                "container": {
+                                    "type": "docker",
+                                    "uri": "index_file:latest",
+                                    "imageId": "780e89383c67"
+                                }
+                            },
+                            "resources": {
+                                "cpu": 0,
+                                "mem": 5000,
+                                "ports": [],
+                                "diskSpace": 0,
+                                "network": false
+                            }
+                        },
+                        "documentAuthor": "",
+                        "id": "index_file"
+                    },
+                    "id": "index_file"
+                }
+            ],
+            "@type": "Workflow",
+            "display": {
+                "nodes": {
+                    "input": {
+                        "y": 361,
+                        "x": 105.99301147460938
+                    },
+                    "input_dir": {
+                        "y": 359.5833435058594,
+                        "x": 584.888916015625
+                    },
+                    "output": {
+                        "y": 266.99998474121094,
+                        "x": 1410.9930114746094
+                    },
+                    "output_1": {
+                        "y": 525.9999847412109,
+                        "x": 1410.9930114746094
+                    },
+                    "index_file": {
+                        "y": 359.5833435058594,
+                        "x": 1043.888916015625
+                    }
+                },
+                "canvas": {
+                    "zoom": 1,
+                    "y": -1,
+                    "x": 6
+                }
+            },
+            "id": "workflow_input_dir_and_index"
+        },
+        "inputs": {
+            "input": {
+                "$from": "create_dir.output_file"
+            }
+        },
+        "outputs": {
+            "output": {
+                "$to": "output_1"
+            },
+            "output_1": {
+                "$to": "output"
+            }
+        }
+    }
+], "inputs": {
+    "type": "object",
+    "properties": {
+        "input": {
+            "type": "file",
+            "id": "input",
+            "name": "input"
+        }
+    }
+}, "outputs": {
+    "type": "object",
+    "properties": {
+        "output_1": {
+            "type": "file",
+            "id": "output_1",
+            "name": "output_1"
+        },
+        "output": {
+            "type": "file",
+            "id": "output",
+            "name": "output"
+        }
+    }
+}, "name": "test_nested_dir_workflow"}

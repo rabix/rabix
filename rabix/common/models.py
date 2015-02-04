@@ -7,10 +7,12 @@ import datetime
 
 from uuid import uuid4
 from jsonschema.validators import Draft4Validator
-from six.moves.urllib.parse import urlparse, urlunparse, unquote
+from six.moves.urllib.parse import urlparse, urlunparse, unquote, urljoin
 from base64 import b64decode
+from os.path import isabs
 
-from rabix.common.errors import ValidationError
+from rabix.common.errors import ValidationError, RabixError
+from rabix.common.util import map_rec_list
 
 
 log = logging.getLogger(__name__)
@@ -41,6 +43,20 @@ class App(object):
 
     def get_output(self, name):
         return self._outputs.get(name)
+
+    def construct_inputs(self, inputs):
+        return self.construct(self.inputs, inputs)
+
+    def construct_outputs(self, outputs):
+        return self.construct(self.outputs, outputs)
+
+    @staticmethod
+    def construct(defs, vals):
+        return {
+            input.id: map_rec_list(input.constructor, vals.get(input.id))
+            for input in defs
+            if vals.get(input.id) is not None
+        }
 
     def validate_inputs(self, input_values):
         for inp in self.inputs:
@@ -100,20 +116,70 @@ class URL(object):
     def isdata(self):
         return self.scheme == 'data'
 
+    def join(self, base):
+        base += '' if base.endswith('/') else '/'
+        return URL(urljoin(base, str(self)))
+
+    def remap(self, mappings):
+        if not self.islocal():
+            raise RabixError("Can't remap non-local paths")
+        if not isabs(self.path):
+            raise RabixError("Can't remap non-absolute paths")
+        for k, v in six.iteritems(mappings):
+            if self.path.startswith(k):
+                ls = self.path[len(k):]
+                return URL(urljoin(v, ls))
+
+        return self
+
     def __str__(self):
         if self.islocal():
             return self.path
         else:
             return self.geturl()
 
+    def __repr__(self):
+        return "URL(%s)" % self.geturl()
+
 
 class File(object):
 
+    name = 'file'
+
+    @classmethod
+    def match(cls, val):
+        return isinstance(val, dict) and 'path' in val
+
     def __init__(self, path, size=None, meta=None, secondary_files=None):
-        self.url = URL(path) if isinstance(path, six.string_types) else path
         self.size = size
         self.meta = meta or {}
         self.secondary_files = secondary_files or []
+        self.url = None
+
+        if isinstance(path, dict):
+            self.from_dict(path)
+        elif isinstance(path, File):
+            self.size, self.meta, self.secondary_files, self.url = \
+                path.size, path.meta, path.secondary_files, path.url
+        else:
+            self.path = path
+
+    def from_dict(self, val):
+        size = val.get('size')
+        if size is not None:
+            size = int(size)
+
+        path = val.get('path')
+        if path is None:
+            raise ValidationError(
+                "Not a valid 'File' object: %s" % str(val)
+            )
+
+        self.size = self.size or size
+        self.meta = self.meta or val.get('metadata')
+        self.secondary_files = self.secondary_files or \
+            [File(sf) for sf in val.get('secondaryFiles', [])]
+        self.path = path
 
     def to_dict(self, context=None):
         return {
@@ -129,6 +195,18 @@ class File(object):
     def path(self):
         return six.text_type(self.url)
 
+    def rebase(self, base):
+        self.url = self.url.join(base)
+        for sf in self.secondary_files:
+            sf.rebase(base)
+        return self
+
+    def remap(self, mappings):
+        self.url = self.url.remap(mappings)
+        for sf in self.secondary_files:
+            sf.remap(mappings)
+        return self
+
     def __str__(self):
         return self.path
 
@@ -137,18 +215,14 @@ class File(object):
 
     @path.setter
     def path(self, val):
-        self.url = val
+        self.url = URL(val) if isinstance(val, six.string_types) else val
 
 
 def make_constructor(schema):
-        constructor_map = {
-            'integer': int,
-            'number': float,
-            'boolean': bool,
-            'string': six.text_type,
-            'file': FileConstructor(),
-            'directory': FileConstructor()
-        }
+
+        one_of = schema.get('oneOf')
+        if one_of:
+            return OneOfConstructor(one_of)
 
         type_name = schema.get('type')
 
@@ -162,7 +236,10 @@ def make_constructor(schema):
         if type_name == 'object':
             return ObjectConstructor(schema.get('properties', {}))
 
-        return constructor_map[type_name]
+        if type_name == 'file' or type_name == 'directory':
+            return File
+
+        return PrimitiveConstructor(type_name)
 
 
 class ArrayConstructor(object):
@@ -173,6 +250,13 @@ class ArrayConstructor(object):
 
     def __call__(self, val):
         return [self.item_constructor(v) for v in val]
+
+    def match(self, val):
+        return isinstance(val, list) and all(
+            [self.item_constructor.match(v) for v in val])
+
+    def __repr__(self):
+        return "ArrayConstructor(%s)" % repr(self.item_constructor)
 
 
 class ObjectConstructor(object):
@@ -190,31 +274,66 @@ class ObjectConstructor(object):
             for k, v in six.iteritems(val)
         }
 
+    def match(self, val):
+        return isinstance(val, dict) and all(
+            [k in self.properties and self.properties[k].match(v)
+             for k, v in six.iteritems(val)])
 
-class FileConstructor(object):
+    def __repr__(self):
+        return "ObjectConstructor(%s)" % repr(self.properties)
 
-    def __init__(self):
-        self.name = 'file'
+
+class PrimitiveConstructor(object):
+
+    CONSTRUCTOR_MAP = {
+        'integer': int,
+        'number': float,
+        'boolean': bool,
+        'string': six.text_type
+    }
+
+    MATCH_MAP = dict(CONSTRUCTOR_MAP)
+    MATCH_MAP.update({
+        'string': six.string_types,
+        'number': (int, float)
+    })
+
+    def __init__(self, type_name):
+        self.name = type_name
+        self._match = PrimitiveConstructor.MATCH_MAP.get(type_name)
+        self.type = PrimitiveConstructor.CONSTRUCTOR_MAP.get(type_name)
 
     def __call__(self, val):
-        if isinstance(val, six.string_types):
-            val = {'path': val}
+        return self.type(val)
 
-        size = val.get('size')
-        if size is not None:
-            size = int(size)
+    def match(self, val):
+        matches = isinstance(val, self._match)
+        return matches
 
-        path = val.get('path')
-        if path is None:
-            raise ValidationError(
-                "Not a valid 'File' object: %s" % str(val)
+    def __repr__(self):
+        return self.name
+
+
+class OneOfConstructor(object):
+
+    def __init__(self, options):
+        self.name = 'oneOf'
+        self.options = [make_constructor(opt) for opt in options]
+
+    def match(self, val):
+        return next((x for x in self.options if x.match(val)), None)
+
+    def __call__(self, val):
+        opt = self.match(val)
+        if not opt:
+            raise ValueError(
+                "Value '%s' doesn't match any of the constructors"
+                % str(val)
             )
+        return opt(val)
 
-        return File(path=path,
-                    size=size,
-                    meta=val.get('metadata'),
-                    secondary_files=[self(sf)
-                                     for sf in val.get('secondaryFiles', [])])
+    def __repr__(self):
+        return "OneOf(%s)" % repr(self.options)
 
 
 class IO(object):
@@ -260,6 +379,9 @@ class IO(object):
                    required=d['required'],
                    annotations=d['annotations'],
                    depth=depth)
+
+    def __repr__(self):
+        return "IO(%s)" % vars(self)
 
 
 class Job(object):

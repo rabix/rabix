@@ -21,7 +21,7 @@ def test_simple_json_schema():
     js = JsonSchema(init_context(), schema)
     a = next(iter(js))
     assert_equal(a.id, 'a')
-    assert_equal(a.constructor, int)
+    assert_equal(a.constructor.name, 'integer')
     assert_false(a.required)
 
     to_dict = js.to_dict()

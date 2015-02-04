@@ -5,9 +5,7 @@ import logging
 import docker
 
 from docker.errors import APIError
-from six.moves.urllib.parse import urlparse
 
-from rabix.common.models import FileConstructor
 from rabix.cli.cli_app import Container
 from rabix.docker.container import get_image
 from rabix.common.errors import ResourceUnavailable, RabixError
@@ -52,17 +50,9 @@ def make_config(**kwargs):
     return cfg
 
 
-class BindDict(dict):
-    def items(self):
-        ret = []
-        for k, v in six.iteritems(super(BindDict, self)):
-            ret.append((v, k))
-        return ret
-
-
 class DockerContainer(Container):
 
-    def __init__(self, uri, image_id, dockr=None):
+    def __init__(self, uri, image_id, user=None, dockr=None):
         super(DockerContainer, self).__init__()
         self.uri = uri.lstrip("docker://")\
             if uri and uri.startswith('docker:/') else uri
@@ -72,91 +62,44 @@ class DockerContainer(Container):
         self.config = {}
         self.volumes = {}
         self.binds = {}
+        self.user = user or ':'.join(
+            [six.text_type(os.getuid()), six.text_type(os.getgid())]
+        )
 
     def install(self, *args, **kwargs):
-        try:
-            get_image(self.docker_client,
-                      image_id=self.image_id,
-                      repo=self.uri)
-        except APIError as e:
-            if e.response.status_code == 404:
-                log.info('Image %s not found:' % self.image_id)
-                raise RuntimeError('Image %s not found:' % self.image_id)
 
-    def prepare_paths(self, job):
-        self.volumes, self.binds = self._volumes(job)
+        image = get_image(
+            self.docker_client,
+            image_id=self.image_id,
+            repo=self.uri
+        )
 
-    def _volumes(self, job):
-        remaped_job = job.inputs
+        if not image:
+            log.info('Image %s not found:' % self.image_id)
+            raise RabixError('Image %s not found:' % self.image_id)
+
+        if not image['Id'].startswith(self.image_id):
+
+            raise RabixError(
+                'Wrong id of pulled image: expected "%s", got "%s"'
+                % (self.image_id, image['Id'])
+            )
+
+        self.image_id = image['Id']
+
+    def get_mapping(self, paths):
         volumes = {}
         binds = {}
 
-        input_values = remaped_job
-        obj_inputs = job.app.inputs.io
-        self._remap_obj(obj_inputs, input_values, volumes, binds, remaped_job)
-        return volumes, BindDict(binds)
+        for idx, p in enumerate(paths):
+            mapping = '/mnt/%s/' % idx
+            volumes[mapping] = {}
+            binds[p] = mapping
 
-    def _remap_obj(self, inputs, input_values, volumes, binds, remaped_job,
-                   parent=None):
-        is_single = lambda i: isinstance(i.constructor, FileConstructor) and i.depth == 0
-        is_list = lambda i: isinstance(i.constructor, FileConstructor) and i.depth == 1
-        if inputs:
-            single = filter(is_single, [i for i in inputs])
-            lists = filter(is_list, [i for i in inputs])
-            for inp in single:
-                self._remap_single(inp, input_values, volumes, binds,
-                                   remaped_job, parent)
-            for inp in lists:
-                self._remap_list(
-                    inp, input_values, volumes, binds, remaped_job,
-                    parent, inp.depth)
+        self.volumes = volumes
+        self.binds = binds
 
-    def _remap_single(
-            self, inp, input_values, volumes, binds, remaped_job, parent):
-        if input_values.get(inp.id):
-            if parent:
-                docker_dir = '/' + '/'.join([parent, inp.id])
-            else:
-                docker_dir = '/' + inp.id
-            dir_name, file_name = os.path.split(
-                os.path.abspath(input_values[inp.id].path))
-            volumes[docker_dir] = {}
-            binds[docker_dir] = dir_name
-            remaped_job[inp.id].path = '/'.join(
-                [docker_dir, file_name])
-
-    def _remap_list(
-            self, inp, input_values, volumes, binds, remaped_job,
-            parent, depth):
-        if input_values.get(inp.id):
-
-            for num, inv in enumerate(input_values[inp.id]):
-                if parent:
-                    docker_dir = '/' + '/'.join([parent, inp.id, six.text_type(num)])
-                else:
-                    docker_dir = '/' + '/'.join([inp.id, six.text_type(num)])
-                dir_name, file_name = os.path.split(
-                    os.path.abspath(inv.path))
-                volumes[docker_dir] = {}
-                binds[docker_dir] = dir_name
-                remaped_job[inp.id][num].path = '/'.join(
-                    [docker_dir, file_name])
-
-    def set_config(self, *args, **kwargs):
-        self.prepare_paths(kwargs.get('job'))
-        user = kwargs.get('user', None) or ':'.join([six.text_type(os.getuid()),
-                                                     six.text_type(os.getgid())])
-        self.job_dir = kwargs.get('job_dir')
-        self.volumes['/' + self.job_dir] = {}
-        self.binds['/' + self.job_dir] = os.path.abspath(self.job_dir)
-        self.stderr = kwargs.get('stderr') or 'out.err'
-        cfg = {
-            "Image": self.image_id,
-            "User": user,
-            "Volumes": self.volumes,
-            "WorkingDir": self.job_dir
-        }
-        self.config = make_config(**cfg)
+        return dict(self.binds)
 
     def _start(self, cmd):
         self.config["Cmd"] = ['bash', '-c', cmd]
@@ -172,10 +115,27 @@ class DockerContainer(Container):
             raise RuntimeError('Unable to run container from image %s:'
                                % self.image_id)
 
-    def run(self, cmd):  # should be run(self, cmd_line, job)
+    def run(self, cmd, job_dir):
+
+        if not os.path.isabs(job_dir):
+            raise RabixError('job_dir must be an abslute path.')
+
+        for k, v in six.iteritems(self.binds):
+            if job_dir.startswith(k):
+                working_dir = '/'.join([v, job_dir[len(k):]])
+                break
+        else:
+            raise RabixError("Invalid working dir: " + job_dir)
+
+        cfg = {
+            "Image": self.image_id,
+            "User": self.user,
+            "Volumes": self.volumes,
+            "WorkingDir": working_dir
+        }
+        self.config = make_config(**cfg)
         self._start(cmd)
-        self.get_stderr(file='/'.join([os.path.abspath(self.job_dir),
-                                       self.stderr]))
+        self.get_stderr(file='/'.join([job_dir, 'out.err']))
         if not self.is_success():
             raise RabixError("Tool failed:\n%s" % self.get_stderr())
 
