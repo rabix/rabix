@@ -88,7 +88,7 @@ def check_result(dir, res):
     def compare_file(myfile, resfile):
         for k, v in six.iteritems(myfile):
             if k == 'path':
-                print resfile
+                print(resfile)
                 assert re.match(resfile.get('path'), os.path.basename(v))
             elif k == 'secondaryFiles':
                 compare_output(v, resfile.get('secondaryFiles'))

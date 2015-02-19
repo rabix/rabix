@@ -4,7 +4,7 @@ import collections
 import logging
 import six
 import json
-import urlparse
+import six.moves.urllib.parse as urlparse
 
 from os.path import abspath, isabs, join
 
