@@ -4,6 +4,7 @@ import collections
 import logging
 import six
 import json
+import urlparse
 
 from os.path import abspath, isabs, join
 
@@ -132,10 +133,21 @@ def to_json(obj, fp=None):
     return json.dump(obj, fp, **kwargs) if fp else json.dumps(obj, **kwargs)
 
 
+def is_url(path):
+    return urlparse.urlparse(path).scheme != ""
+
+
 def to_abspath(path, base=None):
     if not base:
         return abspath(path)
-    elif isabs(path):
+    elif isabs(path) or is_url(path):
         return path
     else:
         return abspath(join(base, path))
+
+
+def result_str(job_id, outputs):
+    result_str = '\nResult for job %s:\n' % job_id
+    for name, out in six.iteritems(outputs):
+        result_str = result_str + '%s: %s\n' % (name, out)
+    return result_str
