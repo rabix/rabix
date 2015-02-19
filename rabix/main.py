@@ -9,7 +9,7 @@ import copy
 
 from rabix import __version__ as version
 from rabix.common.util import log_level, dot_update_dict, map_or_apply,\
-    map_rec_list, map_rec_collection
+    map_rec_list, map_rec_collection, result_str
 from rabix.common.models import Job, IO, File
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
@@ -346,7 +346,8 @@ def main():
             return
 
         try:
-            context.executor.execute(job, lambda _, result: print(result))
+            context.executor.execute(job, lambda _, result: print(
+                result_str(job.id, result)))
         except RabixError as err:
             print(err.message)
             sys.exit(1)
