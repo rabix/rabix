@@ -149,5 +149,8 @@ def to_abspath(path, base=None):
 def result_str(job_id, outputs):
     result_str = '\nResult for job %s:\n' % job_id
     for name, out in six.iteritems(outputs):
-        result_str = result_str + '%s: %s\n' % (name, out)
+        files = out
+        if isinstance(out, list):
+            files = ' '.join(['%s' % o for o in out])
+        result_str = result_str + '%s: %s\n' % (name, files)
     return result_str
