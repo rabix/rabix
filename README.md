@@ -18,6 +18,32 @@ This repo includes a local python executor and some utilities for building docke
 
 ### Install
 
+#### Using VirtualBox and Vagrant
+
+We've pre-installed rabix and dependencies on a VirtualBox machine image.
+If you install VirtualBox and Vagrant, you can run the machine using the vagrantfile:
+
+```
+curl https://s3.amazonaws.com/rabix/Vagrantfile > Vagrantfile
+vagrant up && vagrant ssh
+# Example BWA run with local files
+cd rabix/examples
+rabix bwa-mem.json -- --reads test-data/example_human_Illumina.pe_1.fastq --reads test-data/example_human_Illumina.pe_2.fastq --reference test-data/chr20.fa
+```
+
+#### On an EC2 instance
+
+If you launch an instance on AWS in the us-east region, you can use the public AMI `ami-60644508` which has rabix and dependencies installed. SSH to the instance using "rabix" as username and password.
+
+To run the BWA example:
+
+```
+cd examples
+rabix bwa-mem.json -- --reads test-data/example_human_Illumina.pe_1.fastq --reads test-data/example_human_Illumina.pe_2.fastq --reference test-data/chr20.fa
+```
+
+#### Linux
+
 Rabix requires Python 2.7 or 3.x to run.
 
 There are several external dependencies for rabix.
