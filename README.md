@@ -47,7 +47,7 @@ rabix bwa-mem.json -- --reads test-data/example_human_Illumina.pe_1.fastq --read
 Rabix requires Python 2.7 or 3.x to run.
 
 There are several external dependencies for rabix.
-The first one is [Docker](https://docs.docker.com/installation/#installation)
+The first one is [Docker](https://docs.docker.com/installation/#installation) (v1.5 or later)
 for running command line bioinformatics tools.
 Second one is a JavaScript interpreter:
 you can look for available options on
