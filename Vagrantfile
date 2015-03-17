@@ -4,11 +4,11 @@
 Vagrant.configure("2") do |config|
 
   # Every Vagrant virtual environment requires a box to build off of.
-  config.vm.box = "rabix-0.6.4"
+  config.vm.box = "rabix-0.6.5"
 
   # The url from where the 'config.vm.box' box will be fetched if it
   # doesn't already exist on the user's system.
-  config.vm.box_url = "https://s3.amazonaws.com/rabix/rabix-box/rabix-0.6.4.box"
+  config.vm.box_url = "https://s3.amazonaws.com/rabix/rabix-box/rabix-0.6.5.box"
 
   config.vm.synced_folder ".", "/home/vagrant/projects"
 
