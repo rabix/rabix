@@ -11,7 +11,7 @@ import jsonschema.exceptions
 from six.moves import reduce
 
 from rabix.common.ref_resolver import resolve_pointer
-from rabix.common.util import sec_files_naming_conv, wrap_in_list
+from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath
 from rabix.expressions import Evaluator
 
 log = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ def secondary_files(p, adapter, evaluator):
     secFiles = wrap_in_list(evaluator.resolve(adapter.get('secondaryFiles', [])))
     for s in secFiles:
         path = sec_files_naming_conv(p, s)
-        secondaryFiles.append({'path': path})
+        secondaryFiles.append({'path': to_abspath(path)})
     return secondaryFiles
 
 
