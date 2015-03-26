@@ -132,7 +132,16 @@ class WorkflowApp(App):
                     self.inputs.append(wf_input)
 
         else:
-            self.graph.node_data(node_id).inputs[input_name] = input_val
+            input = step.app.get_input(input_name)
+            if input.depth > 0:
+                if not self.graph.node_data(node_id).inputs.get(input_name):
+                    self.graph.node_data(node_id).inputs[
+                        input_name] = [input_val]
+                else:
+                    self.graph.node_data(node_id).inputs[
+                        input_name].append(input_val)
+            else:
+                self.graph.node_data(node_id).inputs[input_name] = input_val
 
     # Graph.add_node silently fails if node already exists
     def add_node(self, node_id, node):
