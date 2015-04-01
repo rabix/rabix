@@ -24,14 +24,15 @@ def collect_prefixes(paths):
     container, such that only directories actually containing files are
     bound (otherwise trivial minimal set would be '/').
 
-    >>> DockerContainer.collect_prefixes(['/a/b', '/a/b/c'])
+    >>> collect_prefixes(['/a/b/c', '/a/b', '/a/b/d'])
     set(['/a/b/'])
-    >>> DockerContainer.collect_prefixes(['/a/b/c', '/a/b/d'])
+    >>> collect_prefixes(['/a/b/c', '/a/b/d'])
     set(['/a/b/d/', '/a/b/c/'])
-    >>> DockerContainer.collect_prefixes(['/a/b', '/c/d'])
+    >>> collect_prefixes(['/a/b', '/c/d'])
     set(['/a/b/', '/c/d/'])
-    >>> DockerContainer.collect_prefixes(['/a/b/', '/a/b/c', '/c/d'])
+    >>> collect_prefixes(['/a/b/', '/a/b/c', '/c/d'])
     set(['/a/b/', '/c/d/'])
+
 
     :param paths: list of directory names containing files
     :return: set of paths guaranteed to end with forward slash
@@ -45,6 +46,8 @@ def collect_prefixes(paths):
         for idx, part in enumerate(path):
             if part not in cur:
                 cur[part] = (idx == last, {})
+            elif not cur[part][0]:
+                cur[part] = (idx == last, cur[part][1])
             term, cur = cur[part]
             if term:
                 break
