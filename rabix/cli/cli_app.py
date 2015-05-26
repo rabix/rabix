@@ -128,32 +128,6 @@ class Container(object):
                         val)
 
 
-class Requirements(object):
-
-    def __init__(self, container=None, resources=None, platform_features=None):
-        self.container = container
-        self.resources = resources
-        self.platform_features = platform_features
-
-    def to_dict(self, context):
-        d = {
-            "@type": "Requirements",
-            "resources": context.to_dict(self.resources),
-            "platformFeatures": self.platform_features
-        }
-        if self.container:
-            d["environment"] = {"container": self.container.to_dict(context)}
-        return d
-
-    @classmethod
-    def from_dict(cls, context, d):
-        return cls(
-            context.from_dict(d.get('environment', {}).get('container')),
-            context.from_dict(d.get('resources')),
-            context.from_dict(d.get('platformFeatures'))
-        )
-
-
 class CliApp(App):
     WORKING_DIR = '/work'
 
@@ -248,27 +222,16 @@ class CliApp(App):
     def to_dict(self, context=None):
         d = super(CliApp, self).to_dict(context)
         d.update({
-            "@type": "CommandLine",
-            'name': self.id,
-            'adapter': self.adapter,
-            'annotations': self.annotations,
-            'platform_features': self.platform_features,
-            'inputs': self.inputs.schema,
-            'outputs': self.outputs.schema,
-            'requirements': self.requirements.to_dict(context)
+            "class": "CommandLineTool",
+            'commandLine': self.adapter
         })
         return d
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d.get('@id', d.get('name')),
+        return cls(d.get('id', d.get('name')),
                    context.from_dict(d['inputs']),
                    context.from_dict(d.get('outputs', {})),
-                   app_description=d.get('appDescription'),
-                   annotations=d.get('annotations'),
-                   platform_features=d.get('platform_features'),
-                   adapter=context.from_dict(d.get('adapter')),
-                   software_description=d.get('softwareDescription'),
                    requirements=Requirements.from_dict(
                        context, d.get('requirements', {})))
 

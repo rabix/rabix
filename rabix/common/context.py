@@ -19,9 +19,9 @@ class Context(object):
             return [self.from_dict(e) for e in d]
         if not isinstance(d, dict):
             return d
-        if '@type' not in d:
+        if 'class' not in d:
             return {k: self.from_dict(v) for k, v in six.iteritems(d)}
-        type_name = d['@type']
+        type_name = d['class']
         constructor = self.type_map.get(type_name)
         if not constructor:
             return d

@@ -12,22 +12,25 @@ from base64 import b64decode
 from os.path import isabs
 
 from rabix.common.errors import ValidationError, RabixError
-from rabix.common.util import map_rec_list
+from rabix.common.util import map_rec_list, wrap_in_list
 
 
 log = logging.getLogger(__name__)
 
 
-class App(object):
+class Process(object):
 
-    def __init__(self, app_id, inputs, outputs, app_description=None,
-                 annotations=None, platform_features=None):
-        self.id = app_id
+    def __init__(self, process_id, inputs, outputs, requirements, hints,
+                 label, description, scatter, scatter_method):
+        self.id = process_id
         self.inputs = inputs
         self.outputs = outputs
-        self.app_description = app_description
-        self.annotations = annotations
-        self.platform_features = platform_features
+        self.requirements = requirements
+        self.hints = hints
+        self.label = label
+        self.description = description
+        self.scatter = wrap_in_list(scatter)
+        self.scatter_method = scatter_method
         self._inputs = {io.id: io for io in inputs}
         self._outputs = {io.id: io for io in outputs}
 
@@ -75,14 +78,32 @@ class App(object):
 
     def to_dict(self, context):
         return {
-            '@id': self.id,
-            '@type': 'App',
-            'inputs': [context.to_dict(inp) for inp in self.inputs],
-            'outputs': [context.to_dict(outp) for outp in self.outputs],
-            'appDescription': self.app_description,
-            'annotations': self.annotations,
-            'platformFeatures': self.platform_features
+            'id': self.id,
+            'class': 'Process',
+            'inputs': context.to_dict(self.inputs),
+            'outputs': context.to_dict(self.outputs),
+            'requirements': self.requirements,
+            'hints': self.hints
         }
+
+
+class ExternalProcess(Process):
+
+    def __init__(self, process_id, inputs, outputs, requirements, hints, label,
+                 description, scatter, scatter_method, impl):
+        super(ExternalProcess, self).__init__(
+            process_id, inputs, outputs, requirements, hints, label,
+            description, scatter, scatter_method)
+        self.impl = impl
+
+    def run(self, job):
+        return self.impl.run(job)
+
+    def to_dict(self, context):
+        proc = super(ExternalProcess, self).to_dict(context)
+        proc['class'] = 'External'
+        proc['impl'] = self.impl
+        return proc
 
 
 class URL(object):
@@ -144,7 +165,7 @@ class URL(object):
 
 class File(object):
 
-    name = 'file'
+    name = 'File'
 
     @classmethod
     def match(cls, val):
@@ -183,7 +204,7 @@ class File(object):
 
     def to_dict(self, context=None):
         return {
-            "@type": "File",
+            "class": "File",
             "path": self.path,
             "size": self.size,
             "metadata": self.meta,
@@ -352,10 +373,8 @@ class IO(object):
 
     def to_dict(self, ctx=None):
         return {
-            '@id': self.id,
-            '@type': 'IO',
-            'depth': self.depth,
-            'schema': self.validator.schema,
+            'id': self.id,
+            'type': self.validator.schema,
             'required': self.required,
             'annotations': self.annotations
         }
@@ -373,7 +392,7 @@ class IO(object):
 
         constructor = make_constructor(item_schema)
 
-        return cls(d.get('@id', six.text_type(uuid4())),
+        return cls(d.get('id', six.text_type(uuid4())),
                    validator=context.from_dict(d.get('schema')),
                    constructor=constructor,
                    required=d['required'],
@@ -400,8 +419,8 @@ class Job(object):
     def to_dict(self, context=None):
         ctx = context or self.context
         return {
-            '@id': self.id,
-            '@type': 'Job',
+            'id': self.id,
+            'class': 'Job',
             'app': self.app.to_dict(ctx),
             'inputs': ctx.to_dict(self.inputs),
             'allocatedResources': ctx.to_dict(self.allocated_resources)
@@ -427,13 +446,9 @@ class Job(object):
     def from_dict(cls, context, d):
         app = context.from_dict(d['app'])
         return cls(
-            d.get('@id') if d.get('@id') else cls.mk_work_dir(app.id),
+            d.get('id') if d.get('id') else cls.mk_work_dir(app.id),
             app,
             context.from_dict(d['inputs']),
             d.get('allocatedResources'),
             context
         )
-
-
-class Resource(object):
-    pass

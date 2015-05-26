@@ -39,16 +39,15 @@ class ScriptApp(App):
     def to_dict(self, context):
         d = super(ScriptApp, self).to_dict(context)
         d.update({
-            "@type": "Script",
+            "class": "ExpressionTool",
             "script": self.script,
-            "inputs": self.inputs.schema,
-            "outputs": self.outputs.schema
+            "engine": "javascript"
         })
         return d
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d.get('@id', six.text_type(uuid4())),
+        return cls(d.get('id', six.text_type(uuid4())),
                    context.from_dict(d['inputs']),
                    context.from_dict(d['outputs']),
                    d['script'],

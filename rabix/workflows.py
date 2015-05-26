@@ -31,8 +31,7 @@ class Step(object):
     def to_dict(self, context):
         return {
             "id": self.id,
-            "@type": "Step",
-            "app": self.app.to_dict(context),
+            "inpl": self.app.to_dict(context),
             "inputs": context.to_dict(self.inputs),
             "outputs": context.to_dict(self.outputs)
         }
@@ -90,13 +89,6 @@ class WorkflowApp(App):
         if not self.graph.connected():
             pass
             # raise ValidationError('Graph is not connected')
-
-        schema = {
-            "@type": "JsonSchema",
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
 
         for inp in self.inputs:
             schema['properties'][inp.id] = inp.validator.schema
@@ -156,7 +148,7 @@ class WorkflowApp(App):
     def to_dict(self, context):
         d = super(WorkflowApp, self).to_dict(context)
         d.update({
-            "@type": "Workflow",
+            "class": "Workflow",
             'steps': [step.to_dict(context) for step in self.steps]
         })
         return d
@@ -170,7 +162,7 @@ class WorkflowApp(App):
             for step in d['steps']]
 
         return cls(
-            d.get('@id', six.text_type(uuid4())),
+            d.get('id', six.text_type(uuid4())),
             steps,
             context
         )

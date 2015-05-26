@@ -21,7 +21,6 @@ import rabix.cli
 import rabix.docker
 import rabix.expressions
 import rabix.workflows
-import rabix.schema
 
 
 TEMPLATE_RESOURCES = {
@@ -73,8 +72,7 @@ def init_context():
     context = Context(TYPE_MAP, executor)
 
     for module in (
-            rabix.cli, rabix.expressions, rabix.workflows,
-            rabix.schema, rabix.docker
+            rabix.cli, rabix.expressions, rabix.workflows, rabix.docker
     ):
         module.init(context)
 
@@ -87,37 +85,19 @@ def init_context():
 
 def fix_types(tool, toplevelType=None):
 
-    toplevelType = toplevelType or 'CommandLine'
+    toplevelType = toplevelType or 'CommandLineTool'
 
     # tool type
-    if '@type' not in tool:
-        tool['@type'] = toplevelType
+    if 'class' not in tool:
+        tool['class'] = toplevelType
 
-    if tool.get('@type') in ('Job', 'TaskTemplate'):
+    if tool.get('class') in ('Job', 'TaskTemplate'):
         fix_types(tool['app'])
         return
 
-    requirements = tool.get('requirements', {})
-    environment = requirements.get('environment')
-
-    # container type
-    if (environment and
-            isinstance(environment.get('container'), dict) and
-            environment['container'].get('type') == 'docker'):
-        environment['container']['@type'] = 'Docker'
-
-    if tool['@type'] == 'Workflow':
+    if tool['class'] == 'Workflow':
         for step in tool['steps']:
-            fix_types(step['app'])
-
-    # schema type
-    inputs = tool.get('inputs')
-    if isinstance(inputs, dict) and '@type' not in inputs:
-        inputs['@type'] = 'JsonSchema'
-
-    outputs = tool.get('outputs')
-    if isinstance(outputs, dict) and '@type' not in outputs:
-        outputs['@type'] = 'JsonSchema'
+            fix_types(step['impl'])
 
 
 ###
@@ -210,15 +190,12 @@ def dry_run_parse(args=None):
 
 
 def conformance_test(context, app, job_dict, basedir):
-    job_dict['@type'] = 'Job'
-    job_dict['@id'] = basedir
+    job_dict['class'] = 'Job'
+    job_dict['id'] = basedir
     job_dict['app'] = app
 
     if not app.outputs:
-        app.outputs = rabix.schema.JsonSchema(context, {
-            'type': 'object',
-            'properties': {}
-        })
+        app.outputs = []
 
     job_dict['inputs'] = get_inputs(app, job_dict['inputs'], basedir)
     job = context.from_dict(job_dict)
@@ -262,7 +239,7 @@ def main():
         print("Couldn't find tool.")
         return
 
-    fix_types(tool, dry_run_args.get('--type', 'CommandLine'))
+    fix_types(tool, dry_run_args.get('--type', 'CommandLineTool'))
 
     context = init_context()
     app = context.from_dict(tool)
@@ -327,7 +304,7 @@ def main():
 
         inp = get_inputs(app, app_inputs)
         if not job:
-            job_dict['@id'] = args.get('--dir')
+            job_dict['id'] = args.get('--dir')
             job_dict['app'] = app
             job = Job.from_dict(context, job_dict)
 
