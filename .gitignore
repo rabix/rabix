@@ -8,3 +8,4 @@ dist
 rabix.conf
 rethinkdb_data/*
 rabix.iml
+.coverage
