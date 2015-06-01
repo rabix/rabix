@@ -8,14 +8,13 @@ import json
 import copy
 
 from rabix import __version__ as version
-from rabix.common.util import log_level, dot_update_dict, map_or_apply,\
-    map_rec_list, map_rec_collection, result_str
-from rabix.common.models import Job, IO, File
+from rabix.common.util import log_level, map_rec_collection, result_str
+from rabix.common.models import Job, Parameter, File, ExternalProcess
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
 from rabix.common.errors import RabixError, ValidationError
 from rabix.executor import Executor
-from rabix.cli import CliApp, CLIJob
+from rabix.cli import CommandLineTool, CLIJob
 
 import rabix.cli
 import rabix.docker
@@ -63,7 +62,8 @@ Usage:
 TYPE_MAP = {
     'TaskTemplate': Job.from_dict,
     'Job': Job.from_dict,
-    'IO': IO.from_dict
+    'IO': Parameter.from_dict,
+    'External': ExternalProcess.from_dict
 }
 
 
@@ -85,7 +85,7 @@ def init_context():
 
 def fix_types(tool, toplevelType=None):
 
-    toplevelType = toplevelType or 'CommandLineTool'
+    toplevelType = toplevelType or 'External'
 
     # tool type
     if 'class' not in tool:
@@ -97,7 +97,7 @@ def fix_types(tool, toplevelType=None):
 
     if tool['class'] == 'Workflow':
         for step in tool['steps']:
-            fix_types(step['impl'])
+            fix_types(step)
 
 
 ###
@@ -311,7 +311,7 @@ def main():
         job.inputs.update(inp)
 
         if args['--print-cli']:
-            if not isinstance(app, CliApp):
+            if not isinstance(app, CommandLineTool):
                 print(dry_run_args['<tool>'] + " is not a command line app")
                 return
 

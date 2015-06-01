@@ -1,35 +1,29 @@
-import six
-
-from uuid import uuid4
-
 from rabix.common.errors import RabixError
-from rabix.common.models import App
+from rabix.common.models import Process
 from rabix.expressions.evaluator import Evaluator
 
 
-class ScriptApp(App):
+class ExpresionTool(Process):
 
-    def __init__(self, app_id, inputs, outputs, script, context,
-                 app_description=None,
-                 annotations=None,
-                 platform_features=None):
-        super(ScriptApp, self).__init__(
+    def __init__(self, app_id, inputs, outputs, requirements, hints, script,
+                 context, engine, label, description):
+        super(ExpresionTool, self).__init__(
             app_id, inputs, outputs,
-            app_description=app_description,
-            annotations=annotations,
-            platform_features=platform_features
+            hints=hints,
+            requirements=requirements,
+            label=label,
+            description=description
         )
         self.script = script
         self.evaluator = Evaluator()
         self.context = context
+        self.engine = engine
+
 
     def run(self, job):
-        if isinstance(self.script, six.string_types):
-            lang = 'javascript'
-            expr = self.script
-        elif isinstance(self.script, dict):
-            lang = self.script['lang']
-            expr = self.script['value']
+        if isinstance(self.script, dict):
+            lang = self.script['engine']
+            expr = self.script['script']
         else:
             raise RabixError("invalid script")
 
@@ -37,7 +31,7 @@ class ScriptApp(App):
         return self.construct_outputs(result)
 
     def to_dict(self, context):
-        d = super(ScriptApp, self).to_dict(context)
+        d = super(ExpresionTool, self).to_dict(context)
         d.update({
             "class": "ExpressionTool",
             "script": self.script,
@@ -47,11 +41,13 @@ class ScriptApp(App):
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d.get('id', six.text_type(uuid4())),
-                   context.from_dict(d['inputs']),
-                   context.from_dict(d['outputs']),
-                   d['script'],
-                   context,
-                   app_description=d.get('appDescription'),
-                   annotations=d.get('annotations'),
-                   platform_features=d.get('platform_features'))
+        return cls(d['id'],
+                   inputs=context.from_dict(d['inputs']),
+                   outputs=context.from_dict(d['outputs']),
+                   requirements=context.from_dict(d.get('requirements'), []),
+                   hints=context.from_dict(d.get('hints'), []),
+                   script=d['script'],
+                   engine=d['engine'],
+                   context=context,
+                   label=d.get('label'),
+                   description=d.get('description'))

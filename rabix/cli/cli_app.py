@@ -5,7 +5,7 @@ import stat
 import copy
 
 from rabix.cli.adapter import CLIJob
-from rabix.common.models import App, File
+from rabix.common.models import Process, File
 from rabix.common.io import InputCollector
 from rabix.common.util import map_or_apply, map_rec_collection
 
@@ -24,13 +24,13 @@ def collect_prefixes(paths):
     container, such that only directories actually containing files are
     bound (otherwise trivial minimal set would be '/').
 
-    >>> DockerContainer.collect_prefixes(['/a/b', '/a/b/c'])
+    >>> collect_prefixes(['/a/b', '/a/b/c'])
     set(['/a/b/'])
-    >>> DockerContainer.collect_prefixes(['/a/b/c', '/a/b/d'])
+    >>> collect_prefixes(['/a/b/c', '/a/b/d'])
     set(['/a/b/d/', '/a/b/c/'])
-    >>> DockerContainer.collect_prefixes(['/a/b', '/c/d'])
+    >>> collect_prefixes(['/a/b', '/c/d'])
     set(['/a/b/', '/c/d/'])
-    >>> DockerContainer.collect_prefixes(['/a/b/', '/a/b/c', '/c/d'])
+    >>> collect_prefixes(['/a/b/', '/a/b/c', '/c/d'])
     set(['/a/b/', '/c/d/'])
 
     :param paths: list of directory names containing files
@@ -128,25 +128,19 @@ class Container(object):
                         val)
 
 
-class CliApp(App):
+class CommandLineTool(Process):
     WORKING_DIR = '/work'
 
-    def __init__(self, app_id, inputs, outputs,
-                 app_description=None,
-                 annotations=None,
-                 platform_features=None,
-                 adapter=None,
-                 software_description=None,
-                 requirements=None):
-        super(CliApp, self).__init__(
+    def __init__(self, app_id, inputs, outputs, requirements, hints, label,
+                 description, adapter=None):
+        super(CommandLineTool, self).__init__(
             app_id, inputs, outputs,
-            app_description=app_description,
-            annotations=annotations,
-            platform_features=platform_features
+            requirements=requirements,
+            hints=hints,
+            label=label,
+            description=description
         )
         self.adapter = adapter
-        self.software_description = software_description
-        self.requirements = requirements
         self.mappings = {}
         self.cli_job = None
         self._command_line = None
@@ -220,7 +214,7 @@ class CliApp(App):
             file.remap({v: k for k, v in six.iteritems(self.mappings)})
 
     def to_dict(self, context=None):
-        d = super(CliApp, self).to_dict(context)
+        d = super(CommandLineTool, self).to_dict(context)
         d.update({
             "class": "CommandLineTool",
             'commandLine': self.adapter
@@ -229,11 +223,18 @@ class CliApp(App):
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d.get('id', d.get('name')),
+        return cls(d['id'],
                    context.from_dict(d['inputs']),
                    context.from_dict(d.get('outputs', {})),
-                   requirements=Requirements.from_dict(
-                       context, d.get('requirements', {})))
+                   requirements=context.from_dict(d.get('requirements', [])),
+                   hints=context.from_dict(d.get('hints', [])),
+                   label=d.get('label'),
+                   description=d.get('description'),
+                   base_command=d['baseCommand'],
+                   arguments=d.get('arguments'),
+                   stdin=d.get('stdin'),
+                   stdout=d.get('stdout')
+                   )
 
 if __name__ == '__main__':
     import doctest

@@ -8,7 +8,7 @@ from altgraph.Graph import Graph
 
 from rabix.common.errors import ValidationError, RabixError
 from rabix.common.util import wrap_in_list
-from rabix.common.models import App, IO, Job
+from rabix.common.models import App, Parameter, Job
 from rabix.schema import JsonSchema
 
 log = logging.getLogger(__name__)
@@ -260,7 +260,7 @@ class ExecutionGraph(object):
             if executable:
                 self.executables[node_id] = executable
 
-        workflow.hide_nodes(IO)
+        workflow.hide_nodes(Parameter)
 
         self.order = graph.back_topo_sort()[1]
 
@@ -272,7 +272,7 @@ class ExecutionGraph(object):
 
     def make_executable(self, node_id):
         node = self.graph.node_data(node_id)
-        if isinstance(node, IO):
+        if isinstance(node, Parameter):
             return None
 
         out_edges = self.graph.out_edges(node_id)

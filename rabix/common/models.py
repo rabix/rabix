@@ -6,13 +6,13 @@ import time
 import datetime
 
 from uuid import uuid4
-from jsonschema.validators import Draft4Validator
+# noinspection PyUnresolvedReferences
 from six.moves.urllib.parse import urlparse, urlunparse, unquote, urljoin
 from base64 import b64decode
 from os.path import isabs
 
 from rabix.common.errors import ValidationError, RabixError
-from rabix.common.util import map_rec_list, wrap_in_list
+from rabix.common.util import map_rec_list
 
 
 log = logging.getLogger(__name__)
@@ -20,8 +20,10 @@ log = logging.getLogger(__name__)
 
 class Process(object):
 
-    def __init__(self, process_id, inputs, outputs, requirements, hints,
-                 label, description, scatter, scatter_method):
+    def __init__(
+            self, process_id, inputs, outputs,
+            requirements, hints, label, description
+    ):
         self.id = process_id
         self.inputs = inputs
         self.outputs = outputs
@@ -29,8 +31,6 @@ class Process(object):
         self.hints = hints
         self.label = label
         self.description = description
-        self.scatter = wrap_in_list(scatter)
-        self.scatter_method = scatter_method
         self._inputs = {io.id: io for io in inputs}
         self._outputs = {io.id: io for io in outputs}
 
@@ -82,18 +82,23 @@ class Process(object):
             'class': 'Process',
             'inputs': context.to_dict(self.inputs),
             'outputs': context.to_dict(self.outputs),
-            'requirements': self.requirements,
-            'hints': self.hints
+            'requirements': context.to_dict(self.requirements),
+            'hints': context.to_dict(self.hints),
+            'label': self.label,
+            'description': self.description
         }
 
 
 class ExternalProcess(Process):
 
-    def __init__(self, process_id, inputs, outputs, requirements, hints, label,
-                 description, scatter, scatter_method, impl):
+    def __init__(
+            self, process_id, inputs, outputs, requirements,
+            hints, label, description, impl
+    ):
         super(ExternalProcess, self).__init__(
-            process_id, inputs, outputs, requirements, hints, label,
-            description, scatter, scatter_method)
+            process_id, inputs, outputs, requirements,
+            hints, label, description
+        )
         self.impl = impl
 
     def run(self, job):
@@ -104,6 +109,19 @@ class ExternalProcess(Process):
         proc['class'] = 'External'
         proc['impl'] = self.impl
         return proc
+
+    @classmethod
+    def from_dict(cls, context, d):
+        return cls(
+            d['id'],
+            inputs=context.from_dict(d.get('inputs', [])),
+            outputs=context.from_dict(d.get('outputs', [])),
+            requirements=context.from_dict(d.get('requirements', [])),
+            hints=context.from_dict(d.get('hints', [])),
+            label=d.get('label'),
+            description=d.get('description'),
+            impl=context.from_dict(d['impl'])
+        )
 
 
 class URL(object):
@@ -241,26 +259,66 @@ class File(object):
 
 def make_constructor(schema):
 
-        one_of = schema.get('oneOf')
-        if one_of:
-            return OneOfConstructor(one_of)
+        if isinstance(schema, list):
+            return UnionConstructor(schema)
 
-        type_name = schema.get('type')
+        if isinstance(schema, six.string_types):
+            type_name = schema
+        elif isinstance(schema, dict):
+            type_name = schema.get('type')
+        else:
+            raise RabixError('Invalid schema: %s' % schema)
 
         if not type_name:
             return lambda x: x
 
         if type_name == 'array':
-            item_constructor = make_constructor(schema.get('items', {}))
+            item_constructor = make_constructor(schema.get('items'))
             return ArrayConstructor(item_constructor)
 
-        if type_name == 'object':
-            return ObjectConstructor(schema.get('properties', {}))
+        if type_name == 'record':
+            return RecordConstructor(schema.get('fields', []))
 
-        if type_name == 'file' or type_name == 'directory':
+        if type_name == 'File':
             return File
 
         return PrimitiveConstructor(type_name)
+
+
+
+class PrimitiveConstructor(object):
+
+    CONSTRUCTOR_MAP = {
+        'null': lambda x: None,
+        'boolean': bool,
+        'int': int,
+        'long': int,
+        'float': float,
+        'double': float,
+        'bytes': six.binary_type,
+        'string': six.text_type
+    }
+
+    MATCH_MAP = dict(CONSTRUCTOR_MAP)
+    MATCH_MAP.update({
+        'string': six.string_types,
+        'null': type(None)
+    })
+
+    def __init__(self, type_name):
+        self.name = type_name
+        self._match = PrimitiveConstructor.MATCH_MAP.get(type_name)
+        self.type = PrimitiveConstructor.CONSTRUCTOR_MAP.get(type_name)
+
+    def __call__(self, val):
+        return self.type(val)
+
+    def match(self, val):
+        matches = isinstance(val, self._match)
+        return matches
+
+    def __repr__(self):
+        return self.name
 
 
 class ArrayConstructor(object):
@@ -280,10 +338,25 @@ class ArrayConstructor(object):
         return "ArrayConstructor(%s)" % repr(self.item_constructor)
 
 
-class ObjectConstructor(object):
+class MapConstructor(object):
+
+    def __init__(self, property_constructor):
+        pass
+
+    def __call__(self, val):
+        pass
+
+    def match(self, val):
+        pass
+
+    def __repr__(self):
+        return "MapCostructor()"
+
+
+class RecordConstructor(object):
 
     def __init__(self, properties):
-        self.name = 'object'
+        self.name = 'record'
         self.properties = {
             k: make_constructor(v)
             for k, v in six.iteritems(properties)
@@ -301,44 +374,13 @@ class ObjectConstructor(object):
              for k, v in six.iteritems(val)])
 
     def __repr__(self):
-        return "ObjectConstructor(%s)" % repr(self.properties)
+        return "RecordConstructor(%s)" % repr(self.properties)
 
 
-class PrimitiveConstructor(object):
-
-    CONSTRUCTOR_MAP = {
-        'integer': int,
-        'number': float,
-        'boolean': bool,
-        'string': six.text_type
-    }
-
-    MATCH_MAP = dict(CONSTRUCTOR_MAP)
-    MATCH_MAP.update({
-        'string': six.string_types,
-        'number': (int, float)
-    })
-
-    def __init__(self, type_name):
-        self.name = type_name
-        self._match = PrimitiveConstructor.MATCH_MAP.get(type_name)
-        self.type = PrimitiveConstructor.CONSTRUCTOR_MAP.get(type_name)
-
-    def __call__(self, val):
-        return self.type(val)
-
-    def match(self, val):
-        matches = isinstance(val, self._match)
-        return matches
-
-    def __repr__(self):
-        return self.name
-
-
-class OneOfConstructor(object):
+class UnionConstructor(object):
 
     def __init__(self, options):
-        self.name = 'oneOf'
+        self.name = 'union'
         self.options = [make_constructor(opt) for opt in options]
 
     def match(self, val):
@@ -354,15 +396,23 @@ class OneOfConstructor(object):
         return opt(val)
 
     def __repr__(self):
-        return "OneOf(%s)" % repr(self.options)
+        return "UnionConstructor(%s)" % repr(self.options)
 
 
-class IO(object):
+class EnumConstructor(object):
+    pass
 
-    def __init__(self, port_id, validator=None, constructor=None,
+
+class FixedConstructor(object):
+    pass
+
+
+class Parameter(object):
+
+    def __init__(self, id, validator=None, constructor=None,
                  required=False, annotations=None, depth=0):
-        self.id = port_id
-        self.validator = Draft4Validator(validator)
+        self.id = id
+        self.validator = validator
         self.required = required
         self.annotations = annotations
         self.constructor = constructor or str
@@ -382,18 +432,35 @@ class IO(object):
     @classmethod
     def from_dict(cls, context, d):
 
-        item_schema = d.get('schema', {})
-        type_name = item_schema.get('type')
-        depth = 0
+        parameter_type = d.get('type', None)
+        required = True
+        if isinstance(parameter_type, list):
+            non_null = []
+            for t in parameter_type:
+                if t == 'null':
+                    required = False
+                else:
+                    non_null.append(t)
+
+            if len(non_null) == 1:
+                parameter_type = non_null[0]
+            else:
+                parameter_type = non_null
+
+        # no do..while loops in python
+        depth = -1
+        type_name = 'array'
         while type_name == 'array':
             depth += 1
-            item_schema = item_schema.get('items', {})
-            type_name = item_schema.get('type')
+            parameter_type = parameter_type.get('items')
+            if isinstance(parameter_type, dict):
+                type_name = parameter_type.get('type')
+            else:
+                type_name = None
 
-        constructor = make_constructor(item_schema)
+        constructor = make_constructor(parameter_type)
 
         return cls(d.get('id', six.text_type(uuid4())),
-                   validator=context.from_dict(d.get('schema')),
                    constructor=constructor,
                    required=d['required'],
                    annotations=d['annotations'],
