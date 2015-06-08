@@ -9,10 +9,10 @@ import copy
 
 from rabix import __version__ as version
 from rabix.common.util import log_level, map_rec_collection, result_str
-from rabix.common.models import Job, Parameter, File, ExternalProcess
+from rabix.common.models import Job, File, process_builder
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
-from rabix.common.errors import RabixError, ValidationError
+from rabix.common.errors import RabixError
 from rabix.executor import Executor
 from rabix.cli import CommandLineTool, CLIJob
 
@@ -59,45 +59,21 @@ Usage:
   tool {inputs}
 '''
 
-TYPE_MAP = {
-    'TaskTemplate': Job.from_dict,
-    'Job': Job.from_dict,
-    'IO': Parameter.from_dict,
-    'External': ExternalProcess.from_dict
-}
 
-
-def init_context():
+def init_context(d):
     executor = Executor()
-    context = Context(TYPE_MAP, executor)
+    context = Context(executor)
 
     for module in (
             rabix.cli, rabix.expressions, rabix.workflows, rabix.docker
     ):
         module.init(context)
 
+    if d['class'] == 'Job':
+        context.build_from_document(d['app'])
+    else:
+        context.build_from_document(d)
     return context
-
-
-###
-# input massage
-###
-
-def fix_types(tool, toplevelType=None):
-
-    toplevelType = toplevelType or 'External'
-
-    # tool type
-    if 'class' not in tool:
-        tool['class'] = toplevelType
-
-    if tool.get('class') in ('Job', 'TaskTemplate'):
-        fix_types(tool['app'])
-        return
-
-    if tool['class'] == 'Workflow':
-        for step in tool['steps']:
-            fix_types(step)
 
 
 ###
@@ -120,10 +96,10 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
     inp = inp or {}
 
     def resolve(k, v, usage_str, param_str, inp):
-        if v.constructor.name == 'object':
+        if v.constructor.name == 'record':
             return
 
-        to_append = usage_str if v.constructor.name == 'file'\
+        to_append = usage_str if v.constructor.name == 'File'\
             else param_str
 
         cname = getattr(v.constructor, 'name', None) or \
@@ -209,6 +185,11 @@ def conformance_test(context, app, job_dict, basedir):
     }))
 
 
+def fail(message):
+    print(message)
+    sys.exit(1)
+
+
 def main():
     logging.basicConfig(level=logging.WARN)
     if len(sys.argv) == 1:
@@ -236,13 +217,14 @@ def main():
 
     tool = get_tool(dry_run_args)
     if not tool:
-        print("Couldn't find tool.")
-        return
+        fail("Couldn't find tool.")
 
-    fix_types(tool, dry_run_args.get('--type', 'CommandLineTool'))
+    if 'class' not in tool:
+        fail("Document must have a 'class' field")
 
-    context = init_context()
-    app = context.from_dict(tool)
+    context = init_context(tool)
+
+    app = process_builder(context, tool)
     job = None
 
     if isinstance(app, Job):
@@ -312,8 +294,7 @@ def main():
 
         if args['--print-cli']:
             if not isinstance(app, CommandLineTool):
-                print(dry_run_args['<tool>'] + " is not a command line app")
-                return
+                fail(dry_run_args['<tool>'] + " is not a command line app")
 
             print(CLIJob(job).cmd_line())
             return
@@ -326,12 +307,10 @@ def main():
             context.executor.execute(job, lambda _, result: print(
                 result_str(job.id, result)))
         except RabixError as err:
-            print(err.message)
-            sys.exit(1)
+            fail(err.message)
 
     except docopt.DocoptExit:
-        print(app_usage)
-        sys.exit(1)
+        fail(app_usage)
 
 
 if __name__ == '__main__':

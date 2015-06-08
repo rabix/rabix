@@ -3,14 +3,15 @@ import sys
 
 from os.path import dirname
 from setuptools import setup, find_packages
+from pip.req import parse_requirements
 
 sys.path.append(dirname(__file__))
 from rabix import __version__
 
-requires = [
-    x.strip() for x in
-    io.open('requirements.txt')
-]
+install_reqs = parse_requirements(
+    'requirements-{}.txt'.format(sys.version_info[0])
+)
+requires = [str(ir.req) for ir in install_reqs]
 
 setup(
     name="rabix",

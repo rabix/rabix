@@ -3,28 +3,28 @@ import six
 
 from nose.tools import *
 
-from rabix.schema import JsonSchema
 from rabix.main import init_context
 from rabix.common.errors import RabixError
+from rabix.common.models import make_constructor
 
 
-def test_simple_json_schema():
+def test_simple_avro_schema():
     schema = {
-        "type": "object",
-        "properties": {
-            "a": {
-                "type": "integer"
-            }
-        }
+        "type": "record",
+        "name": "Rec",
+        "fields": [{
+            "name": "a",
+            "type": "int"
+        }]
     }
-
-    js = JsonSchema(init_context(), schema)
-    a = next(iter(js))
-    assert_equal(a.id, 'a')
-    assert_equal(a.constructor.name, 'integer')
+    ctx = init_context()
+    cons = make_constructor(schema)
+    a = next(iter(cons.fields))
+    assert_equal(a.name, 'a')
+    assert_equal(a.constructor.name, 'int')
     assert_false(a.required)
 
-    to_dict = js.to_dict()
+    to_dict = js.to_primitive()
     for k, v in six.iteritems(schema):
         assert_equal(to_dict[k], v)
 

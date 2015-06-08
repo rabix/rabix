@@ -12,8 +12,8 @@ class ExpressionEvalPlugin(IPlugin):
     def __init__(self):
         super(ExpressionEvalPlugin, self).__init__()
 
-    def evaluate(self, expression=None, job=None, context=None, *args,
-                 **kwargs):
+    def evaluate(self, expression=None, job=None, context=None,
+                 *args, **kwargs):
         raise RuntimeError('Not implemented')
 
 

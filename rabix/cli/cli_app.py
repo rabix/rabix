@@ -75,24 +75,6 @@ def collect_files(inputs):
     return files
 
 
-class Resources(object):
-
-    def __init__(self, cpu, mem):
-        self.cpu = cpu
-        self.mem = mem
-
-    def to_dict(self, serializer=None):
-        return {
-            "@type": "Resources",
-            "cpu": self.cpu,
-            "mem": self.mem
-        }
-
-    @classmethod
-    def from_dict(cls, d):
-        cls(d.get('cpu', 0), d.get('mem', 0))
-
-
 class Container(object):
 
     def __init__(self):
@@ -116,7 +98,7 @@ class Container(object):
     def _resolve(self, inputs, input_values, job):
 
         if inputs:
-            file_ins = [i for i in inputs if i.constructor.name == 'file']
+            file_ins = [i for i in inputs if i.constructor.name == 'File']
             for f in file_ins:
                 val = input_values.get(f.id)
                 if val:
@@ -131,16 +113,21 @@ class Container(object):
 class CommandLineTool(Process):
     WORKING_DIR = '/work'
 
-    def __init__(self, app_id, inputs, outputs, requirements, hints, label,
-                 description, adapter=None):
+    def __init__(
+            self, process_id, inputs, outputs, requirements, hints,
+            label, description, base_command, arguments=None,
+            stdin=None, stdout=None):
         super(CommandLineTool, self).__init__(
-            app_id, inputs, outputs,
+            process_id, inputs, outputs,
             requirements=requirements,
             hints=hints,
             label=label,
             description=description
         )
-        self.adapter = adapter
+        self.base_command = base_command
+        self.arguments = arguments
+        self.stdin = stdin
+        self.stdout = stdout
         self.mappings = {}
         self.cli_job = None
         self._command_line = None
@@ -216,25 +203,25 @@ class CommandLineTool(Process):
     def to_dict(self, context=None):
         d = super(CommandLineTool, self).to_dict(context)
         d.update({
-            "class": "CommandLineTool",
-            'commandLine': self.adapter
+            'class': 'CommandLineTool',
+            'baseCommand': self.base_command,
+            'arguments': self.arguments,
+            'stdin': self.stdin,
+            'stdout': self.stdout
         })
         return d
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d['id'],
-                   context.from_dict(d['inputs']),
-                   context.from_dict(d.get('outputs', {})),
-                   requirements=context.from_dict(d.get('requirements', [])),
-                   hints=context.from_dict(d.get('hints', [])),
-                   label=d.get('label'),
-                   description=d.get('description'),
-                   base_command=d['baseCommand'],
-                   arguments=d.get('arguments'),
-                   stdin=d.get('stdin'),
-                   stdout=d.get('stdout')
-                   )
+        converted = {k: context.from_dict(v) for k, v in six.iteritems(d)}
+        kwargs = Process.kwarg_dict(converted)
+        kwargs.update({
+            'base_command': converted['baseCommand'],
+            'arguments': converted.get('arguments'),
+            'stdin': converted.get('stdin'),
+            'stdout': converted.get('stdout')
+        })
+        return cls(**kwargs)
 
 if __name__ == '__main__':
     import doctest

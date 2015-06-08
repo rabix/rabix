@@ -1,6 +1,5 @@
 import copy
 import six
-import os
 
 from rabix.common.errors import RabixError
 from rabix.common.models import Job

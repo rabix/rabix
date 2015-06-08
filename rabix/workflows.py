@@ -2,22 +2,20 @@ import six
 import logging
 import copy
 
-from uuid import uuid4
 from collections import namedtuple, defaultdict
 from altgraph.Graph import Graph
 
 from rabix.common.errors import ValidationError, RabixError
 from rabix.common.util import wrap_in_list
-from rabix.common.models import App, Parameter, Job
-from rabix.schema import JsonSchema
+from rabix.common.models import Process, Parameter, Job
 
 log = logging.getLogger(__name__)
 
 AppNode = namedtuple('AppNode', ['app', 'inputs'])
 
-Relation = namedtuple('Relation', ['src_port', 'dst_port'])
-InputRelation = namedtuple('InputRelation', ['dst_port'])
-OutputRelation = namedtuple('OutputRelation', ['src_port'])
+Relation = namedtuple('Relation', ['source', 'destination'])
+InputRelation = namedtuple('InputRelation', ['destination'])
+OutputRelation = namedtuple('OutputRelation', ['source'])
 
 
 class Step(object):
@@ -31,9 +29,9 @@ class Step(object):
     def to_dict(self, context):
         return {
             "id": self.id,
-            "inpl": self.app.to_dict(context),
-            "inputs": context.to_dict(self.inputs),
-            "outputs": context.to_dict(self.outputs)
+            "impl": self.app.to_primitive(context),
+            "inputs": context.to_primitive(self.inputs),
+            "outputs": context.to_primitive(self.outputs)
         }
 
     @classmethod
@@ -45,27 +43,36 @@ class Step(object):
             context.from_dict(d.get('outputs')))
 
 
-class WorkflowApp(App):
+class Workflow(Process):
 
-    def __init__(self, app_id, steps, context,
-                 inputs=None, outputs=None, to=None,
-                 app_description=None,
-                 annotations=None,
-                 platform_features=None):
+    def __init__(self, process_id, inputs, outputs, requirements, hints, label,
+                 description, steps, context, data_links=None):
+        super(Workflow, self).__init__(
+            process_id, inputs, outputs, requirements,
+            hints, label, description
+        )
         self.graph = Graph()
-        self.inputs = inputs or []
-        self.outputs = outputs or []
         self.executor = context.executor
         self.steps = steps
-        self.to = to or {}
+        self.data_links = data_links
         self.context = context
-
         for step in steps:
-            self.add_node(step.id,  AppNode(step.app, {}))
+            self.add_node(step.id, AppNode(step.app, {}))
+
+        if not data_links:
+            data_links = []
+            for step in steps:
+                dl = step.connect
+                dl.destination = step.id
+                data_links.append(dl)
+
+        for data_link in data_links:
+            step = self.graph.describe_node(data_link.destination)
+            self.add_edge_or_input()
 
         for step in steps:
             # inputs
-            for input_port, input_val in six.iteritems(step.inputs):
+            for input_parameter in step.inputs:
                 inp = wrap_in_list(input_val)
                 for item in inp:
                     self.add_edge_or_input(step, input_port, item)
@@ -74,8 +81,9 @@ class WorkflowApp(App):
             if step.outputs:
                 for output_port, output_val in six.iteritems(step.outputs):
                     self.to[output_val['$to']] = output_port
-                    if isinstance(step.app, WorkflowApp):
-                        output_node = step.app.get_output(step.app.to.get(output_port))
+                    if isinstance(step.app, Workflow):
+                        output_node = step.app.get_output(
+                            step.app.to.get(output_port))
                     else:
                         output_node = step.app.get_output(output_port)
                     output_id = output_val['$to']
@@ -85,22 +93,10 @@ class WorkflowApp(App):
                     )
                     # output_node.id = output_val['$to']
                     self.outputs.append(output_node)
-
         if not self.graph.connected():
             pass
             # raise ValidationError('Graph is not connected')
 
-        for inp in self.inputs:
-            schema['properties'][inp.id] = inp.validator.schema
-            if inp.required:
-                schema['required'].append(inp.id)
-
-        super(WorkflowApp, self).__init__(
-            app_id, JsonSchema(context, schema), self.outputs,
-            app_description=app_description,
-            annotations=annotations,
-            platform_features=platform_features
-        )
 
     def add_edge_or_input(self, step, input_name, input_val):
         node_id = step.id
@@ -146,30 +142,26 @@ class WorkflowApp(App):
         return eg.outputs
 
     def to_dict(self, context):
-        d = super(WorkflowApp, self).to_dict(context)
+        d = super(Workflow, self).to_dict(context)
         d.update({
             "class": "Workflow",
-            'steps': [step.to_dict(context) for step in self.steps]
+            'steps': [step.to_primitive(context) for step in self.steps]
         })
         return d
 
     @classmethod
     def from_dict(cls, context, d):
-        steps = [Step(
-            step['id'], context.from_dict(step['app']),
-            step['inputs'], step.get('outputs')
-        )
-            for step in d['steps']]
-
-        return cls(
-            d.get('id', six.text_type(uuid4())),
-            steps,
-            context
-        )
+        converted = {k: context.from_dict(v) for k, v in six.iteritems(d)}
+        kwargs = Process.kwarg_dict(converted)
+        kwargs.update({
+            'steps': d['steps'],
+            'data_links': d['dataLinks']
+        })
+        return cls(**kwargs)
 
 
 def init(context):
-    context.add_type('Workflow', WorkflowApp.from_dict)
+    context.add_type('Workflow', Workflow.from_dict)
 
 
 class PartialJob(object):
@@ -345,7 +337,7 @@ if __name__ == '__main__':
 
     doc = from_url(root_relative('tests/workflow.yml'))
 
-    wf = WorkflowApp(doc['workflows']['add_one_mul_two']['steps'])
+    wf = Workflow(doc['workflows']['add_one_mul_two']['steps'])
     print(wf.graph.forw_topo_sort())
 
     for edge in wf.graph.edges:

@@ -28,13 +28,13 @@ class AdapterEvaluator(object):
             return self.ev.evaluate(
                 expr_object.get('lang', 'javascript'),
                 expr_object.get('value'),
-                job.to_dict() if job else self.job.to_dict(),
+                job.to_primitive() if job else self.job.to_primitive(),
                 context
             )
         else:
             return self.ev.evaluate('javascript', expr_object,
-                                    job.to_dict() if job else
-                                    self.job.to_dict(), context)
+                                    job.to_primitive() if job else
+                                    self.job.to_primitive(), context)
 
     def resolve(self, val, context=None, job=None):
         if not isinstance(val, dict):
@@ -44,7 +44,7 @@ class AdapterEvaluator(object):
             return self.evaluate(v, context, job=job)
         if 'job' in val or '$job' in val:
             v = val.get('job') or val.get('$job')
-            return resolve_pointer(self.job.to_dict(), v)
+            return resolve_pointer(self.job.to_primitive(), v)
         return val
 
     def __deepcopy__(self, memo):

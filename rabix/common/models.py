@@ -1,21 +1,40 @@
 import os
-import six
 import json
 import logging
 import time
 import datetime
-
 from uuid import uuid4
+
+import six
+
 # noinspection PyUnresolvedReferences
 from six.moves.urllib.parse import urlparse, urlunparse, unquote, urljoin
 from base64 import b64decode
 from os.path import isabs
+from avro.schema import Names, make_avsc_object
 
 from rabix.common.errors import ValidationError, RabixError
 from rabix.common.util import map_rec_list
 
 
 log = logging.getLogger(__name__)
+
+
+def process_builder(context, d):
+    inputs = d.get('inputs')
+    outputs = d.get('outputs')
+
+    schemas = []
+    for s in context.get_requirement(SchemaDefRequirement):
+        schemas.extend(s.types)
+
+    for i in inputs:
+        i['type'] = make_avro(i['type'], schemas)
+
+    for o in outputs:
+        o['type'] = make_avro(o['type'], schemas)
+
+    return context.from_dict(d)
 
 
 class Process(object):
@@ -38,8 +57,9 @@ class Process(object):
         pass
 
     def run(self, job):
-        raise NotImplementedError("Method 'run' is not implemented"
-                                  " in the App class")
+        raise NotImplementedError(
+            "Method 'run' is not implemented in the App class"
+        )
 
     def get_input(self, name):
         return self._inputs.get(name)
@@ -72,7 +92,7 @@ class Process(object):
 
     def job_dump(self, job, dirname):
         with open(os.path.join(dirname, 'job.cwl.json'), 'w') as f:
-            job_dict = job.to_dict()
+            job_dict = job.to_primitive()
             json.dump(job_dict, f)
             log.info('File %s created.', job.id)
 
@@ -80,48 +100,25 @@ class Process(object):
         return {
             'id': self.id,
             'class': 'Process',
-            'inputs': context.to_dict(self.inputs),
-            'outputs': context.to_dict(self.outputs),
-            'requirements': context.to_dict(self.requirements),
-            'hints': context.to_dict(self.hints),
+            'inputs': context.to_primitive(self.inputs),
+            'outputs': context.to_primitive(self.outputs),
+            'requirements': context.to_primitive(self.requirements),
+            'hints': context.to_primitive(self.hints),
             'label': self.label,
             'description': self.description
         }
 
-
-class ExternalProcess(Process):
-
-    def __init__(
-            self, process_id, inputs, outputs, requirements,
-            hints, label, description, impl
-    ):
-        super(ExternalProcess, self).__init__(
-            process_id, inputs, outputs, requirements,
-            hints, label, description
-        )
-        self.impl = impl
-
-    def run(self, job):
-        return self.impl.run(job)
-
-    def to_dict(self, context):
-        proc = super(ExternalProcess, self).to_dict(context)
-        proc['class'] = 'External'
-        proc['impl'] = self.impl
-        return proc
-
-    @classmethod
-    def from_dict(cls, context, d):
-        return cls(
-            d['id'],
-            inputs=context.from_dict(d.get('inputs', [])),
-            outputs=context.from_dict(d.get('outputs', [])),
-            requirements=context.from_dict(d.get('requirements', [])),
-            hints=context.from_dict(d.get('hints', [])),
-            label=d.get('label'),
-            description=d.get('description'),
-            impl=context.from_dict(d['impl'])
-        )
+    @staticmethod
+    def kwarg_dict(d):
+        return {
+            'process_id': d['id'],
+            'inputs': d['inputs'],
+            'outputs': d.get('outputs'),
+            'requirements': d.get('requirements'),
+            'hints': d.get('hints'),
+            'label': d.get('label'),
+            'description': d.get('description')
+        }
 
 
 class URL(object):
@@ -226,7 +223,7 @@ class File(object):
             "path": self.path,
             "size": self.size,
             "metadata": self.meta,
-            "secondaryFiles": [sf.to_dict(context)
+            "secondaryFiles": [sf.to_primitive(context)
                                for sf in self.secondary_files]
         }
 
@@ -256,166 +253,52 @@ class File(object):
     def path(self, val):
         self.url = URL(val) if isinstance(val, six.string_types) else val
 
-
-def make_constructor(schema):
-
-        if isinstance(schema, list):
-            return UnionConstructor(schema)
-
-        if isinstance(schema, six.string_types):
-            type_name = schema
-        elif isinstance(schema, dict):
-            type_name = schema.get('type')
-        else:
-            raise RabixError('Invalid schema: %s' % schema)
-
-        if not type_name:
-            return lambda x: x
-
-        if type_name == 'array':
-            item_constructor = make_constructor(schema.get('items'))
-            return ArrayConstructor(item_constructor)
-
-        if type_name == 'record':
-            return RecordConstructor(schema.get('fields', []))
-
-        if type_name == 'File':
-            return File
-
-        return PrimitiveConstructor(type_name)
-
-
-
-class PrimitiveConstructor(object):
-
-    CONSTRUCTOR_MAP = {
-        'null': lambda x: None,
-        'boolean': bool,
-        'int': int,
-        'long': int,
-        'float': float,
-        'double': float,
-        'bytes': six.binary_type,
-        'string': six.text_type
-    }
-
-    MATCH_MAP = dict(CONSTRUCTOR_MAP)
-    MATCH_MAP.update({
-        'string': six.string_types,
-        'null': type(None)
-    })
-
-    def __init__(self, type_name):
-        self.name = type_name
-        self._match = PrimitiveConstructor.MATCH_MAP.get(type_name)
-        self.type = PrimitiveConstructor.CONSTRUCTOR_MAP.get(type_name)
-
-    def __call__(self, val):
-        return self.type(val)
-
-    def match(self, val):
-        matches = isinstance(val, self._match)
-        return matches
-
-    def __repr__(self):
-        return self.name
-
-
-class ArrayConstructor(object):
-
-    def __init__(self, item_constructor):
-        self.item_constructor = item_constructor
-        self.name = 'array'
-
-    def __call__(self, val):
-        return [self.item_constructor(v) for v in val]
-
-    def match(self, val):
-        return isinstance(val, list) and all(
-            [self.item_constructor.match(v) for v in val])
-
-    def __repr__(self):
-        return "ArrayConstructor(%s)" % repr(self.item_constructor)
-
-
-class MapConstructor(object):
-
-    def __init__(self, property_constructor):
-        pass
-
-    def __call__(self, val):
-        pass
-
-    def match(self, val):
-        pass
-
-    def __repr__(self):
-        return "MapCostructor()"
-
-
-class RecordConstructor(object):
-
-    def __init__(self, properties):
-        self.name = 'record'
-        self.properties = {
-            k: make_constructor(v)
-            for k, v in six.iteritems(properties)
+FILE_SCHEMA = {
+    'type': 'record',
+    'name': 'File',
+    'fields': [
+        {
+            'name': 'path',
+            'type': 'string'
+        },
+        {
+            'name': 'size',
+            'type': ['long', 'null']
+        },
+        {
+            'name': 'secondaryFiles',
+            'type': ['null', {'type': 'array', 'items': 'File'}]
+        },
+        {
+            'name': 'checksum',
+            'type': ['null', 'string']
         }
-
-    def __call__(self, val):
-        return {
-            k: self.properties.get(k, lambda x: x)(v)
-            for k, v in six.iteritems(val)
-        }
-
-    def match(self, val):
-        return isinstance(val, dict) and all(
-            [k in self.properties and self.properties[k].match(v)
-             for k, v in six.iteritems(val)])
-
-    def __repr__(self):
-        return "RecordConstructor(%s)" % repr(self.properties)
+    ]
+}
 
 
-class UnionConstructor(object):
+def make_avro(schema, named_defs):
+    names = Names()
+    make_avsc_object(FILE_SCHEMA, names)
+    for d in named_defs:
+        make_avsc_object(d, names)
 
-    def __init__(self, options):
-        self.name = 'union'
-        self.options = [make_constructor(opt) for opt in options]
-
-    def match(self, val):
-        return next((x for x in self.options if x.match(val)), None)
-
-    def __call__(self, val):
-        opt = self.match(val)
-        if not opt:
-            raise ValueError(
-                "Value '%s' doesn't match any of the constructors"
-                % str(val)
-            )
-        return opt(val)
-
-    def __repr__(self):
-        return "UnionConstructor(%s)" % repr(self.options)
+    return make_avsc_object(schema, names)
 
 
-class EnumConstructor(object):
-    pass
-
-
-class FixedConstructor(object):
+class Expression(object):
     pass
 
 
 class Parameter(object):
 
-    def __init__(self, id, validator=None, constructor=None,
-                 required=False, annotations=None, depth=0):
+    def __init__(
+            self, id, validator=None, required=False, annotations=None, depth=0
+    ):
         self.id = id
         self.validator = validator
         self.required = required
         self.annotations = annotations
-        self.constructor = constructor or str
         self.depth = depth
 
     def validate(self, value):
@@ -458,10 +341,8 @@ class Parameter(object):
             else:
                 type_name = None
 
-        constructor = make_constructor(parameter_type)
-
         return cls(d.get('id', six.text_type(uuid4())),
-                   constructor=constructor,
+                   validator=d.get('type'),
                    required=d['required'],
                    annotations=d['annotations'],
                    depth=depth)
@@ -488,9 +369,9 @@ class Job(object):
         return {
             'id': self.id,
             'class': 'Job',
-            'app': self.app.to_dict(ctx),
-            'inputs': ctx.to_dict(self.inputs),
-            'allocatedResources': ctx.to_dict(self.allocated_resources)
+            'app': self.app.to_primitive(ctx),
+            'inputs': ctx.to_primitive(self.inputs),
+            'allocatedResources': ctx.to_primitive(self.allocated_resources)
         }
 
     @staticmethod
@@ -511,7 +392,7 @@ class Job(object):
 
     @classmethod
     def from_dict(cls, context, d):
-        app = context.from_dict(d['app'])
+        app = process_builder(context, d['app'])
         return cls(
             d.get('id') if d.get('id') else cls.mk_work_dir(app.id),
             app,
@@ -519,3 +400,33 @@ class Job(object):
             d.get('allocatedResources'),
             context
         )
+
+
+class CreateFileRequirement(object):
+
+    def __init__(self, file_defs):
+        pass
+
+
+class EnvVarRequirement(object):
+    pass
+
+
+class ExpressionEngineRequirement(object):
+    pass
+
+
+class SchemaDefRequirement(object):
+
+    def __init__(self, types):
+        self.types = types
+
+    @classmethod
+    def from_dict(cls, context, d):
+        return cls(d.get('types', []))
+
+    def to_dict(self, context):
+        return {
+            'type': 'SchemaDefRequirement',
+            'types': [t.to_json() for t in self.types]
+        }

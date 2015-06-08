@@ -1,0 +1,2 @@
+-r requirements.txt
+avro-python3==1.7.7
