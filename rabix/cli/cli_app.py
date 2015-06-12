@@ -4,8 +4,10 @@ import json
 import stat
 import copy
 
+from avro.schema import NamedSchema
+
 from rabix.cli.adapter import CLIJob
-from rabix.common.models import Process, File
+from rabix.common.models import Process, File, InputParameter, OutputParameter
 from rabix.common.io import InputCollector
 from rabix.common.util import map_or_apply, map_rec_collection
 
@@ -90,7 +92,7 @@ class Container(object):
         """
         Download remote files and find secondary files according to annotations
         """
-        inputs = job.app.inputs.io
+        inputs = job.app.inputs
         self.input_collector = InputCollector(job_dir)
         input_values = job.inputs
         self._resolve(inputs, input_values, job.inputs)
@@ -98,7 +100,9 @@ class Container(object):
     def _resolve(self, inputs, input_values, job):
 
         if inputs:
-            file_ins = [i for i in inputs if i.constructor.name == 'File']
+            file_ins = [i for i in inputs
+                        if isinstance(i.validator, NamedSchema) and
+                        i.validator.name == 'File']
             for f in file_ins:
                 val = input_values.get(f.id)
                 if val:
@@ -131,6 +135,7 @@ class CommandLineTool(Process):
         self.mappings = {}
         self.cli_job = None
         self._command_line = None
+        self.container = next(r for r in self.requirements if hasattr(r, 'run'))
 
     def run(self, job, job_dir=None):
         job_dir = os.path.abspath(job_dir or job.id)
@@ -142,14 +147,14 @@ class CommandLineTool(Process):
                  stat.S_IWOTH)
         self.cli_job = CLIJob(job)
 
-        if self.requirements.container:
+        if self.container:
             self.ensure_files(job, job_dir)
             abspath_job = copy.deepcopy(job)
             self.install(job=job)
 
             cmd_line = self.command_line(job, job_dir)
             self.job_dump(job, job_dir)
-            self.requirements.container.run(cmd_line, job_dir)
+            self.container.run(cmd_line, job_dir)
             result_path = os.path.abspath(job_dir) + '/result.cwl.json'
             if os.path.exists(result_path):
                 with open(result_path, 'r') as res:
@@ -178,12 +183,12 @@ class CommandLineTool(Process):
         return self._command_line
 
     def install(self, *args, **kwargs):
-        if self.requirements and self.requirements.container:
-            self.requirements.container.install(*args, **kwargs)
+        if self.container:
+            self.container.install(*args, **kwargs)
 
     def ensure_files(self, job, job_dir):
-        if self.requirements and self.requirements.container:
-            self.requirements.container.ensure_files(job, job_dir)
+        if self.container:
+            self.container.ensure_files(job, job_dir)
 
     def remap_paths(self, inputs, job_dir):
         if self.requirements and self.requirements.container:
@@ -219,7 +224,11 @@ class CommandLineTool(Process):
             'base_command': converted['baseCommand'],
             'arguments': converted.get('arguments'),
             'stdin': converted.get('stdin'),
-            'stdout': converted.get('stdout')
+            'stdout': converted.get('stdout'),
+            'inputs': [InputParameter.from_dict(context, inp)
+                       for inp in converted.get('inputs', [])],
+            'outputs': [OutputParameter.from_dict(context, inp)
+                       for inp in converted.get('outputs', [])]
         })
         return cls(**kwargs)
 

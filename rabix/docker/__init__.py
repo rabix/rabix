@@ -3,4 +3,4 @@ from rabix.docker.container import find_image, get_image
 
 
 def init(context):
-    context.add_type('Docker', DockerContainer.from_dict)
+    context.add_type('DockerRequirement', DockerContainer.from_dict)

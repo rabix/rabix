@@ -7,9 +7,11 @@ import six
 import json
 import copy
 
+from avro.schema import NamedSchema
+
 from rabix import __version__ as version
 from rabix.common.util import log_level, map_rec_collection, result_str
-from rabix.common.models import Job, File, process_builder
+from rabix.common.models import Job, File, process_builder, construct_files
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
 from rabix.common.errors import RabixError
@@ -76,6 +78,9 @@ def init_context(d):
     return context
 
 
+def infer_types(d):
+    pass
+
 ###
 # usage strings
 ###
@@ -96,17 +101,17 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
     inp = inp or {}
 
     def resolve(k, v, usage_str, param_str, inp):
-        if v.constructor.name == 'record':
+        if v.validator.type == 'record':
             return
 
-        to_append = usage_str if v.constructor.name == 'File'\
+        to_append = usage_str if (isinstance(v.validator, NamedSchema) and
+                                  v.validator.name == 'File')\
             else param_str
 
-        cname = getattr(v.constructor, 'name', None) or \
-            getattr(v.constructor, '__name__', 'val')
+        cname = v.validator.type
 
         prefix = '--%s' % k
-        suffix = '' if v.constructor.name == 'boolean' else '=<%s>' % cname
+        suffix = '' if v.validator.type == 'boolean' else '=<%s>' % cname
 
         arg = prefix + suffix
 
@@ -119,7 +124,7 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
         to_append.append(arg)
 
     def resolve_object(obj, usage_str, param_str, inp, root=False):
-        properties = obj.inputs.io if root else obj.objects
+        properties = obj.inputs if root else obj.objects
         for input in properties:
             key = input.id if root else '.'.join([obj.id, input.id])
             resolve(key, input, usage_str, param_str, inp.keys())
@@ -139,10 +144,10 @@ def rebase_path(val, base):
     return val
 
 
-def get_inputs(app, args, basedir=None):
+def get_inputs(args, basedir=None):
 
     basedir = basedir or os.path.abspath('.')
-    inputs = app.construct_inputs(args)
+    inputs = construct_files(args)
     return map_rec_collection(
         lambda v: rebase_path(v, basedir),
         inputs
@@ -173,7 +178,7 @@ def conformance_test(context, app, job_dict, basedir):
     if not app.outputs:
         app.outputs = []
 
-    job_dict['inputs'] = get_inputs(app, job_dict['inputs'], basedir)
+    job_dict['inputs'] = get_inputs(job_dict['inputs'], basedir)
     job = context.from_dict(job_dict)
 
     adapter = CLIJob(job)
@@ -249,14 +254,14 @@ def main():
         if args['--inp-file']:
             basedir = os.path.dirname(args.get('--inp-file'))
             input_file = from_url(args.get('--inp-file'))
-            inputs = get_inputs(app, input_file, basedir)
+            inputs = get_inputs(input_file, basedir)
             job_dict['inputs'].update(inputs)
 
         input_usage = job_dict['inputs']
 
         if job:
             basedir = os.path.dirname(args.get('<tool>'))
-            job.inputs = get_inputs(app, job.inputs, basedir)
+            job.inputs = get_inputs(job.inputs, basedir)
             input_usage.update(job.inputs)
 
         app_inputs_usage = make_app_usage_string(
@@ -284,7 +289,7 @@ def main():
             if v != []
         }
 
-        inp = get_inputs(app, app_inputs)
+        inp = get_inputs(app_inputs)
         if not job:
             job_dict['id'] = args.get('--dir')
             job_dict['app'] = app

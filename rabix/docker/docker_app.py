@@ -52,7 +52,7 @@ def make_config(**kwargs):
 
 class DockerContainer(Container):
 
-    def __init__(self, uri, image_id, user=None, dockr=None):
+    def __init__(self, uri, image_id=None, user=None, dockr=None):
         super(DockerContainer, self).__init__()
         self.uri = uri.lstrip("docker://")\
             if uri and uri.startswith('docker:/') else uri
@@ -205,4 +205,4 @@ class DockerContainer(Container):
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d.get('uri'), d.get('imageId'))
+        return cls(d.get('dockerPull'))

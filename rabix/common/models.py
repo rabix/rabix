@@ -3,6 +3,7 @@ import json
 import logging
 import time
 import datetime
+from slugify import slugify
 from uuid import uuid4
 
 import six
@@ -11,7 +12,7 @@ import six
 from six.moves.urllib.parse import urlparse, urlunparse, unquote, urljoin
 from base64 import b64decode
 from os.path import isabs
-from avro.schema import Names, make_avsc_object
+from avro.schema import Names, make_avsc_object, UnionSchema, ArraySchema
 
 from rabix.common.errors import ValidationError, RabixError
 from rabix.common.util import map_rec_list
@@ -21,6 +22,9 @@ log = logging.getLogger(__name__)
 
 
 def process_builder(context, d):
+    if not isinstance(d, dict):
+        return d
+
     inputs = d.get('inputs')
     outputs = d.get('outputs')
 
@@ -35,6 +39,19 @@ def process_builder(context, d):
         o['type'] = make_avro(o['type'], schemas)
 
     return context.from_dict(d)
+
+
+def construct_files(val):
+    if isinstance(val, list):
+        return [construct_files(e) for e in val]
+
+    if not isinstance(val, dict):
+        return val
+
+    if val.get('class') == 'File':
+        return File(val)
+
+    return {k: construct_files(v) for k, v in six.iteritems(val)}
 
 
 class Process(object):
@@ -182,10 +199,6 @@ class File(object):
 
     name = 'File'
 
-    @classmethod
-    def match(cls, val):
-        return isinstance(val, dict) and 'path' in val
-
     def __init__(self, path, size=None, meta=None, secondary_files=None):
         self.size = size
         self.meta = meta or {}
@@ -293,23 +306,28 @@ class Expression(object):
 class Parameter(object):
 
     def __init__(
-            self, id, validator=None, required=False, annotations=None, depth=0
+            self, id, validator=None, required=False, label=None,
+            description=None, depth=0
     ):
         self.id = id
         self.validator = validator
         self.required = required
-        self.annotations = annotations
+        self.label = label
+        self.description = description
         self.depth = depth
 
     def validate(self, value):
         return self.validator.validate(value)
 
     def to_dict(self, ctx=None):
+        t = [self.validator.schema]
+        if not self.required:
+            t.append('null')
         return {
             'id': self.id,
-            'type': self.validator.schema,
-            'required': self.required,
-            'annotations': self.annotations
+            'type': t,
+            'label': self.label,
+            'description': self.description
         }
 
     @classmethod
@@ -317,39 +335,73 @@ class Parameter(object):
 
         parameter_type = d.get('type', None)
         required = True
-        if isinstance(parameter_type, list):
+        if isinstance(parameter_type, UnionSchema):
             non_null = []
-            for t in parameter_type:
-                if t == 'null':
+            for t in parameter_type.schemas:
+                if t.type == 'null':
                     required = False
                 else:
                     non_null.append(t)
 
             if len(non_null) == 1:
                 parameter_type = non_null[0]
-            else:
-                parameter_type = non_null
 
-        # no do..while loops in python
-        depth = -1
-        type_name = 'array'
-        while type_name == 'array':
+        depth = 0
+
+        while isinstance(parameter_type, ArraySchema):
             depth += 1
-            parameter_type = parameter_type.get('items')
-            if isinstance(parameter_type, dict):
-                type_name = parameter_type.get('type')
-            else:
-                type_name = None
+            parameter_type = parameter_type.items
 
         return cls(d.get('id', six.text_type(uuid4())),
-                   validator=d.get('type'),
-                   required=d['required'],
-                   annotations=d['annotations'],
+                   validator=parameter_type,
+                   required=required,
+                   label=d.get('label'),
+                   description=d.get('description'),
                    depth=depth)
 
     def __repr__(self):
-        return "IO(%s)" % vars(self)
+        return "Parameter(%s)" % vars(self)
 
+
+class InputParameter(Parameter):
+
+    def __init__(self, id, validator=None, required=False, label=None,
+                 description=None, depth=0, input_binding=None):
+        super(InputParameter, self).__init__(
+            id, validator, required, label, description, depth
+        )
+
+        self.input_binding = input_binding
+
+    def to_dict(self, ctx=None):
+        d = super(InputParameter, self).to_dict(ctx)
+        d['inputBinding'] = ctx.to_primitive(self.input_binding)
+
+    @classmethod
+    def from_dict(cls, context, d):
+        instance = super(InputParameter, cls).from_dict(context, d)
+        instance.input_binding = d.get('inputBinding')
+        return instance
+
+
+class OutputParameter(Parameter):
+    def __init__(self, id, validator=None, required=False, label=None,
+                 description=None, depth=0, output_binding=None):
+        super(OutputParameter, self).__init__(
+            id, validator, required, label, description, depth
+        )
+
+        self.output_binding = output_binding
+
+    def to_dict(self, ctx=None):
+        d = super(OutputParameter, self).to_dict(ctx)
+        d['outputBinding'] = ctx.to_primitive(self.output_binding)
+
+    @classmethod
+    def from_dict(cls, context, d):
+        instance = super(OutputParameter, cls).from_dict(context, d)
+        instance.output_binding = d.get('outputBinding')
+        return instance
 
 class Job(object):
 
@@ -375,8 +427,12 @@ class Job(object):
         }
 
     @staticmethod
-    def mk_work_dir(name):
+    def mk_work_dir(app):
         ts = time.time()
+        if app.label:
+            name = slugify(app.label)
+        else:
+            name = slugify(app.id)
         path = '_'.join([name, datetime.datetime.fromtimestamp(ts).strftime('%H%M%S')])
         try_path = path
         if os.path.exists(path):
@@ -394,7 +450,7 @@ class Job(object):
     def from_dict(cls, context, d):
         app = process_builder(context, d['app'])
         return cls(
-            d.get('id') if d.get('id') else cls.mk_work_dir(app.id),
+            d.get('id') if d.get('id') else cls.mk_work_dir(app),
             app,
             context.from_dict(d['inputs']),
             d.get('allocatedResources'),

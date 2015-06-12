@@ -6,9 +6,11 @@ import glob
 import copy
 import shlex
 
-from jsonschema import Draft4Validator
-import jsonschema.exceptions
+
+# noinspection PyUnresolvedReferences
 from six.moves import reduce
+from avro.schema import UnionSchema, Schema
+from avro.io import validate
 
 from rabix.common.ref_resolver import resolve_pointer
 from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath
@@ -26,8 +28,8 @@ class AdapterEvaluator(object):
     def evaluate(self, expr_object, context=None, job=None):
         if isinstance(expr_object, dict):
             return self.ev.evaluate(
-                expr_object.get('lang', 'javascript'),
-                expr_object.get('value'),
+                expr_object.get('expressionEngine', 'javascript'),
+                expr_object.get('script'),
                 job.to_primitive() if job else self.job.to_primitive(),
                 context
             )
@@ -83,19 +85,17 @@ def secondary_files(p, adapter, evaluator):
 class InputAdapter(object):
     def __init__(self, value, evaluator, schema, adapter_dict=None, key=''):
         self.evaluator = evaluator
-        self.schema = schema or {}
-        self.adapter = adapter_dict or self.schema.get('adapter')
+        self.schema = schema
+        self.adapter = adapter_dict or (
+            isinstance(self.schema, Schema), self.schema.props.get('inputBinding'))
         self.has_adapter = self.adapter is not None
         self.adapter = self.adapter or {}
         self.key = key
-        if 'oneOf' in self.schema:
-            for opt in self.schema['oneOf']:
-                validator = Draft4Validator(opt)
-                try:
-                    validator.validate(value)
+        if isinstance(self.schema, UnionSchema):
+            for opt in self.schema.schemas:
+                if validate(opt, value):
                     self.schema = opt
-                except jsonschema.exceptions.ValidationError:
-                    pass
+                    break
         self.value = evaluator.resolve(value)
 
     __str__ = lambda self: six.text_type(self.value)
@@ -131,11 +131,24 @@ class InputAdapter(object):
             return [self.prefix, self.value]
         return [self.prefix + self.separator + six.text_type(self.value)]
 
-    def as_dict(self, mix_with=None):
-        sch = lambda key: self.schema.get('properties', {}).get(key, {})
+    def as_dict(self):
+        sch = lambda key: next(field for field in self.schema.fields
+                               if field.name == key)
         adapters = [InputAdapter(v, self.evaluator, sch(k), key=k)
                     for k, v in six.iteritems(self.value)]
-        adapters = (mix_with or []) + [adp for adp in adapters if adp.has_adapter]
+        adapters = [adp for adp in adapters if adp.has_adapter]
+        res = reduce(
+            operator.add,
+            [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)],
+            []
+        )
+        return res
+
+    def as_toplevel(self, mix_with):
+        sch = lambda key: next(inp.type for inp in self.schema
+                               if inp.id == key)
+        adapters = mix_with + [InputAdapter(v, self.evaluator, sch(k), key=k)
+                    for k, v in six.iteritems(self.value)]
         res = reduce(
             operator.add,
             [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)],
@@ -144,7 +157,7 @@ class InputAdapter(object):
         return res
 
     def as_list(self):
-        items = [InputAdapter(item, self.evaluator, self.schema.get('items', {}))
+        items = [InputAdapter(item, self.evaluator, self.schema.items)
                  for item in self.value]
 
         if not self.prefix:
@@ -179,15 +192,12 @@ class CLIJob(object):
     def __init__(self, job):
         self.job = job
         self.app = job.app
-        self.adapter = self.app.adapter or {}
-        self._stdin = self.adapter.get('stdin')
-        self._stdout = self.adapter.get('stdout')
-        self.base_cmd = self.adapter.get('baseCmd', [])
+        self._stdin = self.app.stdin
+        self._stdout = self.app.stdout
+        self.base_cmd = self.app.base_command
         if isinstance(self.base_cmd, six.string_types):
             self.base_cmd = self.base_cmd.split(' ')
-        self.args = self.adapter.get('args', [])
-        self.input_schema = self.app.inputs.schema
-        self.output_schema = self.app.outputs.schema
+        self.args = self.app.arguments
         self.eval = AdapterEvaluator(job)
 
     @property
@@ -203,8 +213,8 @@ class CLIJob(object):
     def make_arg_list(self):
         adapters = [InputAdapter(a['value'], self.eval, {}, a)
                     for a in self.args]
-        ia = InputAdapter(self.job.inputs, self.eval, self.input_schema)
-        args = ia.as_dict(adapters)
+        ia = InputAdapter(self.job.inputs, self.eval, self.app.inputs)
+        args = ia.as_toplevel(adapters)
         base_cmd = [self.eval.resolve(item) for item in self.base_cmd]
 
         return [six.text_type(arg) for arg in base_cmd + args]
