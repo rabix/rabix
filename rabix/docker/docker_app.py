@@ -78,12 +78,12 @@ class DockerContainer(Container):
             log.info('Image %s not found:' % self.image_id)
             raise RabixError('Image %s not found:' % self.image_id)
 
-        if not image['Id'].startswith(self.image_id):
-
-            raise RabixError(
-                'Wrong id of pulled image: expected "%s", got "%s"'
-                % (self.image_id, image['Id'])
-            )
+        # if not image['Id'].startswith(self.image_id):
+        #
+        #     raise RabixError(
+        #         'Wrong id of pulled image: expected "%s", got "%s"'
+        #         % (self.image_id, image['Id'])
+        #     )
 
         self.image_id = image['Id']
 
@@ -197,10 +197,9 @@ class DockerContainer(Container):
 
     def to_dict(self, context=None):
         return {
-            "@type": "Docker",
-            "type": "docker",
-            "uri": self.uri,
-            "imageId": self.image_id
+            "class": "DockerRequirement",
+            "dockerPull": self.uri,
+            "dockerImageId": self.image_id
         }
 
     @classmethod

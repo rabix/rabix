@@ -7,7 +7,9 @@ import copy
 from avro.schema import NamedSchema
 
 from rabix.cli.adapter import CLIJob
-from rabix.common.models import Process, File, InputParameter, OutputParameter
+from rabix.common.models import (
+    Process, File, InputParameter, OutputParameter, construct_files
+)
 from rabix.common.io import InputCollector
 from rabix.common.util import map_or_apply, map_rec_collection
 
@@ -108,8 +110,8 @@ class Container(object):
                 if val:
                     job[f.id] = map_or_apply(
                         lambda e: self.input_collector.download(
-                            e.url, f.annotations.get('secondaryFiles')
-                            if f.annotations is not None else None
+                            e.url, f.input_binding.get('secondaryFiles')
+                            if f.input_binding is not None else None
                         ),
                         val)
 
@@ -165,7 +167,9 @@ class CommandLineTool(Process):
                         os.path.abspath(job_dir), abspath_job)
                     json.dump(outputs, res)
 
-            outputs = job.app.construct_outputs(outputs)
+            outputs = {o.id: construct_files(outputs.get(o.id), o.validator)
+                       for o in job.app.outputs}
+
             self.unmap_paths(outputs)
 
             def write_rbx(f):
@@ -191,12 +195,12 @@ class CommandLineTool(Process):
             self.container.ensure_files(job, job_dir)
 
     def remap_paths(self, inputs, job_dir):
-        if self.requirements and self.requirements.container:
+        if self.container:
             files = collect_files(inputs)
             flatened = flatten_files(files)
             paths = [os.path.dirname(f.path) for f in flatened] + [job_dir]
             prefixes = collect_prefixes(paths)
-            self.mappings = self.requirements.container.get_mapping(prefixes)
+            self.mappings = self.container.get_mapping(prefixes)
             for file in files:
                 file.remap(self.mappings)
 

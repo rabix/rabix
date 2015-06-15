@@ -109,7 +109,8 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
                                   v.validator.name == 'File')\
             else param_str
 
-        cname = v.validator.type
+        cname = v.validator.name if isinstance(v.validator, NamedSchema)\
+            else v.validator.type
 
         prefix = '--%s' % k
         suffix = '' if v.validator.type == 'boolean' else '=<%s>' % cname
@@ -145,13 +146,14 @@ def rebase_path(val, base):
     return val
 
 
-def get_inputs(args, basedir=None):
+def get_inputs(args, inputs, basedir=None):
 
     basedir = basedir or os.path.abspath('.')
-    inputs = construct_files(args)
+    constructed = {i.id: construct_files(args.get(i.id), i.validator)
+                   for i in inputs}
     return map_rec_collection(
         lambda v: rebase_path(v, basedir),
-        inputs
+        constructed
     )
 
 
@@ -179,7 +181,7 @@ def conformance_test(context, app, job_dict, basedir):
     if not app.outputs:
         app.outputs = []
 
-    job_dict['inputs'] = get_inputs(job_dict['inputs'], basedir)
+    job_dict['inputs'] = get_inputs(job_dict['inputs'], app.inputs, basedir)
     job = context.from_dict(job_dict)
 
     adapter = CLIJob(job)
@@ -255,14 +257,14 @@ def main():
         if args['--inp-file']:
             basedir = os.path.dirname(args.get('--inp-file'))
             input_file = from_url(args.get('--inp-file'))
-            inputs = get_inputs(input_file, basedir)
+            inputs = get_inputs(input_file, app.inputs, basedir)
             job_dict['inputs'].update(inputs)
 
         input_usage = job_dict['inputs']
 
         if job:
             basedir = os.path.dirname(args.get('<tool>'))
-            job.inputs = get_inputs(job.inputs, basedir)
+            job.inputs = get_inputs(job.inputs, app.inputs, basedir)
             input_usage.update(job.inputs)
 
         app_inputs_usage = make_app_usage_string(
@@ -290,7 +292,7 @@ def main():
             if v != []
         }
 
-        inp = get_inputs(app_inputs)
+        inp = get_inputs(app_inputs, app.inputs)
         if not job:
             job_dict['id'] = args.get('--dir')
             job_dict['app'] = app

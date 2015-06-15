@@ -13,6 +13,7 @@ from six.moves.urllib.parse import urlparse, urlunparse, unquote, urljoin
 from base64 import b64decode
 from os.path import isabs
 from avro.schema import Names, make_avsc_object, UnionSchema, ArraySchema
+from avro.io import validate
 
 from rabix.common.errors import ValidationError, RabixError
 from rabix.common.util import map_rec_list
@@ -41,17 +42,24 @@ def process_builder(context, d):
     return context.from_dict(d)
 
 
-def construct_files(val):
-    if isinstance(val, list):
-        return [construct_files(e) for e in val]
+def construct_files(val, schema):
+    if schema.type == 'array':
+        return [construct_files(e, schema.items) for e in val]
 
-    if not isinstance(val, dict):
-        return val
+    if schema.type == 'record':
+        if schema.name == 'File':
+            return File(val)
+        else:
+            ret = {}
+            for k, s in six.iteritems(schema.fields):
+                ret[k] = construct_files(val.get(k), s)
+            return ret
 
-    if val.get('class') == 'File':
-        return File(val)
-
-    return {k: construct_files(v) for k, v in six.iteritems(val)}
+    if schema.type == 'union':
+        for s in schema.schemas:
+            if validate(s, val):
+                return construct_files(val, s)
+    return val
 
 
 class Process(object):
@@ -84,20 +92,6 @@ class Process(object):
     def get_output(self, name):
         return self._outputs.get(name)
 
-    def construct_inputs(self, inputs):
-        return self.construct(self.inputs, inputs)
-
-    def construct_outputs(self, outputs):
-        return self.construct(self.outputs, outputs)
-
-    @staticmethod
-    def construct(defs, vals):
-        return {
-            input.id: map_rec_list(input.constructor, vals.get(input.id))
-            for input in defs
-            if vals.get(input.id) is not None
-        }
-
     def validate_inputs(self, input_values):
         for inp in self.inputs:
             if inp.id in input_values:
@@ -109,7 +103,7 @@ class Process(object):
 
     def job_dump(self, job, dirname):
         with open(os.path.join(dirname, 'job.cwl.json'), 'w') as f:
-            job_dict = job.to_primitive()
+            job_dict = job.to_dict()
             json.dump(job_dict, f)
             log.info('File %s created.', job.id)
 
