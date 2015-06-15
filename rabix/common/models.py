@@ -309,7 +309,7 @@ class Parameter(object):
             self, id, validator=None, required=False, label=None,
             description=None, depth=0
     ):
-        self.id = id
+        self.id = id.lstrip('#')
         self.validator = validator
         self.required = required
         self.label = label
@@ -320,11 +320,11 @@ class Parameter(object):
         return self.validator.validate(value)
 
     def to_dict(self, ctx=None):
-        t = [self.validator.schema]
+        t = [self.validator.to_json()]
         if not self.required:
             t.append('null')
         return {
-            'id': self.id,
+            'id': '#' + self.id,
             'type': t,
             'label': self.label,
             'description': self.description
@@ -421,7 +421,7 @@ class Job(object):
         return {
             'id': self.id,
             'class': 'Job',
-            'app': self.app.to_primitive(ctx),
+            'app': ctx.to_primitive(self.app),
             'inputs': ctx.to_primitive(self.inputs),
             'allocatedResources': ctx.to_primitive(self.allocated_resources)
         }

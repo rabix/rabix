@@ -101,7 +101,8 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
     inp = inp or {}
 
     def resolve(k, v, usage_str, param_str, inp):
-        if v.validator.type == 'record':
+        if (v.validator.type == 'record' and
+                    v.validator.name != 'File'):
             return
 
         to_append = usage_str if (isinstance(v.validator, NamedSchema) and

@@ -28,25 +28,22 @@ class AdapterEvaluator(object):
     def evaluate(self, expr_object, context=None, job=None):
         if isinstance(expr_object, dict):
             return self.ev.evaluate(
-                expr_object.get('expressionEngine', 'javascript'),
+                expr_object.get('engine', 'javascript'),
                 expr_object.get('script'),
-                job.to_primitive() if job else self.job.to_primitive(),
+                job.to_dict() if job else self.job.to_dict(),
                 context
             )
         else:
             return self.ev.evaluate('javascript', expr_object,
-                                    job.to_primitive() if job else
-                                    self.job.to_primitive(), context)
+                                    job.to_dict() if job else
+                                    self.job.to_dict(), context)
 
     def resolve(self, val, context=None, job=None):
         if not isinstance(val, dict):
             return val
-        if 'expr' in val or '$expr' in val:
-            v = val.get('expr') or val.get('$expr')
+        if 'engine' in val and 'script' in val:
+            v = val.get('script')
             return self.evaluate(v, context, job=job)
-        if 'job' in val or '$job' in val:
-            v = val.get('job') or val.get('$job')
-            return resolve_pointer(self.job.to_primitive(), v)
         return val
 
     def __deepcopy__(self, memo):
@@ -87,7 +84,7 @@ class InputAdapter(object):
         self.evaluator = evaluator
         self.schema = schema
         self.adapter = adapter_dict or (
-            isinstance(self.schema, Schema), self.schema.props.get('inputBinding'))
+            isinstance(self.schema, Schema) and self.schema.props.get('inputBinding'))
         self.has_adapter = self.adapter is not None
         self.adapter = self.adapter or {}
         self.key = key
@@ -100,7 +97,7 @@ class InputAdapter(object):
 
     __str__ = lambda self: six.text_type(self.value)
     __repr__ = lambda self: 'InputAdapter(%s)' % self
-    position = property(lambda self: (self.adapter.get('order', 9999999), self.key))
+    position = property(lambda self: (self.adapter.get('position', 9999999), self.key))
     prefix = property(lambda self: self.adapter.get('prefix'))
     item_separator = property(lambda self: self.adapter.get('itemSeparator', ','))
 
@@ -145,7 +142,7 @@ class InputAdapter(object):
         return res
 
     def as_toplevel(self, mix_with):
-        sch = lambda key: next(inp.type for inp in self.schema
+        sch = lambda key: next(inp.validator for inp in self.schema
                                if inp.id == key)
         adapters = mix_with + [InputAdapter(v, self.evaluator, sch(k), key=k)
                     for k, v in six.iteritems(self.value)]
