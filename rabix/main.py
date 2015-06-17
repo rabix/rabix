@@ -9,6 +9,11 @@ import copy
 
 from avro.schema import NamedSchema
 
+# prevent naming collision with docker package when running directly as script
+script_dir = os.path.dirname(os.path.realpath(__file__))
+if script_dir in sys.path:
+    sys.path.remove(script_dir)
+
 from rabix import __version__ as version
 from rabix.common.util import log_level, map_rec_collection, result_str
 from rabix.common.models import Job, File, process_builder, construct_files
