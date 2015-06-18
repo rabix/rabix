@@ -3,6 +3,7 @@ import six
 import shlex
 import logging
 import docker
+import copy
 
 from docker.errors import APIError
 
@@ -205,3 +206,8 @@ class DockerContainer(Container):
     @classmethod
     def from_dict(cls, context, d):
         return cls(d.get('dockerPull'))
+
+    def __deepcopy__(self, memo):
+        return DockerContainer(
+            self.uri, self.image_id, self.user, self.docker_client
+        )
