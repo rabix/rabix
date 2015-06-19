@@ -232,7 +232,7 @@ class CommandLineTool(Process):
             'inputs': [InputParameter.from_dict(context, inp)
                        for inp in converted.get('inputs', [])],
             'outputs': [OutputParameter.from_dict(context, inp)
-                       for inp in converted.get('outputs', [])]
+                        for inp in converted.get('outputs', [])]
         })
         return cls(**kwargs)
 

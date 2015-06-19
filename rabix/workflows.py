@@ -7,41 +7,99 @@ from altgraph.Graph import Graph
 
 from rabix.common.errors import ValidationError, RabixError
 from rabix.common.util import wrap_in_list
-from rabix.common.models import Process, Parameter, Job
+from rabix.common.models import Process, Parameter, Job, InputParameter, \
+    OutputParameter
 
 log = logging.getLogger(__name__)
 
 AppNode = namedtuple('AppNode', ['app', 'inputs'])
 
-Relation = namedtuple('Relation', ['source', 'destination'])
-InputRelation = namedtuple('InputRelation', ['destination'])
-OutputRelation = namedtuple('OutputRelation', ['source'])
+Relation = namedtuple('Relation', ['source', 'destination', 'position'])
+InputRelation = namedtuple('InputRelation', ['destination', 'position'])
+OutputRelation = namedtuple('OutputRelation', ['source', 'position'])
+
+Relation.to_dict = Relation._asdict
 
 
-class Step(object):
 
-    def __init__(self, step_id, app, inputs, outputs=None):
-        self.id = step_id
-        self.app = app
-        self.inputs = inputs
-        self.outputs = outputs
+class WorkflowStepInput(InputParameter):
 
-    def to_dict(self, context):
-        return {
-            "id": self.id,
-            "impl": self.app.to_primitive(context),
-            "inputs": context.to_primitive(self.inputs),
-            "outputs": context.to_primitive(self.outputs)
-        }
+    def __init__(self, id, validator=None, required=False, label=None,
+                 description=None, depth=0, input_binding=None, connect=None,
+                 value=None):
+        super(WorkflowStepInput, self).__init__(
+            id, validator, required, label, description, depth, input_binding
+        )
+
+        self.connect = wrap_in_list(connect) if connect is not None else connect
+        self.value = None
+
+    def to_dict(self, ctx=None):
+        d = super(WorkflowStepInput, self).to_dict(ctx)
+        d['connect'] = ctx.to_primitive(self.connect)
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(
-            d["id"],
-            context.from_dict(d['app']),
-            context.from_dict(d.get('inputs')),
-            context.from_dict(d.get('outputs')))
+        instance = super(WorkflowStepInput, cls).from_dict(context, d)
+        instance.connect = d.get('connect')
+        instance.value = d.get('value')
+        return instance
 
+
+class Step(Process):
+
+    def __init__(
+            self, process_id, inputs, outputs, requirements, hints,
+            label, description, impl
+    ):
+        super(Step, self).__init__(
+            process_id, inputs, outputs,
+            requirements=requirements,
+            hints=hints,
+            label=label,
+            description=description
+        )
+        self.app = impl
+
+    def to_dict(self, context):
+        d = super(Step, self).to_dict(context)
+        d['impl'] = context.to_primitive(self.app)
+        return d
+
+    def run(self, job):
+        self.app.run(job)
+
+    @classmethod
+    def from_dict(cls, context, d):
+        converted = {k: context.from_dict(v) for k, v in six.iteritems(d)}
+        kwargs = Process.kwarg_dict(converted)
+        kwargs.update({
+            'impl': converted['impl'],
+            'inputs': [WorkflowStepInput.from_dict(context, inp)
+                       for inp in converted.get('inputs', [])],
+            'outputs': [OutputParameter.from_dict(context, inp)
+                        for inp in converted.get('outputs', [])]
+        })
+        return cls(**kwargs)
+
+
+class WorkflowOutput(OutputParameter):
+
+    def __init__(self, id, validator=None, required=False, label=None,
+                 description=None, depth=0, output_binding=None, connect=None):
+        super(WorkflowOutput, self).__init__(
+            id, validator, required, label, description, depth, output_binding
+        )
+        self.connect = wrap_in_list(connect) if connect is not None else connect
+
+    def to_dict(self, ctx=None):
+        d = super(WorkflowOutput, self).to_dict(ctx)
+        d['connect'] = ctx.to_primitive(self.output_binding)
+
+    @classmethod
+    def from_dict(cls, context, d):
+        instance = super(OutputParameter, cls).from_dict(context, d)
+        return instance
 
 class Workflow(Process):
 
@@ -54,73 +112,60 @@ class Workflow(Process):
         self.graph = Graph()
         self.executor = context.executor
         self.steps = steps
-        self.data_links = data_links
+        self.data_links = data_links or []
         self.context = context
-        for step in steps:
-            self.add_node(step.id, AppNode(step.app, {}))
-
-        if not data_links:
-            data_links = []
-            for step in steps:
-                dl = step.connect
-                dl.destination = step.id
-                data_links.append(dl)
-
-        for data_link in data_links:
-            step = self.graph.describe_node(data_link.destination)
-            self.add_edge_or_input()
+        self.port_step_index = {}
 
         for step in steps:
-            # inputs
-            for input_parameter in step.inputs:
-                inp = wrap_in_list(input_val)
-                for item in inp:
-                    self.add_edge_or_input(step, input_port, item)
+            node = AppNode(step.app, {})
+            self.add_node(step.id, node)
+            for inp in step.inputs:
+                self.port_step_index[inp.id] = step.id
+                self.move_connect_to_datalink(inp)
+                if inp.value:
+                    node.inputs[inp.id] = inp.value
 
-            # outputs
-            if step.outputs:
-                for output_port, output_val in six.iteritems(step.outputs):
-                    self.to[output_val['$to']] = output_port
-                    if isinstance(step.app, Workflow):
-                        output_node = step.app.get_output(
-                            step.app.to.get(output_port))
-                    else:
-                        output_node = step.app.get_output(output_port)
-                    output_id = output_val['$to']
-                    self.add_node(output_id, output_node)
-                    self.graph.add_edge(
-                        step.id, output_id, OutputRelation(output_port)
-                    )
-                    # output_node.id = output_val['$to']
-                    self.outputs.append(output_node)
+            for out in step.outputs:
+                self.port_step_index[out.id] = step.id
+
+        for inp in self.inputs:
+            self.add_node(inp.id, inp)
+
+        for out in self.outputs:
+            self.move_connect_to_datalink(out)
+            self.add_node(out.id, out)
+
+        print(self.port_step_index)
+
+        for dl in self.data_links:
+            dst = dl['destination'].lstrip('#')
+            src = dl['source'].lstrip('#')
+
+            if src in self.port_step_index and dst in self.port_step_index:
+                rel = Relation(src, dst, dl.get('position', 0))
+                src = self.port_step_index[src]
+                dst = self.port_step_index[dst]
+            elif src in self._inputs:
+                rel = InputRelation(dst, dl.get('position', 0))
+                dst = self.port_step_index[dst]
+            elif dst in self._outputs:
+                rel = OutputRelation(src, dl.get('position', 0))
+                src = self.port_step_index[src]
+            else:
+                raise RabixError("invalid data link %s" % dl)
+
+            self.graph.add_edge(src, dst, rel)
+
         if not self.graph.connected():
             pass
             # raise ValidationError('Graph is not connected')
 
-
-    def add_edge_or_input(self, step, input_name, input_val):
-        node_id = step.id
-        if isinstance(input_val, dict) and '$from' in input_val:
-            frm = wrap_in_list(input_val['$from'])
-            for inp in frm:
-                if '.' in inp:
-                    node, outp = inp.split('.')
-                    self.graph.add_edge(node, node_id, Relation(outp, input_name))
-                else:
-                    # TODO: merge input schemas if one input goes to different apps
-
-                    input = step.app.get_input(input_name)
-                    if inp not in self.graph.nodes:
-                        self.add_node(inp, input)
-                    self.graph.add_edge(
-                        inp, node_id, InputRelation(input_name)
-                    )
-                    wf_input = copy.deepcopy(input)
-                    wf_input.id = inp
-                    self.inputs.append(wf_input)
-
-        else:
-            self.graph.node_data(node_id).inputs[input_name] = input_val
+    def move_connect_to_datalink(self, port):
+        if port.connect:
+                dl = port.connect
+                port.connect = None
+                dl['destination'] = port.id
+                self.data_links.append(dl)
 
     # Graph.add_node silently fails if node already exists
     def add_node(self, node_id, node):
@@ -154,8 +199,13 @@ class Workflow(Process):
         converted = {k: context.from_dict(v) for k, v in six.iteritems(d)}
         kwargs = Process.kwarg_dict(converted)
         kwargs.update({
-            'steps': d['steps'],
-            'data_links': d['dataLinks']
+            'steps': [Step.from_dict(context, s) for s in converted['steps']],
+            'data_links': converted['dataLinks'],
+            'context': context,
+            'inputs': [InputParameter.from_dict(context, i)
+                       for i in converted['inputs']],
+            'outputs': [WorkflowOutput.from_dict(context, o)
+                        for o in converted['outputs']]
         })
         return cls(**kwargs)
 

@@ -12,8 +12,15 @@ import six
 from six.moves.urllib.parse import urlparse, urlunparse, unquote, urljoin
 from base64 import b64decode
 from os.path import isabs
-from avro.schema import Names, make_avsc_object, UnionSchema, ArraySchema
-from avro.io import validate
+from avro.schema import Names, UnionSchema, ArraySchema
+
+if six.PY2:
+    from avro.schema import make_avsc_object
+    from avro.io import validate
+else:
+    from avro.schema import SchemaFromJSONData as make_avsc_object
+    from avro.io import Validate as validate
+
 
 from rabix.common.errors import ValidationError, RabixError
 from rabix.common.util import map_rec_list
