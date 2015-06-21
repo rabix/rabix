@@ -8,8 +8,8 @@ from avro.schema import NamedSchema
 
 from rabix.cli.adapter import CLIJob
 from rabix.common.models import (
-    Process, File, InputParameter, OutputParameter, construct_files
-)
+    Process, File, InputParameter, OutputParameter, construct_files,
+    Job)
 from rabix.common.io import InputCollector
 from rabix.common.util import map_or_apply, map_rec_collection
 
@@ -151,7 +151,10 @@ class CommandLineTool(Process):
 
         if self.container:
             self.ensure_files(job, job_dir)
-            abspath_job = copy.deepcopy(job)
+            abspath_job = Job(
+                job.id, job.app, copy.deepcopy(job.inputs),
+                job.allocated_resources, job.context
+            )
             self.install(job=job)
 
             cmd_line = self.command_line(job, job_dir)
@@ -232,7 +235,7 @@ class CommandLineTool(Process):
             'inputs': [InputParameter.from_dict(context, inp)
                        for inp in converted.get('inputs', [])],
             'outputs': [OutputParameter.from_dict(context, inp)
-                       for inp in converted.get('outputs', [])]
+                        for inp in converted.get('outputs', [])]
         })
         return cls(**kwargs)
 

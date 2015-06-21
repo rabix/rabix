@@ -12,8 +12,15 @@ import six
 from six.moves.urllib.parse import urlparse, urlunparse, unquote, urljoin
 from base64 import b64decode
 from os.path import isabs
-from avro.schema import Names, make_avsc_object, UnionSchema, ArraySchema
-from avro.io import validate
+from avro.schema import Names, UnionSchema, ArraySchema
+
+if six.PY2:
+    from avro.schema import make_avsc_object
+    from avro.io import validate
+else:
+    from avro.schema import SchemaFromJSONData as make_avsc_object
+    from avro.io import Validate as validate
+
 
 from rabix.common.errors import ValidationError, RabixError
 from rabix.common.util import map_rec_list
@@ -48,7 +55,7 @@ def construct_files(val, schema):
 
     if schema.type == 'record':
         if schema.name == 'File':
-            return File(val)
+            return File(val) if val else val
         else:
             ret = {}
             for k, s in six.iteritems(schema.fields):
@@ -400,7 +407,7 @@ class OutputParameter(Parameter):
 class Job(object):
 
     def __init__(self, job_id, app, inputs, allocated_resources, context):
-        self.id = job_id or self.mk_work_dir(app.id)
+        self.id = job_id or self.mk_work_dir(app)
         self.app = app
         self.inputs = inputs
         self.allocated_resources = allocated_resources

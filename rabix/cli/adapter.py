@@ -10,7 +10,11 @@ import shlex
 # noinspection PyUnresolvedReferences
 from six.moves import reduce
 from avro.schema import UnionSchema, Schema
-from avro.io import validate
+
+if six.PY2:
+    from avro.io import validate
+else:
+    from avro.io import Validate as validate
 
 from rabix.common.ref_resolver import resolve_pointer
 from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath
