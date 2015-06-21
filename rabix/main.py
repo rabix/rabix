@@ -154,8 +154,15 @@ def rebase_path(val, base):
 def get_inputs(args, inputs, basedir=None):
 
     basedir = basedir or os.path.abspath('.')
-    constructed = {i.id: construct_files(args.get(i.id), i.validator)
-                   for i in inputs}
+    constructed = {}
+    for i in inputs:
+        val = args.get(i.id)
+        if i.depth == 0:
+            cons = construct_files(val, i.validator)
+        else:
+            cons = [construct_files(e, i.validator) for e in val]
+        if cons:
+            constructed[i.id] = cons
     return map_rec_collection(
         lambda v: rebase_path(v, basedir),
         constructed

@@ -26,7 +26,7 @@ class Executor(object):
     def split_job(job):
         parallel_input = None
         for input_name, input_val in six.iteritems(job.inputs):
-            io = job.app.get_input(input_name)
+            io = job.app.get_input(input_name.split('/')[-1])
             val_d = Executor.depth(input_val)
             if val_d == io.depth:
                 continue
@@ -35,7 +35,7 @@ class Executor(object):
             if val_d < io.depth:
                 raise RabixError("Insufficient dimensionality")
             if parallel_input:
-                raise RabixError("Already parallelized by input '%%s'" % parallel_input)
+                raise RabixError("Already parallelized by input '%s'" % parallel_input)
 
             parallel_input = input_name
 

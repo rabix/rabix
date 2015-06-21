@@ -135,8 +135,6 @@ class Workflow(Process):
             self.move_connect_to_datalink(out)
             self.add_node(out.id, out)
 
-        print(self.port_step_index)
-
         for dl in self.data_links:
             dst = dl['destination'].lstrip('#')
             src = dl['source'].lstrip('#')
@@ -326,11 +324,11 @@ class ExecutionGraph(object):
             rel = self.graph.edge_data(out_edge)
             if isinstance(rel, Relation):
                 tail = self.executables[self.graph.tail(out_edge)]
-                self.add_output(outputs, rel.src_port, ExecRelation(
-                    tail, rel.dst_port))
+                self.add_output(outputs, rel.source, ExecRelation(
+                    tail, rel.destination))
             elif isinstance(rel, OutputRelation):
                 tail = self.graph.tail(out_edge)
-                self.add_output(outputs, rel.src_port, OutRelation(
+                self.add_output(outputs, rel.source, OutRelation(
                     self, tail))
 
         executable = PartialJob(
@@ -344,7 +342,7 @@ class ExecutionGraph(object):
             if (isinstance(rel, InputRelation) and
                     head in self.job.inputs):
                 executable.resolve_input(
-                    rel.dst_port, self.job.inputs[head]
+                    rel.destination, self.job.inputs[head]
                 )
 
         return executable
@@ -354,8 +352,8 @@ class ExecutionGraph(object):
         input_counts = defaultdict(lambda: 0)
         for edge in in_edges:
             relation = graph.edge_data(edge)
-            input_count = input_counts[relation.dst_port]
-            input_counts[relation.dst_port] = input_count + 1
+            input_count = input_counts[relation.destination]
+            input_counts[relation.destination] = input_count + 1
         return input_counts
 
     def job_done(self, node_id, results):

@@ -55,7 +55,7 @@ def construct_files(val, schema):
 
     if schema.type == 'record':
         if schema.name == 'File':
-            return File(val)
+            return File(val) if val else val
         else:
             ret = {}
             for k, s in six.iteritems(schema.fields):
@@ -407,7 +407,7 @@ class OutputParameter(Parameter):
 class Job(object):
 
     def __init__(self, job_id, app, inputs, allocated_resources, context):
-        self.id = job_id or self.mk_work_dir(app.id)
+        self.id = job_id or self.mk_work_dir(app)
         self.app = app
         self.inputs = inputs
         self.allocated_resources = allocated_resources
