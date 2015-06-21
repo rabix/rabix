@@ -67,6 +67,11 @@ Usage:
 '''
 
 
+def disable_warnings():
+    import requests
+    requests.packages.urllib3.disable_warnings()
+
+
 def init_context(d):
     executor = Executor()
     context = Context(executor)
@@ -204,6 +209,7 @@ def fail(message):
 
 
 def main():
+    disable_warnings()
     logging.basicConfig(level=logging.WARN)
     if len(sys.argv) == 1:
         print(USAGE)

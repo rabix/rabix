@@ -54,8 +54,8 @@ def intersect_dicts(d1, d2):
     return {k: v for k, v in six.iteritems(d1) if v == d2.get(k)}
 
 
-def meta(path, inputs, eval, adapter):
-    meta, result = adapter.get('metadata', {}), {}
+def meta(path, inputs, eval, outputBinding):
+    meta, result = outputBinding.get('metadata', {}), {}
     inherit = meta.pop('__inherit__', None)
     if inherit:
         src = inputs.get(inherit)
@@ -70,9 +70,9 @@ def meta(path, inputs, eval, adapter):
     return result
 
 
-def secondary_files(p, adapter, evaluator):
+def secondary_files(p, outputBinding, evaluator):
     secondaryFiles = []
-    secFiles = wrap_in_list(evaluator.resolve(adapter.get('secondaryFiles', [])))
+    secFiles = wrap_in_list(evaluator.resolve(outputBinding.get('secondaryFiles', [])))
     for s in secFiles:
         path = sec_files_naming_conv(p, s)
         secondaryFiles.append({'path': to_abspath(path)})
@@ -226,17 +226,17 @@ class CLIJob(object):
         return ' '.join(a)  # TODO: escape
 
     def get_outputs(self, job_dir, job):
-        result, outs = {}, self.output_schema.get('properties', {})
-        for k, v in six.iteritems(outs):
-            adapter = v['adapter']
+        result, outs = {}, self.app.outputs
+        for out in outs:
+            out_binding = out.output_binding
             ret = os.getcwd()
             os.chdir(job_dir)
-            pattern = self.eval.resolve(adapter.get('glob'), job=job) or ""
+            pattern = self.eval.resolve(out_binding.get('glob'), job=job) or ""
             files = glob.glob(pattern)
-            result[k] = [{'path': os.path.abspath(p),
-                          'metadata': meta(p, job.inputs, self.eval, adapter),
-                          'secondaryFiles': secondary_files(p, adapter, self.eval)} for p in files]
+            result[out.id] = [{'path': os.path.abspath(p),
+                          'metadata': meta(p, job.inputs, self.eval, out_binding),
+                          'secondaryFiles': secondary_files(p, out_binding, self.eval)} for p in files]
             os.chdir(ret)
-            if v['type'] != 'array':
-                result[k] = result[k][0] if result[k] else None
+            if out.depth == 0:
+                result[out.id] = result[out.id][0] if result[out.id] else None
         return result

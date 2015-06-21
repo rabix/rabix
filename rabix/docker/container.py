@@ -1,12 +1,13 @@
 from __future__ import print_function
 import logging
-import six
 import shlex
 
+import six
 from docker.errors import APIError
 from docker.utils.utils import parse_repository_tag
 
 from rabix.common.errors import ResourceUnavailable, RabixError
+
 
 log = logging.getLogger(__name__)
 

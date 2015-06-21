@@ -130,7 +130,7 @@ class ObjectArgument(InputArgument):
 
     def __init__(self, name, schema):
         super(ObjectArgument, self).__init__(name, schema)
-        self.schemas.append(super(ObjectArgument, self).__init__(name, schema))
+        self.schema.append(super(ObjectArgument, self).__init__(name, schema))
         if schema.get('properties'):
             pass
         elif schema.get('oneOf'):

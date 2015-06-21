@@ -9,7 +9,7 @@ sys.path.append(dirname(__file__))
 from rabix import __version__
 
 install_reqs = parse_requirements(
-    'requirements-{}.txt'.format(sys.version_info[0])
+    'requirements-{}.txt'.format(sys.version_info[0]), session=False
 )
 requires = [str(ir.req) for ir in install_reqs]
 

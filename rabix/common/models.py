@@ -230,7 +230,7 @@ class File(object):
             "path": self.path,
             "size": self.size,
             "metadata": self.meta,
-            "secondaryFiles": [sf.to_primitive(context)
+            "secondaryFiles": [sf.to_dict(context)
                                for sf in self.secondary_files]
         }
 
