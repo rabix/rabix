@@ -7,8 +7,9 @@ from altgraph.Graph import Graph
 
 from rabix.common.errors import ValidationError, RabixError
 from rabix.common.util import wrap_in_list
-from rabix.common.models import Process, Parameter, Job, InputParameter, \
-    OutputParameter
+from rabix.common.models import (
+    Process, Parameter, Job, InputParameter, OutputParameter, process_builder
+)
 
 log = logging.getLogger(__name__)
 
@@ -71,7 +72,10 @@ class Step(Process):
 
     @classmethod
     def from_dict(cls, context, d):
-        converted = {k: context.from_dict(v) for k, v in six.iteritems(d)}
+        converted = {
+            k: process_builder(context, v) if k == 'impl' else context.from_dict(v)
+            for k, v in six.iteritems(d)
+        }
         kwargs = Process.kwarg_dict(converted)
         kwargs.update({
             'impl': converted['impl'],
@@ -194,10 +198,16 @@ class Workflow(Process):
 
     @classmethod
     def from_dict(cls, context, d):
-        converted = {k: context.from_dict(v) for k, v in six.iteritems(d)}
+        converted = {}
+        for k, v in six.iteritems(d):
+            if k == 'steps':
+                converted[k] = [Step.from_dict(context, s) for s in v]
+            else:
+                converted[k] = context.from_dict(v)
+
         kwargs = Process.kwarg_dict(converted)
         kwargs.update({
-            'steps': [Step.from_dict(context, s) for s in converted['steps']],
+            'steps': converted['steps'],
             'data_links': converted['dataLinks'],
             'context': context,
             'inputs': [InputParameter.from_dict(context, i)

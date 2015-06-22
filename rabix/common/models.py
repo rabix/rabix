@@ -12,7 +12,7 @@ import six
 from six.moves.urllib.parse import urlparse, urlunparse, unquote, urljoin
 from base64 import b64decode
 from os.path import isabs
-from avro.schema import Names, UnionSchema, ArraySchema
+from avro.schema import Names, UnionSchema, ArraySchema, Schema
 
 if six.PY2:
     from avro.schema import make_avsc_object
@@ -333,8 +333,9 @@ class Parameter(object):
 
     @classmethod
     def from_dict(cls, context, d):
-
         parameter_type = d.get('type', None)
+        if parameter_type and not isinstance(parameter_type, Schema):
+            raise ValueError("Type is not schema: %s" % parameter_type)
         required = True
         if isinstance(parameter_type, UnionSchema):
             non_null = []
@@ -423,7 +424,8 @@ class Job(object):
             'id': self.id,
             'class': 'Job',
             'app': ctx.to_primitive(self.app),
-            'inputs': ctx.to_primitive(self.inputs),
+            'inputs': {k.split('/')[-1]: ctx.to_primitive(v)
+                       for k, v in six.iteritems(self.inputs)},
             'allocatedResources': ctx.to_primitive(self.allocated_resources)
         }
 

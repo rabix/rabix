@@ -147,7 +147,7 @@ class InputAdapter(object):
 
     def as_toplevel(self, mix_with):
         sch = lambda key: next(inp.validator for inp in self.schema
-                               if inp.id == key)
+                               if inp.id == key.split('/')[-1])
         adapters = mix_with + [InputAdapter(v, self.evaluator, sch(k), key=k)
                     for k, v in six.iteritems(self.value)]
         res = reduce(

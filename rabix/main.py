@@ -88,9 +88,6 @@ def init_context(d):
     return context
 
 
-def infer_types(d):
-    pass
-
 ###
 # usage strings
 ###
@@ -165,7 +162,7 @@ def get_inputs(args, inputs, basedir=None):
         if i.depth == 0:
             cons = construct_files(val, i.validator)
         else:
-            cons = [construct_files(e, i.validator) for e in val]
+            cons = [construct_files(e, i.validator) for e in val] if val else []
         if cons:
             constructed[i.id] = cons
     return map_rec_collection(
