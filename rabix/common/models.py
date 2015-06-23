@@ -12,7 +12,7 @@ import six
 from six.moves.urllib.parse import urlparse, urlunparse, unquote, urljoin
 from base64 import b64decode
 from os.path import isabs
-from avro.schema import Names, UnionSchema, ArraySchema, Schema
+from avro.schema import Names, UnionSchema, ArraySchema, Schema, VALID_TYPES
 
 if six.PY2:
     from avro.schema import make_avsc_object
@@ -291,13 +291,24 @@ FILE_SCHEMA = {
 }
 
 
+def fix_file_type(d):
+        if isinstance(d, list):
+            return [fix_file_type(e) for e in d]
+        if not isinstance(d, dict):
+            return d
+        if 'type' in d and d['type'] not in VALID_TYPES:
+            return d['type']
+        return {k: fix_file_type(v) for k, v in six.iteritems(d)}
+
+
 def make_avro(schema, named_defs):
     names = Names()
     make_avsc_object(FILE_SCHEMA, names)
     for d in named_defs:
         make_avsc_object(d, names)
 
-    return make_avsc_object(schema, names)
+    avsc = make_avsc_object(fix_file_type(schema), names)
+    return avsc
 
 
 class Expression(object):

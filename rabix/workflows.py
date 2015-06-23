@@ -51,7 +51,7 @@ class Step(Process):
 
     def __init__(
             self, process_id, inputs, outputs, requirements, hints,
-            label, description, impl
+            label, description, impl, scatter
     ):
         super(Step, self).__init__(
             process_id, inputs, outputs,
@@ -61,6 +61,7 @@ class Step(Process):
             description=description
         )
         self.app = impl
+        self.scatter = scatter
 
     def to_dict(self, context):
         d = super(Step, self).to_dict(context)
@@ -82,7 +83,8 @@ class Step(Process):
             'inputs': [WorkflowStepInput.from_dict(context, inp)
                        for inp in converted.get('inputs', [])],
             'outputs': [OutputParameter.from_dict(context, inp)
-                        for inp in converted.get('outputs', [])]
+                        for inp in converted.get('outputs', [])],
+            'scatter': converted.get('scatter')
         })
         return cls(**kwargs)
 
@@ -231,9 +233,8 @@ class PartialJob(object):
         self.app = app
         self.inputs = inputs
         self.input_counts = input_counts
-        self.outputs = outputs
+        self.outputs = {k.split('/')[-1]: v for k, v in six.iteritems(outputs)}
         self.context = context
-
         self.running = []
         self.resources = None
 
@@ -245,7 +246,6 @@ class PartialJob(object):
         return True
 
     def resolve_input(self, input_port, results):
-        print("Resolving input '%s' with value %s" % (input_port, results))
         log.debug("Resolving input '%s' with value %s" % (input_port, results))
         input_count = self.input_counts[input_port]
         if input_count <= 0:

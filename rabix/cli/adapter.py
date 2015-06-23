@@ -4,8 +4,6 @@ import logging
 import os
 import glob
 import copy
-import shlex
-
 
 # noinspection PyUnresolvedReferences
 from six.moves import reduce
@@ -16,7 +14,6 @@ if six.PY2:
 else:
     from avro.io import Validate as validate
 
-from rabix.common.ref_resolver import resolve_pointer
 from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath
 from rabix.expressions import Evaluator
 
@@ -50,9 +47,6 @@ class AdapterEvaluator(object):
             return self.evaluate(v, context, job=job)
         return val
 
-    def __deepcopy__(self, memo):
-        return AdapterEvaluator(copy.deepcopy(self.job, memo))
-
 
 def intersect_dicts(d1, d2):
     return {k: v for k, v in six.iteritems(d1) if v == d2.get(k)}
@@ -84,11 +78,13 @@ def secondary_files(p, outputBinding, evaluator):
 
 
 class InputAdapter(object):
-    def __init__(self, value, evaluator, schema, adapter_dict=None, key=''):
+    def __init__(self, value, evaluator, schema, input_binding=None, key=''):
         self.evaluator = evaluator
         self.schema = schema
-        self.adapter = adapter_dict or (
-            isinstance(self.schema, Schema) and self.schema.props.get('inputBinding'))
+        self.adapter = input_binding or (
+            isinstance(self.schema, Schema) and
+            self.schema.props.get('inputBinding')
+        )
         self.has_adapter = self.adapter is not None
         self.adapter = self.adapter or {}
         self.key = key
@@ -146,10 +142,14 @@ class InputAdapter(object):
         return res
 
     def as_toplevel(self, mix_with):
-        sch = lambda key: next(inp.validator for inp in self.schema
+        sch = lambda key: next(inp for inp in self.schema
                                if inp.id == key.split('/')[-1])
-        adapters = mix_with + [InputAdapter(v, self.evaluator, sch(k), key=k)
-                    for k, v in six.iteritems(self.value)]
+        adapters = mix_with + [
+            InputAdapter(v, self.evaluator, sch(k).validator,
+                         sch(k).input_binding, key=k)
+            for k, v in six.iteritems(self.value)
+            ]
+
         res = reduce(
             operator.add,
             [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)],
