@@ -1,6 +1,5 @@
 import six
 import logging
-import copy
 
 from collections import namedtuple, defaultdict
 from altgraph.Graph import Graph
