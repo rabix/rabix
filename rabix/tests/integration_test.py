@@ -12,6 +12,7 @@ from rabix.tests import mock_app_bad_repo, mock_app_good_repo, \
 from rabix.main import main
 from rabix.docker import docker_client, get_image
 
+__test__ = False
 
 @raises(Exception)
 def test_provide_image_bad_repo():

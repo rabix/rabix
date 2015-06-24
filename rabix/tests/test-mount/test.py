@@ -1,14 +1,13 @@
 from os.path import dirname, join
 
 from rabix.common.ref_resolver import from_url
-from rabix.main import TEMPLATE_JOB, dot_update_dict, init_context, fix_types
+from rabix.main import TEMPLATE_JOB, init_context
 
 
 def test_remap_job():
     job = TEMPLATE_JOB
     tool = from_url(join(dirname(__file__), 'bwa-mem.json#tool'))
-    context = init_context()
-    fix_types(tool)
+    context = init_context(tool)
     app = context.from_dict(tool)
     input_file = from_url(join(dirname(__file__), 'inputs.json'))
     startdir = './'
