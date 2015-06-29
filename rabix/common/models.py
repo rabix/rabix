@@ -416,12 +416,17 @@ class OutputParameter(Parameter):
         instance.output_binding = d.get('outputBinding')
         return instance
 
+
+def parameter_name(parameter_id):
+    return parameter_id.split('.')[-1]
+
+
 class Job(object):
 
     def __init__(self, job_id, app, inputs, allocated_resources, context):
         self.id = job_id or self.mk_work_dir(app)
         self.app = app
-        self.inputs = inputs
+        self.inputs = {parameter_name(k): v for k, v in six.iteritems(inputs)}
         self.allocated_resources = allocated_resources
         self.context = context
         pass
@@ -435,8 +440,7 @@ class Job(object):
             'id': self.id,
             'class': 'Job',
             'app': ctx.to_primitive(self.app),
-            'inputs': {k.split('/')[-1]: ctx.to_primitive(v)
-                       for k, v in six.iteritems(self.inputs)},
+            'inputs': ctx.to_primitive(self.inputs),
             'allocatedResources': ctx.to_primitive(self.allocated_resources)
         }
 

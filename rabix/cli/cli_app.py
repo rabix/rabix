@@ -217,7 +217,7 @@ class CommandLineTool(Process):
         d.update({
             'class': 'CommandLineTool',
             'baseCommand': self.base_command,
-            'argAdapters': self.arguments,
+            'arguments': self.arguments,
             'stdin': self.stdin,
             'stdout': self.stdout
         })
@@ -229,7 +229,7 @@ class CommandLineTool(Process):
         kwargs = Process.kwarg_dict(converted)
         kwargs.update({
             'base_command': converted['baseCommand'],
-            'arguments': converted.get('argAdapters'),
+            'arguments': converted.get('arguments'),
             'stdin': converted.get('stdin'),
             'stdout': converted.get('stdout'),
             'inputs': [InputParameter.from_dict(context, inp)

@@ -7,7 +7,8 @@ from altgraph.Graph import Graph
 from rabix.common.errors import ValidationError, RabixError
 from rabix.common.util import wrap_in_list
 from rabix.common.models import (
-    Process, Parameter, Job, InputParameter, OutputParameter, process_builder
+    Process, Parameter, Job, InputParameter, OutputParameter,
+    process_builder, parameter_name
 )
 
 log = logging.getLogger(__name__)
@@ -19,7 +20,6 @@ InputRelation = namedtuple('InputRelation', ['destination', 'position'])
 OutputRelation = namedtuple('OutputRelation', ['source', 'position'])
 
 Relation.to_dict = Relation._asdict
-
 
 
 class WorkflowStepInput(InputParameter):
@@ -42,7 +42,7 @@ class WorkflowStepInput(InputParameter):
     def from_dict(cls, context, d):
         instance = super(WorkflowStepInput, cls).from_dict(context, d)
         instance.connect = d.get('connect')
-        instance.value = d.get('value')
+        instance.value = d.get('default')
         return instance
 
 
@@ -50,7 +50,7 @@ class Step(Process):
 
     def __init__(
             self, process_id, inputs, outputs, requirements, hints,
-            label, description, impl, scatter
+            label, description, app, scatter
     ):
         super(Step, self).__init__(
             process_id, inputs, outputs,
@@ -59,12 +59,12 @@ class Step(Process):
             label=label,
             description=description
         )
-        self.app = impl
+        self.app = app
         self.scatter = scatter
 
     def to_dict(self, context):
         d = super(Step, self).to_dict(context)
-        d['impl'] = context.to_primitive(self.app)
+        d['run'] = context.to_primitive(self.app)
         return d
 
     def run(self, job):
@@ -73,12 +73,12 @@ class Step(Process):
     @classmethod
     def from_dict(cls, context, d):
         converted = {
-            k: process_builder(context, v) if k == 'impl' else context.from_dict(v)
+            k: process_builder(context, v) if k == 'run' else context.from_dict(v)
             for k, v in six.iteritems(d)
         }
         kwargs = Process.kwarg_dict(converted)
         kwargs.update({
-            'impl': converted['impl'],
+            'app': converted['run'],
             'inputs': [WorkflowStepInput.from_dict(context, inp)
                        for inp in converted.get('inputs', [])],
             'outputs': [OutputParameter.from_dict(context, inp)
@@ -165,10 +165,10 @@ class Workflow(Process):
 
     def move_connect_to_datalink(self, port):
         if port.connect:
-                dl = port.connect
-                port.connect = None
-                dl['destination'] = port.id
-                self.data_links.append(dl)
+            dl = port.connect
+            port.connect = None
+            dl['destination'] = '#'+port.id
+            self.data_links.append(dl)
 
     # Graph.add_node silently fails if node already exists
     def add_node(self, node_id, node):
@@ -209,7 +209,7 @@ class Workflow(Process):
         kwargs = Process.kwarg_dict(converted)
         kwargs.update({
             'steps': converted['steps'],
-            'data_links': converted['dataLinks'],
+            'data_links': converted.get('dataLinks'),
             'context': context,
             'inputs': [InputParameter.from_dict(context, i)
                        for i in converted['inputs']],
@@ -232,7 +232,7 @@ class PartialJob(object):
         self.app = app
         self.inputs = inputs
         self.input_counts = input_counts
-        self.outputs = {k.split('/')[-1]: v for k, v in six.iteritems(outputs)}
+        self.outputs = {parameter_name(k): v for k, v in six.iteritems(outputs)}
         self.context = context
         self.running = []
         self.resources = None

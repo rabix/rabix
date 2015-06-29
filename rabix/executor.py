@@ -26,7 +26,7 @@ class Executor(object):
     def split_job(job):
         parallel_input = None
         for input_name, input_val in six.iteritems(job.inputs):
-            io = job.app.get_input(input_name.split('/')[-1])
+            io = job.app.get_input(input_name)
             val_d = Executor.depth(input_val)
             if val_d == io.depth:
                 continue

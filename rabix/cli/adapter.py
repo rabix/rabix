@@ -100,13 +100,7 @@ class InputAdapter(object):
     position = property(lambda self: (self.adapter.get('position', 9999999), self.key))
     prefix = property(lambda self: self.adapter.get('prefix'))
     item_separator = property(lambda self: self.adapter.get('itemSeparator', ','))
-
-    @property
-    def separator(self):
-        sep = self.adapter.get('separator')
-        if sep == ' ':
-            sep = None
-        return sep
+    separate = property(lambda self: self.adapter.get('separate', True))
 
     def arg_list(self):
         if isinstance(self.value, dict):
@@ -124,9 +118,9 @@ class InputAdapter(object):
             return [self.prefix]
         if not self.prefix:
             return [six.text_type(self.value)]
-        if self.separator in [' ', None]:
+        if self.separate:
             return [self.prefix, self.value]
-        return [self.prefix + self.separator + six.text_type(self.value)]
+        return [self.prefix + six.text_type(self.value)]
 
     def as_dict(self):
         sch = lambda key: next(field for field in self.schema.fields
@@ -143,7 +137,7 @@ class InputAdapter(object):
 
     def as_toplevel(self, mix_with):
         sch = lambda key: next(inp for inp in self.schema
-                               if inp.id == key.split('/')[-1])
+                               if inp.id == key.split('.')[-1])
         adapters = mix_with + [
             InputAdapter(v, self.evaluator, sch(k).validator,
                          sch(k).input_binding, key=k)
