@@ -23,7 +23,6 @@ else:
 
 
 from rabix.common.errors import ValidationError, RabixError
-from rabix.common.util import map_rec_list
 
 
 log = logging.getLogger(__name__)
@@ -332,8 +331,8 @@ class Parameter(object):
         return self.validator.validate(value)
 
     def to_dict(self, ctx=None):
-        t = [self.validator.to_json()]
-        if not self.required:
+        t = [self.validator.to_json()] if self.validator else None
+        if t and not self.required:
             t.append('null')
         return {
             'id': '#' + self.id,
@@ -389,6 +388,7 @@ class InputParameter(Parameter):
     def to_dict(self, ctx=None):
         d = super(InputParameter, self).to_dict(ctx)
         d['inputBinding'] = ctx.to_primitive(self.input_binding)
+        return d
 
     @classmethod
     def from_dict(cls, context, d):
@@ -409,6 +409,7 @@ class OutputParameter(Parameter):
     def to_dict(self, ctx=None):
         d = super(OutputParameter, self).to_dict(ctx)
         d['outputBinding'] = ctx.to_primitive(self.output_binding)
+        return d
 
     @classmethod
     def from_dict(cls, context, d):

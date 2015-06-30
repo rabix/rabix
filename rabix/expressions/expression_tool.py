@@ -1,6 +1,6 @@
 import six
 from rabix.common.errors import RabixError
-from rabix.common.models import Process
+from rabix.common.models import Process, InputParameter, OutputParameter
 from rabix.expressions.evaluator import Evaluator
 
 
@@ -22,14 +22,8 @@ class ExpresionTool(Process):
 
 
     def run(self, job):
-        if isinstance(self.script, dict):
-            lang = self.script['engine']
-            expr = self.script['script']
-        else:
-            raise RabixError("invalid script")
-
-        result = self.evaluator.evaluate(lang, expr, job.to_primitive(self.context), None)
-        return self.construct_outputs(result)
+        result = self.evaluator.evaluate(self.engine, self.script, job.to_dict(self.context), None)
+        return result
 
     def to_dict(self, context):
         d = super(ExpresionTool, self).to_dict(context)
@@ -47,6 +41,10 @@ class ExpresionTool(Process):
         kwargs.update({
             'script': d['script'],
             'engine': d['engine'],
-            'context': context
+            'context': context,
+            'inputs': [InputParameter.from_dict(context, inp)
+                       for inp in converted.get('inputs', [])],
+            'outputs': [OutputParameter.from_dict(context, inp)
+                        for inp in converted.get('outputs', [])]
         })
         return cls(**kwargs)

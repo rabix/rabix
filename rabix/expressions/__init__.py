@@ -3,4 +3,4 @@ from .evaluator import Evaluator
 
 
 def init(context):
-    context.add_type('Script', ExpresionTool.from_dict)
+    context.add_type('ExpressionTool', ExpresionTool.from_dict)

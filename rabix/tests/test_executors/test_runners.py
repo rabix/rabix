@@ -4,6 +4,7 @@ import six
 from nose.tools import nottest, assert_equal
 
 from os.path import abspath, join
+from rabix.common.models import Job
 from rabix.common.ref_resolver import from_url
 from rabix.main import init_context, construct_files
 
@@ -20,10 +21,11 @@ def test_workflow():
     path = abspath(join(__file__, '../../test_runtime/wf_tests.yaml'))
 
     doc = from_url(path)
-    context = init_context(doc)
     tests = doc['tests']
     for test_name, test in six.iteritems(tests):
-        features = test.get('requiresFeatures', [])
-        if 'map' not in features:
-            construct_files(test['job']['app'])
-            yield assert_execution, context.from_dict(test['job']), test['outputs']
+        context = init_context(test['job'])
+        job = Job.from_dict(context, test['job'])
+
+        for inp in job.app.inputs:
+            construct_files(job.inputs.get(inp.id), inp.validator)
+        yield assert_execution, job, test['outputs']

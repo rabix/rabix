@@ -36,6 +36,7 @@ TEMPLATE_RESOURCES = {
 
 
 TEMPLATE_JOB = {
+    'class': 'Job',
     'inputs': {},
     'platform': 'http://example.org/my_platform/v1',
     'allocatedResources': TEMPLATE_RESOURCES
@@ -81,7 +82,7 @@ def init_context(d):
     ):
         module.init(context)
 
-    if d['class'] == 'Job':
+    if d.get('class') == 'Job':
         context.build_from_document(d['app'])
     else:
         context.build_from_document(d)

@@ -28,14 +28,14 @@ def collect_prefixes(paths):
     container, such that only directories actually containing files are
     bound (otherwise trivial minimal set would be '/').
 
-    >>> collect_prefixes(['/a/b', '/a/b/c'])
-    set(['/a/b/'])
-    >>> collect_prefixes(['/a/b/c', '/a/b/d'])
-    set(['/a/b/d/', '/a/b/c/'])
-    >>> collect_prefixes(['/a/b', '/c/d'])
-    set(['/a/b/', '/c/d/'])
-    >>> collect_prefixes(['/a/b/', '/a/b/c', '/c/d'])
-    set(['/a/b/', '/c/d/'])
+    >>> list(collect_prefixes(['/a/b', '/a/b/c']))
+    ['/a/b/']
+    >>> sorted(list(collect_prefixes(['/a/b/c', '/a/b/d'])))
+    ['/a/b/c/', '/a/b/d/']
+    >>> sorted(list(collect_prefixes(['/a/b', '/c/d'])))
+    ['/a/b/', '/c/d/']
+    >>> sorted(list(collect_prefixes(['/a/b/', '/a/b/c', '/c/d'])))
+    ['/a/b/', '/c/d/']
 
     :param paths: list of directory names containing files
     :return: set of paths guaranteed to end with forward slash

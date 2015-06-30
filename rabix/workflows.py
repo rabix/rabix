@@ -31,17 +31,19 @@ class WorkflowStepInput(InputParameter):
             id, validator, required, label, description, depth, input_binding
         )
 
-        self.connect = wrap_in_list(connect) if connect is not None else connect
-        self.value = None
+        self.connect = wrap_in_list(connect) if connect is not None else []
+        self.value = value
 
     def to_dict(self, ctx=None):
         d = super(WorkflowStepInput, self).to_dict(ctx)
         d['connect'] = ctx.to_primitive(self.connect)
+        return d
 
     @classmethod
     def from_dict(cls, context, d):
         instance = super(WorkflowStepInput, cls).from_dict(context, d)
-        instance.connect = d.get('connect')
+        connect = d.get('connect')
+        instance.connect = wrap_in_list(connect) if connect is not None else []
         instance.value = d.get('default')
         return instance
 
@@ -95,15 +97,18 @@ class WorkflowOutput(OutputParameter):
         super(WorkflowOutput, self).__init__(
             id, validator, required, label, description, depth, output_binding
         )
-        self.connect = wrap_in_list(connect) if connect is not None else connect
+        self.connect = wrap_in_list(connect) if connect is not None else []
 
     def to_dict(self, ctx=None):
         d = super(WorkflowOutput, self).to_dict(ctx)
         d['connect'] = ctx.to_primitive(self.output_binding)
+        return d
 
     @classmethod
     def from_dict(cls, context, d):
         instance = super(OutputParameter, cls).from_dict(context, d)
+        connect = d.get('connect')
+        instance.connect = wrap_in_list(connect) if connect is not None else []
         return instance
 
 class Workflow(Process):
@@ -164,11 +169,10 @@ class Workflow(Process):
             # raise ValidationError('Graph is not connected')
 
     def move_connect_to_datalink(self, port):
-        if port.connect:
-            dl = port.connect
-            port.connect = None
+        for dl in port.connect:
             dl['destination'] = '#'+port.id
             self.data_links.append(dl)
+        port.connect.clear()
 
     # Graph.add_node silently fails if node already exists
     def add_node(self, node_id, node):
@@ -193,7 +197,7 @@ class Workflow(Process):
         d = super(Workflow, self).to_dict(context)
         d.update({
             "class": "Workflow",
-            'steps': [step.to_primitive(context) for step in self.steps]
+            'steps': [step.to_dict(context) for step in self.steps]
         })
         return d
 
@@ -314,6 +318,8 @@ class ExecutionGraph(object):
         self.order = graph.back_topo_sort()[1]
 
     def add_output(self, outputs, port, relation):
+        log.debug("add_output: outputs(%s), port(%s), relation(%s)",
+                  outputs, port, relation)
         if not outputs.get(port):
             outputs[port] = [relation]
         else:
