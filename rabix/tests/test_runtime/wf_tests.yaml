@@ -110,9 +110,16 @@ workflows:
           import: "#/tools/sum"
         inputs:
           - id: arr
-            connect: add_mul.result
+            connect: { source: add_mul.result }
         outputs:
           - id: sum.result
+    inputs:
+      - id: a
+        type: int
+    outputs:
+      - id: result
+        type: int
+        connect: { source: sum.result }
 
   multi_link_sum:
     id: multi_link_sum
@@ -122,11 +129,21 @@ workflows:
         run:
           import: "#tools/sum"
         inputs:
-          arr:
-            $from: [a, b]
+          - id: sum.arr
+            connect:
+              - source: a
+              - source: b
         outputs:
-          sum:
-            $to: result
+          - id: sum.sum
+    inputs:
+      - id: a
+        type: int
+      - id: b
+        type: int
+    outputs:
+      - id: result
+        type: int
+        connect: { source: sum.sum }
 
 jobs:
   simple_sum:
@@ -180,26 +197,26 @@ tests:
     outputs:
       result: 4
 
-#  multi_link_sum:
-#    class: Test
-#    job:
-#      import: "#jobs/multi_link_sum"
-#    outputs:
-#      result: 2
-#    requiresFeatures: [multilink]
-#
-#  batch_add_one_mul_two:
-#    class: Test
-#    job:
-#      import: "#jobs/batch_add_one_mul_two"
-#    outputs:
-#      result: [4, 6, 8]
-#    requiresFeatures: [map]
-#
-#  add_mul_sum:
-#    class: Test
-#    job:
-#      import: "#jobs/add_mul_sum"
-#    outputs:
-#      result: 18
-#    requiresFeatures: [map, nested]
+  multi_link_sum:
+    class: Test
+    job:
+      import: "#jobs/multi_link_sum"
+    outputs:
+      result: 2
+    requiresFeatures: [multilink]
+
+  batch_add_one_mul_two:
+    class: Test
+    job:
+      import: "#jobs/batch_add_one_mul_two"
+    outputs:
+      result: [4, 6, 8]
+    requiresFeatures: [map]
+
+  add_mul_sum:
+    class: Test
+    job:
+      import: "#jobs/add_mul_sum"
+    outputs:
+      result: 18
+    requiresFeatures: [map, nested]
