@@ -172,7 +172,7 @@ class Workflow(Process):
         for dl in port.connect:
             dl['destination'] = '#'+port.id
             self.data_links.append(dl)
-        port.connect.clear()
+        del port.connect[:]
 
     # Graph.add_node silently fails if node already exists
     def add_node(self, node_id, node):
