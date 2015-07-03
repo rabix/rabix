@@ -206,7 +206,7 @@ class CLIJob(object):
             return self.eval.resolve(self._stdout)
 
     def make_arg_list(self):
-        adapters = [InputAdapter(a['value'], self.eval, {}, a)
+        adapters = [InputAdapter(a.get('value'), self.eval, {}, a)
                     for a in self.args]
         ia = InputAdapter(self.job.inputs, self.eval, self.app.inputs)
         args = ia.as_toplevel(adapters)
