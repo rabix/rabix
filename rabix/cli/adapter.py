@@ -158,21 +158,21 @@ class InputAdapter(object):
         if not self.prefix:
             return reduce(operator.add, [a.arg_list() for a in items], [])
 
-        if self.separator is None and self.item_separator is None:
+        if self.separate and self.item_separator is None:
             return reduce(operator.add, [[self.prefix] + a.arg_list()
                                          for a in items], [])
 
-        if self.separator is not None and self.item_separator is None:
-            return [self.prefix + self.separator + a.list_item()
+        if not self.separate and self.item_separator is None:
+            return [self.prefix + a.list_item()
                     for a in items if a.list_item() is not None]
 
         joined = self.item_separator.join(
             filter(None, [a.list_item() for a in items])
         )
 
-        if self.separator is None and self.item_separator is not None:
+        if self.separate and self.item_separator is not None:
             return [self.prefix, joined]
-        return [self.prefix + self.separator + joined]
+        return [self.prefix + joined]
 
     def list_item(self):
         as_arg_list = self.arg_list()
@@ -206,7 +206,7 @@ class CLIJob(object):
             return self.eval.resolve(self._stdout)
 
     def make_arg_list(self):
-        adapters = [InputAdapter(a.get('value'), self.eval, {}, a)
+        adapters = [InputAdapter(a.get('valueFrom'), self.eval, {}, a)
                     for a in self.args]
         ia = InputAdapter(self.job.inputs, self.eval, self.app.inputs)
         args = ia.as_toplevel(adapters)
