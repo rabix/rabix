@@ -7,7 +7,7 @@ import copy
 
 # noinspection PyUnresolvedReferences
 from six.moves import reduce
-from avro.schema import UnionSchema, Schema
+from avro.schema import UnionSchema, Schema, ArraySchema
 
 if six.PY2:
     from avro.io import validate
@@ -152,7 +152,13 @@ class InputAdapter(object):
         return res
 
     def as_list(self):
-        items = [InputAdapter(item, self.evaluator, self.schema.items)
+        # on top-level, I have type and depth, for easier parallelism,
+        # but this is hacky as hell
+        schema = (
+            self.schema.items if isinstance(self.schema, ArraySchema)
+            else self.schema
+        )
+        items = [InputAdapter(item, self.evaluator, schema)
                  for item in self.value]
 
         if not self.prefix:
