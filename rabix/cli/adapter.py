@@ -15,37 +15,9 @@ else:
     from avro.io import Validate as validate
 
 from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath
-from rabix.expressions import Evaluator
+from rabix.expressions.evaluator import ExpressionEvaluator
 
 log = logging.getLogger(__name__)
-
-
-class AdapterEvaluator(object):
-
-    def __init__(self, job):
-        self.job = job
-        self.ev = Evaluator()
-
-    def evaluate(self, expr_object, context=None, job=None):
-        if isinstance(expr_object, dict):
-            return self.ev.evaluate(
-                expr_object.get('engine', 'javascript'),
-                expr_object.get('script'),
-                job.to_dict() if job else self.job.to_dict(),
-                context
-            )
-        else:
-            return self.ev.evaluate('javascript', expr_object,
-                                    job.to_dict() if job else
-                                    self.job.to_dict(), context)
-
-    def resolve(self, val, context=None, job=None):
-        if not isinstance(val, dict):
-            return val
-        if 'engine' in val and 'script' in val:
-            v = val.get('script')
-            return self.evaluate(v, context, job=job)
-        return val
 
 
 def intersect_dicts(d1, d2):
@@ -199,7 +171,7 @@ class CLIJob(object):
         if isinstance(self.base_cmd, six.string_types):
             self.base_cmd = self.base_cmd.split(' ')
         self.args = self.app.arguments
-        self.eval = AdapterEvaluator(job)
+        self.eval = ExpressionEvaluator(job)
 
     @property
     def stdin(self):
@@ -235,7 +207,7 @@ class CLIJob(object):
             out_binding = out.output_binding
             ret = os.getcwd()
             os.chdir(job_dir)
-            pattern = self.eval.resolve(out_binding.get('glob'), job=job) or ""
+            pattern = self.eval.resolve(out_binding.get('glob')) or ""
             files = glob.glob(pattern)
 
             result[out.id] = [
