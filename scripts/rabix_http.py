@@ -11,11 +11,15 @@ ctx = Context(None)
 init(ctx)
 
 
+def strip_prefix(input_id):
+    return input_id[input_id.rfind('.') + 1:]
+
+
 @app.route('/get_command_line', methods=['POST'])
 def get_command_line():
     data = request.get_json(force=True)
     tool = process_builder(ctx, data['tool_cfg'])
-    inputs = {k: construct_files(v, tool._inputs[k].validator) for k, v in data['input_map'].iteritems()}
+    inputs = {strip_prefix(k): construct_files(v, tool._inputs[k].validator) for k, v in data['input_map'].iteritems()}
     job = Job('Fake job ID', tool, inputs,  {'cpu': 1, 'mem': 1024}, ctx)
     cli_job = CLIJob(job)
     return json.dumps({
@@ -29,7 +33,7 @@ def get_command_line():
 def get_outputs():
     data = request.get_json(force=True)
     tool = process_builder(ctx, data['tool_cfg'])
-    inputs = {k: construct_files(v, tool._inputs[k].validator) for k, v in data['input_map'].iteritems()}
+    inputs = {strip_prefix(k): construct_files(v, tool._inputs[k].validator) for k, v in data['input_map'].iteritems()}
     job = Job('Fake job ID', tool, inputs,  {'cpu': 1, 'mem': 1024}, ctx)
     cli_job = CLIJob(job)
     status = 'SUCCESS' if data['exit_code'] in data['tool_cfg'].get('successCodes', [0]) else 'FAILURE'
