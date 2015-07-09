@@ -335,12 +335,17 @@ class Parameter(object):
         return self.validator.validate(value)
 
     def to_dict(self, ctx=None):
-        t = [self.validator.to_json()] if self.validator else None
-        if t and not self.required:
-            t.append('null')
+        avro_schema = None
+        if self.validator:
+            avro_schema = self.validator.to_json()
+            for d in range(0, self.depth):
+                avro_schema = {'type': 'array', 'items': avro_schema}
+            avro_schema = [avro_schema]
+            if not self.required:
+                avro_schema.append('null')
         return {
             'id': '#' + self.id,
-            'type': t,
+            'type': avro_schema,
             'label': self.label,
             'description': self.description
         }
