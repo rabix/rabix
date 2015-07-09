@@ -5,6 +5,7 @@ from yapsy.VersionedPluginManager import VersionedPluginManager
 from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.IPlugin import IPlugin
 from six.moves.configparser import SafeConfigParser
+from rabix.common.ref_resolver import resolve_pointer
 
 
 class ExpressionEvalPlugin(IPlugin):
@@ -63,3 +64,25 @@ class Evaluator(object):
     def evaluate(self, lang, expression, *args, **kwargs):
         pl = self._get_evaluator(lang)
         return pl.evaluate(expression, *args, **kwargs)
+
+
+class ExpressionEvaluator(object):
+    def __init__(self, job):
+        self.job = job
+
+    def resolve(self, expr_or_value, context=None):
+        val = expr_or_value
+        if not isinstance(val, dict) or ('engine' not in val and 'script' not in val):
+            return val
+        engine, script = val['engine'], val['script']
+        if engine == 'cwl:JsonPointer':
+            return self._evaluate_json_pointer(script)
+        else:
+            return self._evaluate_expression(engine, script, context)
+
+    def _evaluate_expression(self, engine, script, context):
+        # TODO: Use ExpressionEngineRequirement
+        return Evaluator().evaluate('javascript', script, self.job.to_dict(), context)
+
+    def _evaluate_json_pointer(self, script):
+        return resolve_pointer(self.job.to_dict(), script)
