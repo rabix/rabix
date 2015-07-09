@@ -131,13 +131,16 @@ class CommandLineTool(Process):
             description=description
         )
         self.base_command = base_command
-        self.arguments = arguments
+        self.arguments = arguments or []
         self.stdin = stdin
         self.stdout = stdout
         self.mappings = {}
         self.cli_job = None
         self._command_line = None
-        self.container = next(r for r in self.requirements if hasattr(r, 'run'))
+        self.container = next(
+            (r for r in self.requirements if hasattr(r, 'run')),
+            next((r for r in self.hints if hasattr(r, 'run')), None)
+        )
 
     def run(self, job, job_dir=None):
         job_dir = os.path.abspath(job_dir or job.id)

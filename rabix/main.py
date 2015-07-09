@@ -44,8 +44,8 @@ TEMPLATE_JOB = {
 
 USAGE = '''
 Usage:
-    rabix <tool> [-v...] [-hcI] [-t <type>] [-d <dir>] [-i <inp>] [{resources}] [-- {inputs}...]
-    rabix --conformance-test [--basedir=<basedir>] [--no-container] <tool> <job> [-- <input>...]
+    rabix <tool> [-v...] [-hcI] [-t <type>] [-d <dir>] [-i <inp>] [--outdir=<outdir>] [--strict] [<inputs-file>] [{resources}] [-- {inputs}...]
+    rabix --conformance-test [--basedir=<basedir>] [--no-container] [--outdir=<outdir>] [--strict] <tool> <job> [-- <input>...]
     rabix --version
 
     Options:
@@ -196,8 +196,8 @@ def conformance_test(context, app, job_dict, basedir):
     if not app.outputs:
         app.outputs = []
 
-    job_dict['inputs'] = get_inputs(job_dict['inputs'], app.inputs, basedir)
-    job = context.from_dict(job_dict)
+    job_dict['inputs'] = get_inputs(job_dict, app.inputs, basedir)
+    job = Job.from_dict(context, job_dict)
 
     adapter = CLIJob(job)
 
@@ -246,6 +246,9 @@ def main():
     if 'class' not in tool:
         fail("Document must have a 'class' field")
 
+    if 'id' not in tool:
+        tool['id'] = dry_run_args['<tool>']
+
     context = init_context(tool)
 
     app = process_builder(context, tool)
@@ -270,9 +273,9 @@ def main():
         job_dict = copy.deepcopy(TEMPLATE_JOB)
         logging.root.setLevel(log_level(dry_run_args['--verbose']))
 
-        if args['--inp-file']:
-            basedir = os.path.dirname(args.get('--inp-file'))
-            input_file = from_url(args.get('--inp-file'))
+        if args['<inputs-file>']:
+            basedir = os.path.dirname(args.get('<inputs-file>'))
+            input_file = from_url(args.get('<inputs-file>'))
             inputs = get_inputs(input_file, app.inputs, basedir)
             job_dict['inputs'].update(inputs)
 
@@ -328,8 +331,8 @@ def main():
             return
 
         try:
-            context.executor.execute(job, lambda _, result: print(
-                result_str(job.id, result)))
+            context.executor.execute(job, lambda _, result: print(json.dumps(context.to_primitive(result))))
+                # result_str(job.id, result)))
         except RabixError as err:
             fail(err.message)
 

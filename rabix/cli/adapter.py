@@ -3,7 +3,7 @@ import six
 import logging
 import os
 import glob
-import copy
+import hashlib
 
 # noinspection PyUnresolvedReferences
 from six.moves import reduce
@@ -237,9 +237,15 @@ class CLIJob(object):
             os.chdir(job_dir)
             pattern = self.eval.resolve(out_binding.get('glob'), job=job) or ""
             files = glob.glob(pattern)
-            result[out.id] = [{'path': os.path.abspath(p),
-                          'metadata': meta(p, job.inputs, self.eval, out_binding),
-                          'secondaryFiles': secondary_files(p, out_binding, self.eval)} for p in files]
+
+            result[out.id] = [
+                {
+                    'path': os.path.abspath(p),
+                    'size': os.stat(p).st_size,
+                    'checksum': 'sha1$' + hashlib.sha1(open(os.path.abspath(p)).read()).hexdigest(),
+                    'metadata': meta(p, job.inputs, self.eval, out_binding),
+                    'secondaryFiles': secondary_files(p, out_binding, self.eval)
+                } for p in files]
             os.chdir(ret)
             if out.depth == 0:
                 result[out.id] = result[out.id][0] if result[out.id] else None

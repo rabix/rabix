@@ -23,6 +23,7 @@ else:
 
 
 from rabix.common.errors import ValidationError, RabixError
+from rabix.common.util import wrap_in_list
 
 
 log = logging.getLogger(__name__)
@@ -77,8 +78,8 @@ class Process(object):
         self.id = process_id
         self.inputs = inputs
         self.outputs = outputs
-        self.requirements = requirements
-        self.hints = hints
+        self.requirements = requirements or []
+        self.hints = hints or []
         self.label = label
         self.description = description
         self._inputs = {io.id: io for io in inputs}
@@ -199,11 +200,12 @@ class File(object):
 
     name = 'File'
 
-    def __init__(self, path, size=None, meta=None, secondary_files=None):
+    def __init__(self, path, size=None, meta=None, secondary_files=None, checksum=None):
         self.size = size
         self.meta = meta or {}
         self.secondary_files = secondary_files or []
         self.url = None
+        self.checksum = None
 
         if isinstance(path, dict):
             self.from_dict(path)
@@ -229,6 +231,7 @@ class File(object):
         self.secondary_files = self.secondary_files or \
             [File(sf) for sf in val.get('secondaryFiles', [])]
         self.path = path
+        self.checksum = val.get('checksum')
 
     def to_dict(self, context=None):
         return {
@@ -236,6 +239,7 @@ class File(object):
             "path": self.path,
             "size": self.size,
             "metadata": self.meta,
+            "checksum": self.checksum,
             "secondaryFiles": [sf.to_dict(context)
                                for sf in self.secondary_files]
         }
@@ -306,7 +310,7 @@ def make_avro(schema, named_defs):
     for d in named_defs:
         make_avsc_object(d, names)
 
-    avsc = make_avsc_object(fix_file_type(schema), names)
+    avsc = make_avsc_object(fix_file_type(wrap_in_list(schema)), names)
     return avsc
 
 

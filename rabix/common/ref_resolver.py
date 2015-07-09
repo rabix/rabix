@@ -8,6 +8,7 @@ import collections
 import requests
 import six
 
+# noinspection PyUnresolvedReferences
 from six.moves.urllib import parse as urlparse
 
 log = logging.getLogger(__name__)

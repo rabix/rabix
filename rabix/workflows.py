@@ -72,8 +72,25 @@ class Step(Process):
     def run(self, job):
         self.app.run(job)
 
+    @staticmethod
+    def infer_step_id(d):
+        step_id = d.get('id')
+        app_id = d['run'].get('id')
+
+        if app_id and step_id:
+            return
+
+        if not step_id:
+            inp = d['inputs'][0]
+            step_id = inp['id'].split('.')[0]
+            d['id'] = step_id
+
+        if not app_id:
+            d['run']['id'] = step_id + '_process'
+
     @classmethod
     def from_dict(cls, context, d):
+        cls.infer_step_id(d)
         converted = {
             k: process_builder(context, v) if k == 'run' else context.from_dict(v)
             for k, v in six.iteritems(d)
