@@ -85,4 +85,8 @@ class ExpressionEvaluator(object):
         return Evaluator().evaluate('javascript', script, self.job.to_dict(), context)
 
     def _evaluate_json_pointer(self, script):
-        return resolve_pointer(self.job.to_dict(), script)
+        job_dict = self.job.to_dict()
+        doc = {
+            'job': job_dict.get('inputs', {}),
+        }
+        return resolve_pointer(doc, script)
