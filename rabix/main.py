@@ -78,7 +78,7 @@ def init_context(d):
     context = Context(executor)
 
     for module in (
-            rabix.cli, rabix.expressions, rabix.workflows, rabix.docker
+            rabix.common.models, rabix.cli, rabix.expressions, rabix.workflows, rabix.docker
     ):
         module.init(context)
 

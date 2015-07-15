@@ -4,11 +4,11 @@ from rabix.common.models import Process, InputParameter, OutputParameter
 from rabix.expressions.evaluator import Evaluator
 
 
-class ExpresionTool(Process):
+class ExpressionTool(Process):
 
     def __init__(self, process_id, inputs, outputs, requirements, hints,
                  script, context, engine, label, description):
-        super(ExpresionTool, self).__init__(
+        super(ExpressionTool, self).__init__(
             process_id, inputs, outputs,
             hints=hints,
             requirements=requirements,
@@ -20,13 +20,12 @@ class ExpresionTool(Process):
         self.context = context
         self.engine = engine
 
-
     def run(self, job):
         result = self.evaluator.evaluate(self.engine, self.script, job.to_dict(self.context), None)
         return result
 
     def to_dict(self, context):
-        d = super(ExpresionTool, self).to_dict(context)
+        d = super(ExpressionTool, self).to_dict(context)
         d.update({
             "class": "ExpressionTool",
             "script": self.script,

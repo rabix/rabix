@@ -58,8 +58,8 @@ def construct_files(val, schema):
             return File(val) if val else val
         else:
             ret = {}
-            for k, s in six.iteritems(schema.fields):
-                ret[k] = construct_files(val.get(k), s)
+            for fld in schema.fields:
+                ret[fld.name] = construct_files(val.get(fld.name), fld.type)
             return ret
 
     if schema.type == 'union':
@@ -509,8 +509,12 @@ class SchemaDefRequirement(object):
     def from_dict(cls, context, d):
         return cls(d.get('types', []))
 
-    def to_dict(self, context):
+    def to_dict(self, context=None):
         return {
             'type': 'SchemaDefRequirement',
             'types': [t.to_json() for t in self.types]
         }
+
+
+def init(ctx):
+    ctx.add_type('SchemaDefRequirement', SchemaDefRequirement.from_dict)
