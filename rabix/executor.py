@@ -55,7 +55,7 @@ class Executor(object):
         jobs = self.split_job(job)
         result = None
         if isinstance(jobs, list):
-            results = [job.runs() for job in jobs]
+            results = [job.run() for job in jobs]
 
             combined = {}
             for result in results:
