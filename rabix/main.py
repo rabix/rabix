@@ -127,11 +127,9 @@ def fix_types(tool, toplevelType=None):
 def make_resources_usage_string(template=TEMPLATE_RESOURCES):
     param_str = []
     for k, v in six.iteritems(template):
-        if type(v) is bool:
-            arg = '--resources.%s' % k
-        else:
-            arg = '--resources.%s=<%s>' % (k, type(v).__name__)
+        arg = ('--resources.%s' % k) if type(v) is bool else ('--resources.%s=<%s>' % (k, type(v).__name__))
         param_str.append(arg)
+
     return ' '.join(param_str)
 
 
