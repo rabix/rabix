@@ -1,138 +1,196 @@
 import six
 import logging
-import copy
 
-from uuid import uuid4
 from collections import namedtuple, defaultdict
 from altgraph.Graph import Graph
 
 from rabix.common.errors import ValidationError, RabixError
 from rabix.common.util import wrap_in_list
-from rabix.common.models import App, IO, Job
-from rabix.schema import JsonSchema
+from rabix.common.models import (
+    Process, Parameter, Job, InputParameter, OutputParameter,
+    process_builder, parameter_name
+)
 
 log = logging.getLogger(__name__)
 
 AppNode = namedtuple('AppNode', ['app', 'inputs'])
 
-Relation = namedtuple('Relation', ['src_port', 'dst_port'])
-InputRelation = namedtuple('InputRelation', ['dst_port'])
-OutputRelation = namedtuple('OutputRelation', ['src_port'])
+Relation = namedtuple('Relation', ['source', 'destination', 'position'])
+InputRelation = namedtuple('InputRelation', ['destination', 'position'])
+OutputRelation = namedtuple('OutputRelation', ['source', 'position'])
+
+Relation.to_dict = Relation._asdict
 
 
-class Step(object):
+class WorkflowStepInput(InputParameter):
 
-    def __init__(self, step_id, app, inputs, outputs=None):
-        self.id = step_id
-        self.app = app
-        self.inputs = inputs
-        self.outputs = outputs
+    def __init__(self, id, validator=None, required=False, label=None,
+                 description=None, depth=0, input_binding=None, connect=None,
+                 value=None):
+        super(WorkflowStepInput, self).__init__(
+            id, validator, required, label, description, depth, input_binding
+        )
 
-    def to_dict(self, context):
-        return {
-            "id": self.id,
-            "@type": "Step",
-            "app": self.app.to_dict(context),
-            "inputs": context.to_dict(self.inputs),
-            "outputs": context.to_dict(self.outputs)
-        }
+        self.connect = wrap_in_list(connect) if connect is not None else []
+        self.value = value
+
+    def to_dict(self, ctx=None):
+        d = super(WorkflowStepInput, self).to_dict(ctx)
+        d['connect'] = ctx.to_primitive(self.connect)
+        return d
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(
-            d["id"],
-            context.from_dict(d['app']),
-            context.from_dict(d.get('inputs')),
-            context.from_dict(d.get('outputs')))
+        instance = super(WorkflowStepInput, cls).from_dict(context, d)
+        connect = d.get('connect')
+        instance.connect = wrap_in_list(connect) if connect is not None else []
+        instance.value = d.get('default')
+        return instance
 
 
-class WorkflowApp(App):
+class Step(Process):
 
-    def __init__(self, app_id, steps, context,
-                 inputs=None, outputs=None, to=None,
-                 app_description=None,
-                 annotations=None,
-                 platform_features=None):
+    def __init__(
+            self, process_id, inputs, outputs, requirements, hints,
+            label, description, app, scatter
+    ):
+        super(Step, self).__init__(
+            process_id, inputs, outputs,
+            requirements=requirements,
+            hints=hints,
+            label=label,
+            description=description
+        )
+        self.app = app
+        self.scatter = scatter
+
+    def to_dict(self, context):
+        d = super(Step, self).to_dict(context)
+        d['run'] = context.to_primitive(self.app)
+        return d
+
+    def run(self, job):
+        self.app.run(job)
+
+    @staticmethod
+    def infer_step_id(d):
+        step_id = d.get('id')
+        app_id = d['run'].get('id')
+
+        if app_id and step_id:
+            return
+
+        if not step_id:
+            inp = d['inputs'][0]
+            step_id = inp['id'].split('.')[0]
+            d['id'] = step_id
+
+        if not app_id:
+            d['run']['id'] = step_id + '_process'
+
+    @classmethod
+    def from_dict(cls, context, d):
+        cls.infer_step_id(d)
+        converted = {
+            k: process_builder(context, v) if k == 'run' else context.from_dict(v)
+            for k, v in six.iteritems(d)
+        }
+        kwargs = Process.kwarg_dict(converted)
+        kwargs.update({
+            'app': converted['run'],
+            'inputs': [WorkflowStepInput.from_dict(context, inp)
+                       for inp in converted.get('inputs', [])],
+            'outputs': [OutputParameter.from_dict(context, inp)
+                        for inp in converted.get('outputs', [])],
+            'scatter': converted.get('scatter')
+        })
+        return cls(**kwargs)
+
+
+class WorkflowOutput(OutputParameter):
+
+    def __init__(self, id, validator=None, required=False, label=None,
+                 description=None, depth=0, output_binding=None, connect=None):
+        super(WorkflowOutput, self).__init__(
+            id, validator, required, label, description, depth, output_binding
+        )
+        self.connect = wrap_in_list(connect) if connect is not None else []
+
+    def to_dict(self, ctx=None):
+        d = super(WorkflowOutput, self).to_dict(ctx)
+        d['connect'] = ctx.to_primitive(self.output_binding)
+        return d
+
+    @classmethod
+    def from_dict(cls, context, d):
+        instance = super(OutputParameter, cls).from_dict(context, d)
+        connect = d.get('connect')
+        instance.connect = wrap_in_list(connect) if connect is not None else []
+        return instance
+
+
+class Workflow(Process):
+
+    def __init__(self, process_id, inputs, outputs, requirements, hints, label,
+                 description, steps, context, data_links=None):
+        super(Workflow, self).__init__(
+            process_id, inputs, outputs, requirements,
+            hints, label, description
+        )
         self.graph = Graph()
-        self.inputs = inputs or []
-        self.outputs = outputs or []
         self.executor = context.executor
         self.steps = steps
-        self.to = to or {}
+        self.data_links = data_links or []
         self.context = context
+        self.port_step_index = {}
 
         for step in steps:
-            self.add_node(step.id,  AppNode(step.app, {}))
+            node = AppNode(step.app, {})
+            self.add_node(step.id, node)
+            for inp in step.inputs:
+                self.port_step_index[inp.id] = step.id
+                self.move_connect_to_datalink(inp)
+                if inp.value:
+                    node.inputs[inp.id] = inp.value
 
-        for step in steps:
-            # inputs
-            for input_port, input_val in six.iteritems(step.inputs):
-                inp = wrap_in_list(input_val)
-                for item in inp:
-                    self.add_edge_or_input(step, input_port, item)
+            for out in step.outputs:
+                self.port_step_index[out.id] = step.id
 
-            # outputs
-            if step.outputs:
-                for output_port, output_val in six.iteritems(step.outputs):
-                    self.to[output_val['$to']] = output_port
-                    if isinstance(step.app, WorkflowApp):
-                        output_node = step.app.get_output(step.app.to.get(output_port))
-                    else:
-                        output_node = step.app.get_output(output_port)
-                    output_id = output_val['$to']
-                    self.add_node(output_id, output_node)
-                    self.graph.add_edge(
-                        step.id, output_id, OutputRelation(output_port)
-                    )
-                    # output_node.id = output_val['$to']
-                    self.outputs.append(output_node)
+        for inp in self.inputs:
+            self.add_node(inp.id, inp)
+
+        for out in self.outputs:
+            self.move_connect_to_datalink(out)
+            self.add_node(out.id, out)
+
+        for dl in self.data_links:
+            dst = dl['destination'].lstrip('#')
+            src = dl['source'].lstrip('#')
+
+            if src in self.port_step_index and dst in self.port_step_index:
+                rel = Relation(src, dst, dl.get('position', 0))
+                src = self.port_step_index[src]
+                dst = self.port_step_index[dst]
+            elif src in self._inputs:
+                rel = InputRelation(dst, dl.get('position', 0))
+                dst = self.port_step_index[dst]
+            elif dst in self._outputs:
+                rel = OutputRelation(src, dl.get('position', 0))
+                src = self.port_step_index[src]
+            else:
+                raise RabixError("invalid data link %s" % dl)
+
+            self.graph.add_edge(src, dst, rel)
 
         if not self.graph.connected():
             pass
             # raise ValidationError('Graph is not connected')
 
-        schema = {
-            "@type": "JsonSchema",
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
-
-        for inp in self.inputs:
-            schema['properties'][inp.id] = inp.validator.schema
-            if inp.required:
-                schema['required'].append(inp.id)
-
-        super(WorkflowApp, self).__init__(
-            app_id, JsonSchema(context, schema), self.outputs,
-            app_description=app_description,
-            annotations=annotations,
-            platform_features=platform_features
-        )
-
-    def add_edge_or_input(self, step, input_name, input_val):
-        node_id = step.id
-        if isinstance(input_val, dict) and '$from' in input_val:
-            frm = wrap_in_list(input_val['$from'])
-            for inp in frm:
-                if '.' in inp:
-                    node, outp = inp.split('.')
-                    self.graph.add_edge(node, node_id, Relation(outp, input_name))
-                else:
-                    # TODO: merge input schemas if one input goes to different apps
-
-                    input = step.app.get_input(input_name)
-                    if inp not in self.graph.nodes:
-                        self.add_node(inp, input)
-                    self.graph.add_edge(
-                        inp, node_id, InputRelation(input_name)
-                    )
-                    wf_input = copy.deepcopy(input)
-                    wf_input.id = inp
-                    self.inputs.append(wf_input)
-
-        else:
-            self.graph.node_data(node_id).inputs[input_name] = input_val
+    def move_connect_to_datalink(self, port):
+        for dl in port.connect:
+            dl['destination'] = '#'+port.id
+            self.data_links.append(dl)
+        del port.connect[:]
 
     # Graph.add_node silently fails if node already exists
     def add_node(self, node_id, node):
@@ -154,30 +212,37 @@ class WorkflowApp(App):
         return eg.outputs
 
     def to_dict(self, context):
-        d = super(WorkflowApp, self).to_dict(context)
+        d = super(Workflow, self).to_dict(context)
         d.update({
-            "@type": "Workflow",
+            "class": "Workflow",
             'steps': [step.to_dict(context) for step in self.steps]
         })
         return d
 
     @classmethod
     def from_dict(cls, context, d):
-        steps = [Step(
-            step['id'], context.from_dict(step['app']),
-            step['inputs'], step.get('outputs')
-        )
-            for step in d['steps']]
+        converted = {}
+        for k, v in six.iteritems(d):
+            if k == 'steps':
+                converted[k] = [Step.from_dict(context, s) for s in v]
+            else:
+                converted[k] = context.from_dict(v)
 
-        return cls(
-            d.get('@id', six.text_type(uuid4())),
-            steps,
-            context
-        )
+        kwargs = Process.kwarg_dict(converted)
+        kwargs.update({
+            'steps': converted['steps'],
+            'data_links': converted.get('dataLinks'),
+            'context': context,
+            'inputs': [InputParameter.from_dict(context, i)
+                       for i in converted['inputs']],
+            'outputs': [WorkflowOutput.from_dict(context, o)
+                        for o in converted['outputs']]
+        })
+        return cls(**kwargs)
 
 
 def init(context):
-    context.add_type('Workflow', WorkflowApp.from_dict)
+    context.add_type('Workflow', Workflow.from_dict)
 
 
 class PartialJob(object):
@@ -189,9 +254,8 @@ class PartialJob(object):
         self.app = app
         self.inputs = inputs
         self.input_counts = input_counts
-        self.outputs = outputs
+        self.outputs = {parameter_name(k): v for k, v in six.iteritems(outputs)}
         self.context = context
-
         self.running = []
         self.resources = None
 
@@ -203,7 +267,6 @@ class PartialJob(object):
         return True
 
     def resolve_input(self, input_port, results):
-        print("Resolving input '%s' with value %s" % (input_port, results))
         log.debug("Resolving input '%s' with value %s" % (input_port, results))
         input_count = self.input_counts[input_port]
         if input_count <= 0:
@@ -268,11 +331,13 @@ class ExecutionGraph(object):
             if executable:
                 self.executables[node_id] = executable
 
-        workflow.hide_nodes(IO)
+        workflow.hide_nodes(Parameter)
 
         self.order = graph.back_topo_sort()[1]
 
     def add_output(self, outputs, port, relation):
+        log.debug("add_output: outputs(%s), port(%s), relation(%s)",
+                  outputs, port, relation)
         if not outputs.get(port):
             outputs[port] = [relation]
         else:
@@ -280,7 +345,7 @@ class ExecutionGraph(object):
 
     def make_executable(self, node_id):
         node = self.graph.node_data(node_id)
-        if isinstance(node, IO):
+        if isinstance(node, Parameter):
             return None
 
         out_edges = self.graph.out_edges(node_id)
@@ -292,11 +357,11 @@ class ExecutionGraph(object):
             rel = self.graph.edge_data(out_edge)
             if isinstance(rel, Relation):
                 tail = self.executables[self.graph.tail(out_edge)]
-                self.add_output(outputs, rel.src_port, ExecRelation(
-                    tail, rel.dst_port))
+                self.add_output(outputs, rel.source, ExecRelation(
+                    tail, rel.destination))
             elif isinstance(rel, OutputRelation):
                 tail = self.graph.tail(out_edge)
-                self.add_output(outputs, rel.src_port, OutRelation(
+                self.add_output(outputs, rel.source, OutRelation(
                     self, tail))
 
         executable = PartialJob(
@@ -310,7 +375,7 @@ class ExecutionGraph(object):
             if (isinstance(rel, InputRelation) and
                     head in self.job.inputs):
                 executable.resolve_input(
-                    rel.dst_port, self.job.inputs[head]
+                    rel.destination, self.job.inputs[head]
                 )
 
         return executable
@@ -320,8 +385,8 @@ class ExecutionGraph(object):
         input_counts = defaultdict(lambda: 0)
         for edge in in_edges:
             relation = graph.edge_data(edge)
-            input_count = input_counts[relation.dst_port]
-            input_counts[relation.dst_port] = input_count + 1
+            input_count = input_counts[relation.destination]
+            input_counts[relation.destination] = input_count + 1
         return input_counts
 
     def job_done(self, node_id, results):
@@ -353,7 +418,7 @@ if __name__ == '__main__':
 
     doc = from_url(root_relative('tests/workflow.yml'))
 
-    wf = WorkflowApp(doc['workflows']['add_one_mul_two']['steps'])
+    wf = Workflow(doc['workflows']['add_one_mul_two']['steps'])
     print(wf.graph.forw_topo_sort())
 
     for edge in wf.graph.edges:

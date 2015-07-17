@@ -1,5 +1,5 @@
 # Workflow tests. Equivalent to wf_tests.json
-# Dereference all $ref pointers then look at "tests" object
+# Dereference all import pointers then look at "tests" object
 # Each test has a "job" to run and expected "outputs"
 # For expected failures, "fails" is truthy value with reason
 # "requiresFeatures" is a list of following feature requirements (to allow testing partial conformance):
@@ -9,53 +9,45 @@
 
 tools:
   add:
-    "@type": Script
+    id: add
+    class: ExpressionTool
     inputs:
-      type: object
-      properties:
-        a:
-          type: integer
-        b:
-          type: integer
-      required: ['a', 'b']
+      - id: a
+        type: int
+      - id: b
+        type: int
     outputs:
-      type: object
-      properties:
-        c:
-          type: integer
+      - id: c
+        type: int
+    engine: javascript
     script: "{return {c: $job.inputs.a + $job.inputs.b}}"
 
   mul:
-    "@type": Script
+    id: mul
+    class: ExpressionTool
     inputs:
-      type: object
-      properties:
-        a:
-          type: integer
-        b:
-          type: integer
-      required: ['a', 'b']
+      - id: a
+        type: int
+      - id: b
+        type: int
     outputs:
-      type: object
-      properties:
-        c:
-          type: integer
+      - id: c
+        type: int
+    engine: javascript
     script: "{return {c: $job.inputs.a * $job.inputs.b}}"
 
   sum:
-    "@type": Script
+    id: sum
+    class: ExpressionTool
     inputs:
-      type: object
-      properties:
-        arr:
+      - id: arr
+        type:
           type: array
-          items:
-            type: integer
+          items: int
     outputs:
-      type: object
-      properties:
-        sum:
-          type: integer
+      - id: sum
+        type: int
+    engine: javascript
     script: |
       {var result = 0;
       for (var i = 0; i < $job.inputs.arr.length; i++) {
@@ -66,130 +58,165 @@ tools:
 
 workflows:
   add_one_mul_two:
-    "@type": Workflow
+    id: add_one_mul_two
+    class: Workflow
     steps:
       - id: add_one
-        app:
-          $ref: "#tools/add"
+        run:
+          import: "#tools/add"
         inputs:
-          a:
-            $from: a
-          b: 1
-      - id: times_two
-        app:
-          $ref: "#tools/mul"
-        inputs:
-          a:
-            $from: add_one.c
-          b: 2
+          - id: add_one.a
+            connect:
+              source: a
+          - id: add_one.b
+            default: 1
         outputs:
-          c:
-            $to: result
+          - id: add_one.c
+      - id: times_two
+        run:
+          import: "#tools/mul"
+        inputs:
+          - id: times_two.a
+            connect:
+              source: add_one.c
+          - id: times_two.b
+            default: 2
+        outputs:
+          - id: times_two.c
+    inputs:
+      - id: a
+        type: int
+    outputs:
+      - id: result
+        type: int
+        connect:
+          source: times_two.c
 
   add_mul_sum:
-    "@type": Workflow
+    id: add_mul_sum
+    class: Workflow
     steps:
       - id: add_mul
-        app:
-          $ref: "#workflows/add_one_mul_two"
+        run:
+          import: "#workflows/add_one_mul_two"
         inputs:
-          a:
-            $from: a
-      - id: sum
-        app:
-          $ref: "#/tools/sum"
-        inputs:
-          arr:
-            $from: add_mul.result
+          - id: add_mul.a
+            connect: { source: a }
         outputs:
-          sum:
-            $to: result
+          - id: add_mul.result
+
+      - id: sum
+        run:
+          import: "#/tools/sum"
+        inputs:
+          - id: arr
+            connect: { source: add_mul.result }
+        outputs:
+          - id: sum.result
+    inputs:
+      - id: a
+        type: int
+    outputs:
+      - id: result
+        type: int
+        connect: { source: sum.result }
 
   multi_link_sum:
-    "@type": Workflow
+    id: multi_link_sum
+    class: Workflow
     steps:
       - id: sum
-        app:
-          $ref: "#tools/sum"
+        run:
+          import: "#tools/sum"
         inputs:
-          arr:
-            $from: [a, b]
+          - id: sum.arr
+            connect:
+              - source: a
+              - source: b
         outputs:
-          sum:
-            $to: result
+          - id: sum.sum
+    inputs:
+      - id: a
+        type: int
+      - id: b
+        type: int
+    outputs:
+      - id: result
+        type: int
+        connect: { source: sum.sum }
 
 jobs:
   simple_sum:
-    "@type": Job
+    class: Job
     app:
-      $ref: "#tools/sum"
+      import: "#tools/sum"
     inputs:
       arr: [1, 2, 3]
 
   simple_add_mul:
-    "@type": Job
+    class: Job
     app:
-      $ref: "#workflows/add_one_mul_two"
+      import: "#workflows/add_one_mul_two"
     inputs:
       a: 1
 
   multi_link_sum:
-    "@type": Job
+    class: Job
     app:
-      $ref: "#workflows/multi_link_sum"
+      import: "#workflows/multi_link_sum"
     inputs:
       a: 1
       b: 1
 
   batch_add_one_mul_two:
-    "@type": Job
+    class: Job
     app:
-      $ref: "#workflows/add_one_mul_two"
+      import: "#workflows/add_one_mul_two"
     inputs:
       a: [1, 2, 3]
 
   add_mul_sum:
-    "@type": Job
+    class: Job
     app:
-      $ref: "#workflows/add_mul_sum"
+      import: "#workflows/add_mul_sum"
     inputs:
       a: [1, 2, 3]
 
 tests:
   simple_sum:
-    "@type": Test
+    class: Test
     job:
-      $ref: "#jobs/simple_sum"
+      import: "#jobs/simple_sum"
     outputs:
       sum: 6
 
   simple_add_mul:
-    "@type": Test
+    class: Test
     job:
-      $ref: "#jobs/simple_add_mul"
+      import: "#jobs/simple_add_mul"
     outputs:
       result: 4
 
   multi_link_sum:
-    "@type": Test
+    class: Test
     job:
-      $ref: "#jobs/multi_link_sum"
+      import: "#jobs/multi_link_sum"
     outputs:
       result: 2
     requiresFeatures: [multilink]
 
   batch_add_one_mul_two:
-    "@type": Test
+    class: Test
     job:
-      $ref: "#jobs/batch_add_one_mul_two"
+      import: "#jobs/batch_add_one_mul_two"
     outputs:
       result: [4, 6, 8]
     requiresFeatures: [map]
 
-  add_mul_sum:
-    "@type": Test
-    job:
-      $ref: "#jobs/add_mul_sum"
-    outputs:
-      result: 18
-    requiresFeatures: [map, nested]
+#  add_mul_sum:
+#    class: Test
+#    job:
+#      import: "#jobs/add_mul_sum"
+#    outputs:
+#      result: 18
+#    requiresFeatures: [map, nested]

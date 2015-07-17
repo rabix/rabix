@@ -1,32 +1,71 @@
+from __future__ import absolute_import
 import os
-import six
 import shlex
 import logging
-import docker
-
+import sys
+import six
+from docker.client import Client
+from docker.utils import kwargs_from_env
 from docker.errors import APIError
 
 from rabix.cli.cli_app import Container
-from rabix.docker.container import get_image
-from rabix.common.errors import ResourceUnavailable, RabixError
+from .container import get_image
+from rabix.common.errors import RabixError
 
 
 log = logging.getLogger(__name__)
 
-DOCKER_DEFAULT_API_VERSION = "1.12"
+DOCKER_DEFAULT_API_VERSION = "1.16"
 DOCKER_DEFAULT_TIMEOUT = 60
 
+DEFAULT_DOCKER_HOST = 'tcp://192.168.59.103:2376'
+DEFAULT_DOCKER_CERT_PATH = os.path.join(os.path.expanduser("~"),
+                                        '.boot2docker/certs/boot2docker-vm')
+DEFAULT_DOCKER_TLS_VERIFY = '1'
 
-def docker_client(docker_host=None,
-                  api_version=DOCKER_DEFAULT_API_VERSION,
-                  timeout=DOCKER_DEFAULT_TIMEOUT,
-                  tls=None):
+DEFAULT_CONFIG = {
+    "version": DOCKER_DEFAULT_API_VERSION,
+    "timeout": DOCKER_DEFAULT_TIMEOUT,
+}
 
-    docker_host = docker_host or os.getenv("DOCKER_HOST", None)
-    tls = False if tls is None else os.getenv("DOCKER_TLS_VERIFY", "") != ""
-    docker_cert_path = os.getenv("DOCKER_CERT_PATH", "")  # ???
 
-    return docker.Client(docker_host, api_version, timeout, tls)
+def set_env():
+    docker_host = os.environ.get('DOCKER_HOST', None)
+    if not docker_host:
+        os.environ['DOCKER_HOST'] = DEFAULT_DOCKER_HOST
+    docker_cert_path = os.environ.get('DOCKER_CERT_PATH', None)
+    if not docker_cert_path:
+        os.environ['DOCKER_CERT_PATH'] = DEFAULT_DOCKER_CERT_PATH
+    os.environ['DOCKER_TLS_VERIFY'] = DEFAULT_DOCKER_TLS_VERIFY
+
+
+def docker_client_osx(**kwargs):
+    set_env()
+    env = kwargs_from_env()
+    env['tls'].verify = False
+    env.update(kwargs)
+    return Client(**env)
+
+
+def docker_client_linux(**kwargs):
+    return Client(**kwargs)
+
+
+def docker_client(cfg=None):
+    if cfg:
+        client_config = {
+            "version": cfg.docker_client_version,
+            "timeout": cfg.docker_client_timeout,
+            }
+    else:
+        client_config = DEFAULT_CONFIG
+    if sys.platform.startswith('darwin'):
+        client = docker_client_osx(**client_config)
+    elif sys.platform.startswith('linux'):
+        client = docker_client_linux(**client_config)
+    else:
+        raise EnvironmentError('Unsupported OS')
+    return client
 
 
 def make_config(**kwargs):
@@ -52,7 +91,7 @@ def make_config(**kwargs):
 
 class DockerContainer(Container):
 
-    def __init__(self, uri, image_id, user=None, dockr=None):
+    def __init__(self, uri, image_id=None, user=None, dockr=None):
         super(DockerContainer, self).__init__()
         self.uri = uri.lstrip("docker://")\
             if uri and uri.startswith('docker:/') else uri
@@ -78,12 +117,12 @@ class DockerContainer(Container):
             log.info('Image %s not found:' % self.image_id)
             raise RabixError('Image %s not found:' % self.image_id)
 
-        if not image['Id'].startswith(self.image_id):
-
-            raise RabixError(
-                'Wrong id of pulled image: expected "%s", got "%s"'
-                % (self.image_id, image['Id'])
-            )
+        # if not image['Id'].startswith(self.image_id):
+        #
+        #     raise RabixError(
+        #         'Wrong id of pulled image: expected "%s", got "%s"'
+        #         % (self.image_id, image['Id'])
+        #     )
 
         self.image_id = image['Id']
 
@@ -197,12 +236,11 @@ class DockerContainer(Container):
 
     def to_dict(self, context=None):
         return {
-            "@type": "Docker",
-            "type": "docker",
-            "uri": self.uri,
-            "imageId": self.image_id
+            "class": "DockerRequirement",
+            "dockerPull": self.uri,
+            "dockerImageId": self.image_id
         }
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d.get('uri'), d.get('imageId'))
+        return cls(d.get('dockerPull'))

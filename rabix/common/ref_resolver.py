@@ -8,6 +8,7 @@ import collections
 import requests
 import six
 
+# noinspection PyUnresolvedReferences
 from six.moves.urllib import parse as urlparse
 
 log = logging.getLogger(__name__)
@@ -37,13 +38,11 @@ class Loader(object):
 
     def load(self, url, base_url=None):
         base_url = base_url or 'file://%s/' % os.path.abspath('.')
-        return self.resolve_ref({'$ref': url}, base_url)
+        return self.resolve_ref({'import': url}, base_url)
 
     def resolve_ref(self, obj, base_url):
-        ref, mixin, checksum = (obj.pop('$ref', None),
-                                obj.pop('$mixin', None),
-                                obj.pop('$checksum', None))
-        ref = ref or mixin
+        ref = obj.pop('import', None)
+
         url = urlparse.urljoin(base_url, ref)
         if url in self.resolved:
             return self.resolved[url]
@@ -54,9 +53,6 @@ class Loader(object):
         document = self.fetch(doc_url)
         fragment = copy.deepcopy(resolve_pointer(document, pointer))
         try:
-            self.verify_checksum(checksum, fragment)
-            if isinstance(fragment, dict) and mixin:
-                fragment = dict(obj, **fragment)
             result = self.resolve_all(fragment, doc_url)
         finally:
             del self.resolving[url]
@@ -66,7 +62,7 @@ class Loader(object):
         if isinstance(document, list):
             iterator = enumerate(document)
         elif isinstance(document, dict):
-            if '$ref' in document or '$mixin' in document:
+            if 'import' in document:
                 return self.resolve_ref(document, base_url)
             iterator = six.iteritems(document)
         else:

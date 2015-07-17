@@ -122,8 +122,40 @@ def log_level(int_level):
 
 
 def sec_files_naming_conv(path, ext):
-    return ''.join([path, ext]) if ext.startswith('.') \
-        else '.'.join(['.'.join(path.split('.')[:-1]), ext])
+    """
+    1. If 'ext' begins with one or more caret (^) characters, for each caret,
+       remove the last file extension from the path (the last period . and all
+       following characters). If there are no file extensions, the path is
+       unchanged.
+    2. Append the remainder of the 'ext' to the end of the file path.
+
+    >>> sec_files_naming_conv("path", ".ext")
+    'path.ext'
+
+    >>> sec_files_naming_conv("path", "^.ext")
+    'path.ext'
+
+    >>> sec_files_naming_conv("path.orig", "^.ext")
+    'path.ext'
+
+    >>> sec_files_naming_conv("path.orig.tar.gz", "^^.ext")
+    'path.orig.ext'
+
+    :param path:
+    :param ext:
+    :return:
+    """
+    ext_clean = ext.lstrip('^')
+    carets = len(ext) - len(ext_clean)
+    if carets > 0:
+        exploded = path.split('.')
+        part_count = len(exploded)
+        if carets >= part_count:
+            path = exploded[0]
+        else:
+            path = '.'.join(exploded[:(part_count - carets)])
+
+    return path + ext_clean
 
 
 def to_json(obj, fp=None):

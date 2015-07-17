@@ -61,4 +61,4 @@ def test_log_level():
 
 def test_sec_files_naming_conv():
     assert_equals(sec_files_naming_conv("bla.ext", '.a'), "bla.ext.a")
-    assert_equals(sec_files_naming_conv("bla.ext", 'b'), "bla.b")
+    assert_equals(sec_files_naming_conv("bla.ext", '^.b'), "bla.b")

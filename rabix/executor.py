@@ -1,6 +1,5 @@
 import copy
 import six
-import os
 
 from rabix.common.errors import RabixError
 from rabix.common.models import Job
@@ -36,7 +35,7 @@ class Executor(object):
             if val_d < io.depth:
                 raise RabixError("Insufficient dimensionality")
             if parallel_input:
-                raise RabixError("Already parallelized by input '%%s'" % parallel_input)
+                raise RabixError("Already parallelized by input '%s'" % parallel_input)
 
             parallel_input = input_name
 
@@ -55,9 +54,7 @@ class Executor(object):
         jobs = self.split_job(job)
         result = None
         if isinstance(jobs, list):
-            results = []
-            for job in jobs:
-                results.append(job.run())
+            results = [job.run() for job in jobs]
 
             combined = {}
             for result in results:

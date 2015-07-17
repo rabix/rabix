@@ -1,33 +1,87 @@
 import os
-import six
 import json
 import logging
 import time
 import datetime
-
+from slugify import slugify
 from uuid import uuid4
-from jsonschema.validators import Draft4Validator
+
+import six
+
+# noinspection PyUnresolvedReferences
 from six.moves.urllib.parse import urlparse, urlunparse, unquote, urljoin
 from base64 import b64decode
 from os.path import isabs
+from avro.schema import Names, UnionSchema, ArraySchema, Schema, VALID_TYPES
+
+if six.PY2:
+    from avro.schema import make_avsc_object
+    from avro.io import validate
+else:
+    from avro.schema import SchemaFromJSONData as make_avsc_object
+    from avro.io import Validate as validate
+
 
 from rabix.common.errors import ValidationError, RabixError
-from rabix.common.util import map_rec_list
+from rabix.common.util import wrap_in_list
 
 
 log = logging.getLogger(__name__)
 
 
-class App(object):
+def process_builder(context, d):
+    if not isinstance(d, dict):
+        return d
 
-    def __init__(self, app_id, inputs, outputs, app_description=None,
-                 annotations=None, platform_features=None):
-        self.id = app_id
+    inputs = d.get('inputs')
+    outputs = d.get('outputs')
+
+    schemas = []
+    for s in context.get_requirement(SchemaDefRequirement):
+        schemas.extend(s.types)
+
+    for i in inputs:
+        i['type'] = make_avro(i['type'], schemas)
+
+    for o in outputs:
+        o['type'] = make_avro(o['type'], schemas)
+
+    return context.from_dict(d)
+
+
+def construct_files(val, schema):
+    if schema.type == 'array':
+        return [construct_files(e, schema.items) for e in val]
+
+    if schema.type == 'record':
+        if schema.name == 'File':
+            return File(val) if val else val
+        else:
+            ret = {}
+            for fld in schema.fields:
+                ret[fld.name] = construct_files(val.get(fld.name), fld.type)
+            return ret
+
+    if schema.type == 'union':
+        for s in schema.schemas:
+            if validate(s, val):
+                return construct_files(val, s)
+    return val
+
+
+class Process(object):
+
+    def __init__(
+            self, process_id, inputs, outputs,
+            requirements, hints, label, description
+    ):
+        self.id = process_id
         self.inputs = inputs
         self.outputs = outputs
-        self.app_description = app_description
-        self.annotations = annotations
-        self.platform_features = platform_features
+        self.requirements = requirements or []
+        self.hints = hints or []
+        self.label = label
+        self.description = description
         self._inputs = {io.id: io for io in inputs}
         self._outputs = {io.id: io for io in outputs}
 
@@ -35,28 +89,15 @@ class App(object):
         pass
 
     def run(self, job):
-        raise NotImplementedError("Method 'run' is not implemented"
-                                  " in the App class")
+        raise NotImplementedError(
+            "Method 'run' is not implemented in the App class"
+        )
 
     def get_input(self, name):
         return self._inputs.get(name)
 
     def get_output(self, name):
         return self._outputs.get(name)
-
-    def construct_inputs(self, inputs):
-        return self.construct(self.inputs, inputs)
-
-    def construct_outputs(self, outputs):
-        return self.construct(self.outputs, outputs)
-
-    @staticmethod
-    def construct(defs, vals):
-        return {
-            input.id: map_rec_list(input.constructor, vals.get(input.id))
-            for input in defs
-            if vals.get(input.id) is not None
-        }
 
     def validate_inputs(self, input_values):
         for inp in self.inputs:
@@ -75,13 +116,26 @@ class App(object):
 
     def to_dict(self, context):
         return {
-            '@id': self.id,
-            '@type': 'App',
-            'inputs': [context.to_dict(inp) for inp in self.inputs],
-            'outputs': [context.to_dict(outp) for outp in self.outputs],
-            'appDescription': self.app_description,
-            'annotations': self.annotations,
-            'platformFeatures': self.platform_features
+            'id': self.id,
+            'class': 'Process',
+            'inputs': context.to_primitive(self.inputs),
+            'outputs': context.to_primitive(self.outputs),
+            'requirements': context.to_primitive(self.requirements),
+            'hints': context.to_primitive(self.hints),
+            'label': self.label,
+            'description': self.description
+        }
+
+    @staticmethod
+    def kwarg_dict(d):
+        return {
+            'process_id': d['id'],
+            'inputs': d['inputs'],
+            'outputs': d.get('outputs'),
+            'requirements': d.get('requirements'),
+            'hints': d.get('hints'),
+            'label': d.get('label'),
+            'description': d.get('description')
         }
 
 
@@ -144,17 +198,14 @@ class URL(object):
 
 class File(object):
 
-    name = 'file'
+    name = 'File'
 
-    @classmethod
-    def match(cls, val):
-        return isinstance(val, dict) and 'path' in val
-
-    def __init__(self, path, size=None, meta=None, secondary_files=None):
+    def __init__(self, path, size=None, meta=None, secondary_files=None, checksum=None):
         self.size = size
         self.meta = meta or {}
         self.secondary_files = secondary_files or []
         self.url = None
+        self.checksum = None
 
         if isinstance(path, dict):
             self.from_dict(path)
@@ -180,13 +231,15 @@ class File(object):
         self.secondary_files = self.secondary_files or \
             [File(sf) for sf in val.get('secondaryFiles', [])]
         self.path = path
+        self.checksum = val.get('checksum')
 
     def to_dict(self, context=None):
         return {
-            "@type": "File",
+            "class": "File",
             "path": self.path,
             "size": self.size,
             "metadata": self.meta,
+            "checksum": self.checksum,
             "secondaryFiles": [sf.to_dict(context)
                                for sf in self.secondary_files]
         }
@@ -217,179 +270,173 @@ class File(object):
     def path(self, val):
         self.url = URL(val) if isinstance(val, six.string_types) else val
 
-
-def make_constructor(schema):
-
-        one_of = schema.get('oneOf')
-        if one_of:
-            return OneOfConstructor(one_of)
-
-        type_name = schema.get('type')
-
-        if not type_name:
-            return lambda x: x
-
-        if type_name == 'array':
-            item_constructor = make_constructor(schema.get('items', {}))
-            return ArrayConstructor(item_constructor)
-
-        if type_name == 'object':
-            return ObjectConstructor(schema.get('properties', {}))
-
-        if type_name == 'file' or type_name == 'directory':
-            return File
-
-        return PrimitiveConstructor(type_name)
-
-
-class ArrayConstructor(object):
-
-    def __init__(self, item_constructor):
-        self.item_constructor = item_constructor
-        self.name = 'array'
-
-    def __call__(self, val):
-        return [self.item_constructor(v) for v in val]
-
-    def match(self, val):
-        return isinstance(val, list) and all(
-            [self.item_constructor.match(v) for v in val])
-
-    def __repr__(self):
-        return "ArrayConstructor(%s)" % repr(self.item_constructor)
-
-
-class ObjectConstructor(object):
-
-    def __init__(self, properties):
-        self.name = 'object'
-        self.properties = {
-            k: make_constructor(v)
-            for k, v in six.iteritems(properties)
+FILE_SCHEMA = {
+    'type': 'record',
+    'name': 'File',
+    'fields': [
+        {
+            'name': 'path',
+            'type': 'string'
+        },
+        {
+            'name': 'size',
+            'type': ['long', 'null']
+        },
+        {
+            'name': 'secondaryFiles',
+            'type': ['null', {'type': 'array', 'items': 'File'}]
+        },
+        {
+            'name': 'checksum',
+            'type': ['null', 'string']
         }
-
-    def __call__(self, val):
-        return {
-            k: self.properties.get(k, lambda x: x)(v)
-            for k, v in six.iteritems(val)
-        }
-
-    def match(self, val):
-        return isinstance(val, dict) and all(
-            [k in self.properties and self.properties[k].match(v)
-             for k, v in six.iteritems(val)])
-
-    def __repr__(self):
-        return "ObjectConstructor(%s)" % repr(self.properties)
+    ]
+}
 
 
-class PrimitiveConstructor(object):
-
-    CONSTRUCTOR_MAP = {
-        'integer': int,
-        'number': float,
-        'boolean': bool,
-        'string': six.text_type
-    }
-
-    MATCH_MAP = dict(CONSTRUCTOR_MAP)
-    MATCH_MAP.update({
-        'string': six.string_types,
-        'number': (int, float)
-    })
-
-    def __init__(self, type_name):
-        self.name = type_name
-        self._match = PrimitiveConstructor.MATCH_MAP.get(type_name)
-        self.type = PrimitiveConstructor.CONSTRUCTOR_MAP.get(type_name)
-
-    def __call__(self, val):
-        return self.type(val)
-
-    def match(self, val):
-        matches = isinstance(val, self._match)
-        return matches
-
-    def __repr__(self):
-        return self.name
+def fix_file_type(d):
+        if isinstance(d, list):
+            return [fix_file_type(e) for e in d]
+        if not isinstance(d, dict):
+            return d
+        if 'type' in d and d['type'] not in VALID_TYPES:
+            return d['type']
+        return {k: fix_file_type(v) for k, v in six.iteritems(d)}
 
 
-class OneOfConstructor(object):
+def make_avro(schema, named_defs):
+    names = Names()
+    make_avsc_object(FILE_SCHEMA, names)
+    for d in named_defs:
+        make_avsc_object(d, names)
 
-    def __init__(self, options):
-        self.name = 'oneOf'
-        self.options = [make_constructor(opt) for opt in options]
-
-    def match(self, val):
-        return next((x for x in self.options if x.match(val)), None)
-
-    def __call__(self, val):
-        opt = self.match(val)
-        if not opt:
-            raise ValueError(
-                "Value '%s' doesn't match any of the constructors"
-                % str(val)
-            )
-        return opt(val)
-
-    def __repr__(self):
-        return "OneOf(%s)" % repr(self.options)
+    avsc = make_avsc_object(fix_file_type(wrap_in_list(schema)), names)
+    return avsc
 
 
-class IO(object):
+class Expression(object):
+    pass
 
-    def __init__(self, port_id, validator=None, constructor=None,
-                 required=False, annotations=None, depth=0):
-        self.id = port_id
-        self.validator = Draft4Validator(validator)
+
+class Parameter(object):
+
+    def __init__(
+            self, id, validator=None, required=False, label=None,
+            description=None, depth=0
+    ):
+        self.id = id.lstrip('#')
+        self.validator = validator
         self.required = required
-        self.annotations = annotations
-        self.constructor = constructor or str
+        self.label = label
+        self.description = description
         self.depth = depth
 
     def validate(self, value):
         return self.validator.validate(value)
 
     def to_dict(self, ctx=None):
+        avro_schema = None
+        if self.validator:
+            avro_schema = self.validator.to_json()
+            for d in range(0, self.depth):
+                avro_schema = {'type': 'array', 'items': avro_schema}
+            avro_schema = [avro_schema]
+            if not self.required:
+                avro_schema.append('null')
         return {
-            '@id': self.id,
-            '@type': 'IO',
-            'depth': self.depth,
-            'schema': self.validator.schema,
-            'required': self.required,
-            'annotations': self.annotations
+            'id': '#' + self.id,
+            'type': avro_schema,
+            'label': self.label,
+            'description': self.description
         }
 
     @classmethod
     def from_dict(cls, context, d):
+        parameter_type = d.get('type', None)
+        if parameter_type and not isinstance(parameter_type, Schema):
+            raise ValueError("Type is not schema: %s" % parameter_type)
+        required = True
+        if isinstance(parameter_type, UnionSchema):
+            non_null = []
+            for t in parameter_type.schemas:
+                if t.type == 'null':
+                    required = False
+                else:
+                    non_null.append(t)
 
-        item_schema = d.get('schema', {})
-        type_name = item_schema.get('type')
+            if len(non_null) == 1:
+                parameter_type = non_null[0]
+
         depth = 0
-        while type_name == 'array':
+
+        while isinstance(parameter_type, ArraySchema):
             depth += 1
-            item_schema = item_schema.get('items', {})
-            type_name = item_schema.get('type')
+            parameter_type = parameter_type.items
 
-        constructor = make_constructor(item_schema)
-
-        return cls(d.get('@id', six.text_type(uuid4())),
-                   validator=context.from_dict(d.get('schema')),
-                   constructor=constructor,
-                   required=d['required'],
-                   annotations=d['annotations'],
+        return cls(d.get('id', six.text_type(uuid4())),
+                   validator=parameter_type,
+                   required=required,
+                   label=d.get('label'),
+                   description=d.get('description'),
                    depth=depth)
 
     def __repr__(self):
-        return "IO(%s)" % vars(self)
+        return "Parameter(%s)" % vars(self)
+
+
+class InputParameter(Parameter):
+
+    def __init__(self, id, validator=None, required=False, label=None,
+                 description=None, depth=0, input_binding=None):
+        super(InputParameter, self).__init__(
+            id, validator, required, label, description, depth
+        )
+
+        self.input_binding = input_binding
+
+    def to_dict(self, ctx=None):
+        d = super(InputParameter, self).to_dict(ctx)
+        d['inputBinding'] = ctx.to_primitive(self.input_binding)
+        return d
+
+    @classmethod
+    def from_dict(cls, context, d):
+        instance = super(InputParameter, cls).from_dict(context, d)
+        instance.input_binding = d.get('inputBinding')
+        return instance
+
+
+class OutputParameter(Parameter):
+    def __init__(self, id, validator=None, required=False, label=None,
+                 description=None, depth=0, output_binding=None):
+        super(OutputParameter, self).__init__(
+            id, validator, required, label, description, depth
+        )
+
+        self.output_binding = output_binding
+
+    def to_dict(self, ctx=None):
+        d = super(OutputParameter, self).to_dict(ctx)
+        d['outputBinding'] = ctx.to_primitive(self.output_binding)
+        return d
+
+    @classmethod
+    def from_dict(cls, context, d):
+        instance = super(OutputParameter, cls).from_dict(context, d)
+        instance.output_binding = d.get('outputBinding')
+        return instance
+
+
+def parameter_name(parameter_id):
+    return parameter_id.split('.')[-1]
 
 
 class Job(object):
 
     def __init__(self, job_id, app, inputs, allocated_resources, context):
-        self.id = job_id or self.mk_work_dir(app.id)
+        self.id = job_id or self.mk_work_dir(app)
         self.app = app
-        self.inputs = inputs
+        self.inputs = {parameter_name(k): v for k, v in six.iteritems(inputs)}
         self.allocated_resources = allocated_resources
         self.context = context
         pass
@@ -400,16 +447,20 @@ class Job(object):
     def to_dict(self, context=None):
         ctx = context or self.context
         return {
-            '@id': self.id,
-            '@type': 'Job',
-            'app': self.app.to_dict(ctx),
-            'inputs': ctx.to_dict(self.inputs),
-            'allocatedResources': ctx.to_dict(self.allocated_resources)
+            'id': self.id,
+            'class': 'Job',
+            'app': ctx.to_primitive(self.app),
+            'inputs': ctx.to_primitive(self.inputs),
+            'allocatedResources': ctx.to_primitive(self.allocated_resources)
         }
 
     @staticmethod
-    def mk_work_dir(name):
+    def mk_work_dir(app):
         ts = time.time()
+        if app.label:
+            name = slugify(app.label)
+        else:
+            name = slugify(app.id)
         path = '_'.join([name, datetime.datetime.fromtimestamp(ts).strftime('%H%M%S')])
         try_path = path
         if os.path.exists(path):
@@ -425,9 +476,9 @@ class Job(object):
 
     @classmethod
     def from_dict(cls, context, d):
-        app = context.from_dict(d['app'])
+        app = process_builder(context, d['app'])
         return cls(
-            d.get('@id') if d.get('@id') else cls.mk_work_dir(app.id),
+            d.get('id') if d.get('id') else cls.mk_work_dir(app),
             app,
             context.from_dict(d['inputs']),
             d.get('allocatedResources'),
@@ -435,5 +486,35 @@ class Job(object):
         )
 
 
-class Resource(object):
+class CreateFileRequirement(object):
+
+    def __init__(self, file_defs):
+        pass
+
+
+class EnvVarRequirement(object):
     pass
+
+
+class ExpressionEngineRequirement(object):
+    pass
+
+
+class SchemaDefRequirement(object):
+
+    def __init__(self, types):
+        self.types = types
+
+    @classmethod
+    def from_dict(cls, context, d):
+        return cls(d.get('types', []))
+
+    def to_dict(self, context=None):
+        return {
+            'type': 'SchemaDefRequirement',
+            'types': [t.to_json() for t in self.types]
+        }
+
+
+def init(ctx):
+    ctx.add_type('SchemaDefRequirement', SchemaDefRequirement.from_dict)

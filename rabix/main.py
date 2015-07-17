@@ -7,21 +7,26 @@ import six
 import json
 import copy
 
+from avro.schema import NamedSchema
+
+# prevent naming collision with docker package when running directly as script
+script_dir = os.path.dirname(os.path.realpath(__file__))
+if script_dir in sys.path:
+    sys.path.remove(script_dir)
+
 from rabix import __version__ as version
-from rabix.common.util import log_level, dot_update_dict, map_or_apply,\
-    map_rec_list, map_rec_collection, result_str
-from rabix.common.models import Job, IO, File
+from rabix.common.util import log_level, map_rec_collection, result_str
+from rabix.common.models import Job, File, process_builder, construct_files
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
-from rabix.common.errors import RabixError, ValidationError
+from rabix.common.errors import RabixError
 from rabix.executor import Executor
-from rabix.cli import CliApp, CLIJob
+from rabix.cli import CommandLineTool, CLIJob
 
 import rabix.cli
 import rabix.docker
 import rabix.expressions
 import rabix.workflows
-import rabix.schema
 
 
 TEMPLATE_RESOURCES = {
@@ -31,6 +36,7 @@ TEMPLATE_RESOURCES = {
 
 
 TEMPLATE_JOB = {
+    'class': 'Job',
     'inputs': {},
     'platform': 'http://example.org/my_platform/v1',
     'allocatedResources': TEMPLATE_RESOURCES
@@ -38,8 +44,8 @@ TEMPLATE_JOB = {
 
 USAGE = '''
 Usage:
-    rabix <tool> [-v...] [-hcI] [-t <type>] [-d <dir>] [-i <inp>] [{resources}] [-- {inputs}...]
-    rabix --conformance-test [--basedir=<basedir>] [--no-container] <tool> <job> [-- <input>...]
+    rabix <tool> [-v...] [-hcI] [-t <type>] [-d <dir>] [-i <inp>]  [{resources}] [-- {inputs}...]
+    rabix --conformance-test [--basedir=<basedir>] [--no-container]  <tool> <job> [-- <input>...]
     rabix --version
 
     Options:
@@ -61,63 +67,26 @@ Usage:
   tool {inputs}
 '''
 
-TYPE_MAP = {
-    'TaskTemplate': Job.from_dict,
-    'Job': Job.from_dict,
-    'IO': IO.from_dict
-}
+
+def disable_warnings():
+    import requests
+    requests.packages.urllib3.disable_warnings()
 
 
-def init_context():
+def init_context(d):
     executor = Executor()
-    context = Context(TYPE_MAP, executor)
+    context = Context(executor)
 
     for module in (
-            rabix.cli, rabix.expressions, rabix.workflows,
-            rabix.schema, rabix.docker
+            rabix.common.models, rabix.cli, rabix.expressions, rabix.workflows, rabix.docker
     ):
         module.init(context)
 
+    if d.get('class') == 'Job':
+        context.build_from_document(d['app'])
+    else:
+        context.build_from_document(d)
     return context
-
-
-###
-# input massage
-###
-
-def fix_types(tool, toplevelType=None):
-
-    toplevelType = toplevelType or 'CommandLine'
-
-    # tool type
-    if '@type' not in tool:
-        tool['@type'] = toplevelType
-
-    if tool.get('@type') in ('Job', 'TaskTemplate'):
-        fix_types(tool['app'])
-        return
-
-    requirements = tool.get('requirements', {})
-    environment = requirements.get('environment')
-
-    # container type
-    if (environment and
-            isinstance(environment.get('container'), dict) and
-            environment['container'].get('type') == 'docker'):
-        environment['container']['@type'] = 'Docker'
-
-    if tool['@type'] == 'Workflow':
-        for step in tool['steps']:
-            fix_types(step['app'])
-
-    # schema type
-    inputs = tool.get('inputs')
-    if isinstance(inputs, dict) and '@type' not in inputs:
-        inputs['@type'] = 'JsonSchema'
-
-    outputs = tool.get('outputs')
-    if isinstance(outputs, dict) and '@type' not in outputs:
-        outputs['@type'] = 'JsonSchema'
 
 
 ###
@@ -127,11 +96,10 @@ def fix_types(tool, toplevelType=None):
 def make_resources_usage_string(template=TEMPLATE_RESOURCES):
     param_str = []
     for k, v in six.iteritems(template):
-        if type(v) is bool:
-            arg = '--resources.%s' % k
-        else:
-            arg = '--resources.%s=<%s>' % (k, type(v).__name__)
+        arg = ('--resources.%s' % k) if type(v) is bool \
+            else ('--resources.%s=<%s>' % (k, type(v).__name__))
         param_str.append(arg)
+
     return ' '.join(param_str)
 
 
@@ -140,17 +108,19 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
     inp = inp or {}
 
     def resolve(k, v, usage_str, param_str, inp):
-        if v.constructor.name == 'object':
+        if (v.validator.type == 'record' and
+                v.validator.name != 'File'):
             return
 
-        to_append = usage_str if v.constructor.name == 'file'\
+        to_append = usage_str if (isinstance(v.validator, NamedSchema) and
+                                  v.validator.name == 'File')\
             else param_str
 
-        cname = getattr(v.constructor, 'name', None) or \
-            getattr(v.constructor, '__name__', 'val')
+        cname = v.validator.name if isinstance(v.validator, NamedSchema)\
+            else v.validator.type
 
         prefix = '--%s' % k
-        suffix = '' if v.constructor.name == 'boolean' else '=<%s>' % cname
+        suffix = '' if v.validator.type == 'boolean' else '=<%s>' % cname
 
         arg = prefix + suffix
 
@@ -163,7 +133,7 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
         to_append.append(arg)
 
     def resolve_object(obj, usage_str, param_str, inp, root=False):
-        properties = obj.inputs.io if root else obj.objects
+        properties = obj.inputs if root else obj.objects
         for input in properties:
             key = input.id if root else '.'.join([obj.id, input.id])
             resolve(key, input, usage_str, param_str, inp.keys())
@@ -183,13 +153,21 @@ def rebase_path(val, base):
     return val
 
 
-def get_inputs(app, args, basedir=None):
+def get_inputs(args, inputs, basedir=None):
 
     basedir = basedir or os.path.abspath('.')
-    inputs = app.construct_inputs(args)
+    constructed = {}
+    for i in inputs:
+        val = args.get(i.id)
+        if i.depth == 0:
+            cons = construct_files(val, i.validator)
+        else:
+            cons = [construct_files(e, i.validator) for e in val] if val else []
+        if cons:
+            constructed[i.id] = cons
     return map_rec_collection(
         lambda v: rebase_path(v, basedir),
-        inputs
+        constructed
     )
 
 
@@ -210,18 +188,15 @@ def dry_run_parse(args=None):
 
 
 def conformance_test(context, app, job_dict, basedir):
-    job_dict['@type'] = 'Job'
-    job_dict['@id'] = basedir
+    job_dict['class'] = 'Job'
+    job_dict['id'] = basedir
     job_dict['app'] = app
 
     if not app.outputs:
-        app.outputs = rabix.schema.JsonSchema(context, {
-            'type': 'object',
-            'properties': {}
-        })
+        app.outputs = []
 
-    job_dict['inputs'] = get_inputs(app, job_dict['inputs'], basedir)
-    job = context.from_dict(job_dict)
+    job_dict['inputs'] = get_inputs(job_dict, app.inputs, basedir)
+    job = Job.from_dict(context, job_dict)
 
     adapter = CLIJob(job)
 
@@ -232,7 +207,13 @@ def conformance_test(context, app, job_dict, basedir):
     }))
 
 
+def fail(message):
+    print(message)
+    sys.exit(1)
+
+
 def main():
+    disable_warnings()
     logging.basicConfig(level=logging.WARN)
     if len(sys.argv) == 1:
         print(USAGE)
@@ -259,13 +240,17 @@ def main():
 
     tool = get_tool(dry_run_args)
     if not tool:
-        print("Couldn't find tool.")
-        return
+        fail("Couldn't find tool.")
 
-    fix_types(tool, dry_run_args.get('--type', 'CommandLine'))
+    if 'class' not in tool:
+        fail("Document must have a 'class' field")
 
-    context = init_context()
-    app = context.from_dict(tool)
+    if 'id' not in tool:
+        tool['id'] = dry_run_args['<tool>']
+
+    context = init_context(tool)
+
+    app = process_builder(context, tool)
     job = None
 
     if isinstance(app, Job):
@@ -287,17 +272,17 @@ def main():
         job_dict = copy.deepcopy(TEMPLATE_JOB)
         logging.root.setLevel(log_level(dry_run_args['--verbose']))
 
-        if args['--inp-file']:
-            basedir = os.path.dirname(args.get('--inp-file'))
-            input_file = from_url(args.get('--inp-file'))
-            inputs = get_inputs(app, input_file, basedir)
+        if args.get('<inp>'):
+            basedir = os.path.dirname(args.get('<inp>'))
+            input_file = from_url(args.get('<inp>'))
+            inputs = get_inputs(input_file, app.inputs, basedir)
             job_dict['inputs'].update(inputs)
 
         input_usage = job_dict['inputs']
 
         if job:
             basedir = os.path.dirname(args.get('<tool>'))
-            job.inputs = get_inputs(app, job.inputs, basedir)
+            job.inputs = get_inputs(job.inputs, app.inputs, basedir)
             input_usage.update(job.inputs)
 
         app_inputs_usage = make_app_usage_string(
@@ -325,18 +310,17 @@ def main():
             if v != []
         }
 
-        inp = get_inputs(app, app_inputs)
+        inp = get_inputs(app_inputs, app.inputs)
         if not job:
-            job_dict['@id'] = args.get('--dir')
+            job_dict['id'] = args.get('--dir')
             job_dict['app'] = app
             job = Job.from_dict(context, job_dict)
 
         job.inputs.update(inp)
 
         if args['--print-cli']:
-            if not isinstance(app, CliApp):
-                print(dry_run_args['<tool>'] + " is not a command line app")
-                return
+            if not isinstance(app, CommandLineTool):
+                fail(dry_run_args['<tool>'] + " is not a command line app")
 
             print(CLIJob(job).cmd_line())
             return
@@ -346,15 +330,12 @@ def main():
             return
 
         try:
-            context.executor.execute(job, lambda _, result: print(
-                result_str(job.id, result)))
+            context.executor.execute(job, lambda _, result: result_str(job.id, result))
         except RabixError as err:
-            print(err.message)
-            sys.exit(1)
+            fail(err.message)
 
     except docopt.DocoptExit:
-        print(app_usage)
-        sys.exit(1)
+        fail(app_usage)
 
 
 if __name__ == '__main__':

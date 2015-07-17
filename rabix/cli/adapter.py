@@ -3,60 +3,29 @@ import six
 import logging
 import os
 import glob
-import copy
-import shlex
+import hashlib
 
-from jsonschema import Draft4Validator
-import jsonschema.exceptions
+# noinspection PyUnresolvedReferences
 from six.moves import reduce
+from avro.schema import UnionSchema, Schema, ArraySchema
 
-from rabix.common.ref_resolver import resolve_pointer
+if six.PY2:
+    from avro.io import validate
+else:
+    from avro.io import Validate as validate
+
 from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath
-from rabix.expressions import Evaluator
+from rabix.expressions.evaluator import ExpressionEvaluator
 
 log = logging.getLogger(__name__)
-
-
-class AdapterEvaluator(object):
-
-    def __init__(self, job):
-        self.job = job
-        self.ev = Evaluator()
-
-    def evaluate(self, expr_object, context=None, job=None):
-        if isinstance(expr_object, dict):
-            return self.ev.evaluate(
-                expr_object.get('lang', 'javascript'),
-                expr_object.get('value'),
-                job.to_dict() if job else self.job.to_dict(),
-                context
-            )
-        else:
-            return self.ev.evaluate('javascript', expr_object,
-                                    job.to_dict() if job else
-                                    self.job.to_dict(), context)
-
-    def resolve(self, val, context=None, job=None):
-        if not isinstance(val, dict):
-            return val
-        if 'expr' in val or '$expr' in val:
-            v = val.get('expr') or val.get('$expr')
-            return self.evaluate(v, context, job=job)
-        if 'job' in val or '$job' in val:
-            v = val.get('job') or val.get('$job')
-            return resolve_pointer(self.job.to_dict(), v)
-        return val
-
-    def __deepcopy__(self, memo):
-        return AdapterEvaluator(copy.deepcopy(self.job, memo))
 
 
 def intersect_dicts(d1, d2):
     return {k: v for k, v in six.iteritems(d1) if v == d2.get(k)}
 
 
-def meta(path, inputs, eval, adapter):
-    meta, result = adapter.get('metadata', {}), {}
+def meta(path, inputs, eval, outputBinding):
+    meta, result = outputBinding.get('metadata', {}), {}
     inherit = meta.pop('__inherit__', None)
     if inherit:
         src = inputs.get(inherit)
@@ -71,9 +40,9 @@ def meta(path, inputs, eval, adapter):
     return result
 
 
-def secondary_files(p, adapter, evaluator):
+def secondary_files(p, outputBinding, evaluator):
     secondaryFiles = []
-    secFiles = wrap_in_list(evaluator.resolve(adapter.get('secondaryFiles', [])))
+    secFiles = wrap_in_list(evaluator.resolve(outputBinding.get('secondaryFiles', [])))
     for s in secFiles:
         path = sec_files_naming_conv(p, s)
         secondaryFiles.append({'path': to_abspath(path)})
@@ -81,35 +50,29 @@ def secondary_files(p, adapter, evaluator):
 
 
 class InputAdapter(object):
-    def __init__(self, value, evaluator, schema, adapter_dict=None, key=''):
+    def __init__(self, value, evaluator, schema, input_binding=None, key=''):
         self.evaluator = evaluator
-        self.schema = schema or {}
-        self.adapter = adapter_dict or self.schema.get('adapter')
+        self.schema = schema
+        self.adapter = input_binding or (
+            isinstance(self.schema, Schema) and
+            self.schema.props.get('inputBinding')
+        )
         self.has_adapter = self.adapter is not None
         self.adapter = self.adapter or {}
         self.key = key
-        if 'oneOf' in self.schema:
-            for opt in self.schema['oneOf']:
-                validator = Draft4Validator(opt)
-                try:
-                    validator.validate(value)
+        if isinstance(self.schema, UnionSchema):
+            for opt in self.schema.schemas:
+                if validate(opt, value):
                     self.schema = opt
-                except jsonschema.exceptions.ValidationError:
-                    pass
+                    break
         self.value = evaluator.resolve(value)
 
     __str__ = lambda self: six.text_type(self.value)
     __repr__ = lambda self: 'InputAdapter(%s)' % self
-    position = property(lambda self: (self.adapter.get('order', 9999999), self.key))
+    position = property(lambda self: (self.adapter.get('position', 9999999), self.key))
     prefix = property(lambda self: self.adapter.get('prefix'))
     item_separator = property(lambda self: self.adapter.get('itemSeparator', ','))
-
-    @property
-    def separator(self):
-        sep = self.adapter.get('separator')
-        if sep == ' ':
-            sep = None
-        return sep
+    separate = property(lambda self: self.adapter.get('separate', True))
 
     def arg_list(self):
         if isinstance(self.value, dict):
@@ -127,15 +90,32 @@ class InputAdapter(object):
             return [self.prefix]
         if not self.prefix:
             return [six.text_type(self.value)]
-        if self.separator in [' ', None]:
+        if self.separate:
             return [self.prefix, self.value]
-        return [self.prefix + self.separator + six.text_type(self.value)]
+        return [self.prefix + six.text_type(self.value)]
 
-    def as_dict(self, mix_with=None):
-        sch = lambda key: self.schema.get('properties', {}).get(key, {})
+    def as_dict(self):
+        sch = lambda key: next(field for field in self.schema.fields
+                               if field.name == key)
         adapters = [InputAdapter(v, self.evaluator, sch(k), key=k)
                     for k, v in six.iteritems(self.value)]
-        adapters = (mix_with or []) + [adp for adp in adapters if adp.has_adapter]
+        adapters = [adp for adp in adapters if adp.has_adapter]
+        res = reduce(
+            operator.add,
+            [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)],
+            []
+        )
+        return res
+
+    def as_toplevel(self, mix_with):
+        sch = lambda key: next(inp for inp in self.schema
+                               if inp.id == key.split('.')[-1])
+        adapters = mix_with + [
+            InputAdapter(v, self.evaluator, sch(k).validator,
+                         sch(k).input_binding, key=k)
+            for k, v in six.iteritems(self.value)
+            ]
+
         res = reduce(
             operator.add,
             [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)],
@@ -144,27 +124,33 @@ class InputAdapter(object):
         return res
 
     def as_list(self):
-        items = [InputAdapter(item, self.evaluator, self.schema.get('items', {}))
+        # on top-level, I have type and depth, for easier parallelism,
+        # but this is hacky as hell
+        schema = (
+            self.schema.items if isinstance(self.schema, ArraySchema)
+            else self.schema
+        )
+        items = [InputAdapter(item, self.evaluator, schema)
                  for item in self.value]
 
         if not self.prefix:
             return reduce(operator.add, [a.arg_list() for a in items], [])
 
-        if self.separator is None and self.item_separator is None:
+        if self.separate and self.item_separator is None:
             return reduce(operator.add, [[self.prefix] + a.arg_list()
                                          for a in items], [])
 
-        if self.separator is not None and self.item_separator is None:
-            return [self.prefix + self.separator + a.list_item()
+        if not self.separate and self.item_separator is None:
+            return [self.prefix + a.list_item()
                     for a in items if a.list_item() is not None]
 
         joined = self.item_separator.join(
             filter(None, [a.list_item() for a in items])
         )
 
-        if self.separator is None and self.item_separator is not None:
+        if self.separate and self.item_separator is not None:
             return [self.prefix, joined]
-        return [self.prefix + self.separator + joined]
+        return [self.prefix + joined]
 
     def list_item(self):
         as_arg_list = self.arg_list()
@@ -179,16 +165,13 @@ class CLIJob(object):
     def __init__(self, job):
         self.job = job
         self.app = job.app
-        self.adapter = self.app.adapter or {}
-        self._stdin = self.adapter.get('stdin')
-        self._stdout = self.adapter.get('stdout')
-        self.base_cmd = self.adapter.get('baseCmd', [])
+        self._stdin = self.app.stdin
+        self._stdout = self.app.stdout
+        self.base_cmd = self.app.base_command
         if isinstance(self.base_cmd, six.string_types):
             self.base_cmd = self.base_cmd.split(' ')
-        self.args = self.adapter.get('args', [])
-        self.input_schema = self.app.inputs.schema
-        self.output_schema = self.app.outputs.schema
-        self.eval = AdapterEvaluator(job)
+        self.args = self.app.arguments
+        self.eval = ExpressionEvaluator(job)
 
     @property
     def stdin(self):
@@ -201,10 +184,10 @@ class CLIJob(object):
             return self.eval.resolve(self._stdout)
 
     def make_arg_list(self):
-        adapters = [InputAdapter(a['value'], self.eval, {}, a)
+        adapters = [InputAdapter(a.get('valueFrom'), self.eval, {}, a)
                     for a in self.args]
-        ia = InputAdapter(self.job.inputs, self.eval, self.input_schema)
-        args = ia.as_dict(adapters)
+        ia = InputAdapter(self.job.inputs, self.eval, self.app.inputs)
+        args = ia.as_toplevel(adapters)
         base_cmd = [self.eval.resolve(item) for item in self.base_cmd]
 
         return [six.text_type(arg) for arg in base_cmd + args]
@@ -219,17 +202,24 @@ class CLIJob(object):
         return ' '.join(a)  # TODO: escape
 
     def get_outputs(self, job_dir, job):
-        result, outs = {}, self.output_schema.get('properties', {})
-        for k, v in six.iteritems(outs):
-            adapter = v['adapter']
+        result, outs = {}, self.app.outputs
+        for out in outs:
+            out_binding = out.output_binding
             ret = os.getcwd()
             os.chdir(job_dir)
-            pattern = self.eval.resolve(adapter.get('glob'), job=job) or ""
+            pattern = self.eval.resolve(out_binding.get('glob')) or ""
             files = glob.glob(pattern)
-            result[k] = [{'path': os.path.abspath(p),
-                          'metadata': meta(p, job.inputs, self.eval, adapter),
-                          'secondaryFiles': secondary_files(p, adapter, self.eval)} for p in files]
+
+            result[out.id] = [
+                {
+                    'path': os.path.abspath(p),
+                    'size': os.stat(p).st_size,
+                    # 'checksum': 'sha1$' +
+                    # hashlib.sha1(open(os.path.abspath(p)).read()).hexdigest(),
+                    'metadata': meta(p, job.inputs, self.eval, out_binding),
+                    'secondaryFiles': secondary_files(p, out_binding, self.eval)
+                } for p in files]
             os.chdir(ret)
-            if v['type'] != 'array':
-                result[k] = result[k][0] if result[k] else None
+            if out.depth == 0:
+                result[out.id] = result[out.id][0] if result[out.id] else None
         return result
