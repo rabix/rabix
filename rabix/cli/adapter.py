@@ -214,7 +214,8 @@ class CLIJob(object):
                 {
                     'path': os.path.abspath(p),
                     'size': os.stat(p).st_size,
-                    'checksum': 'sha1$' + hashlib.sha1(open(os.path.abspath(p)).read()).hexdigest(),
+                    # 'checksum': 'sha1$' +
+                    # hashlib.sha1(open(os.path.abspath(p)).read()).hexdigest(),
                     'metadata': meta(p, job.inputs, self.eval, out_binding),
                     'secondaryFiles': secondary_files(p, out_binding, self.eval)
                 } for p in files]
