@@ -44,8 +44,8 @@ TEMPLATE_JOB = {
 
 USAGE = '''
 Usage:
-    rabix <tool> [-v...] [-hcI] [-t <type>] [-d <dir>] [-i <inp>] [--outdir=<outdir>] [--strict] [<inputs-file>] [{resources}] [-- {inputs}...]
-    rabix --conformance-test [--basedir=<basedir>] [--no-container] [--outdir=<outdir>] [--strict] <tool> <job> [-- <input>...]
+    rabix <tool> [-v...] [-hcI] [-t <type>] [-d <dir>] [-i <inp>]  [{resources}] [-- {inputs}...]
+    rabix --conformance-test [--basedir=<basedir>] [--no-container]  <tool> <job> [-- <input>...]
     rabix --version
 
     Options:
@@ -96,7 +96,8 @@ def init_context(d):
 def make_resources_usage_string(template=TEMPLATE_RESOURCES):
     param_str = []
     for k, v in six.iteritems(template):
-        arg = ('--resources.%s' % k) if type(v) is bool else ('--resources.%s=<%s>' % (k, type(v).__name__))
+        arg = ('--resources.%s' % k) if type(v) is bool \
+            else ('--resources.%s=<%s>' % (k, type(v).__name__))
         param_str.append(arg)
 
     return ' '.join(param_str)
@@ -108,7 +109,7 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
 
     def resolve(k, v, usage_str, param_str, inp):
         if (v.validator.type == 'record' and
-                    v.validator.name != 'File'):
+                v.validator.name != 'File'):
             return
 
         to_append = usage_str if (isinstance(v.validator, NamedSchema) and
@@ -271,9 +272,9 @@ def main():
         job_dict = copy.deepcopy(TEMPLATE_JOB)
         logging.root.setLevel(log_level(dry_run_args['--verbose']))
 
-        if args['<inputs-file>']:
-            basedir = os.path.dirname(args.get('<inputs-file>'))
-            input_file = from_url(args.get('<inputs-file>'))
+        if args.get('<inp>'):
+            basedir = os.path.dirname(args.get('<inp>'))
+            input_file = from_url(args.get('<inp>'))
             inputs = get_inputs(input_file, app.inputs, basedir)
             job_dict['inputs'].update(inputs)
 
@@ -329,8 +330,7 @@ def main():
             return
 
         try:
-            context.executor.execute(job, lambda _, result: print(json.dumps(context.to_primitive(result))))
-                # result_str(job.id, result)))
+            context.executor.execute(job, lambda _, result: result_str(job.id, result))
         except RabixError as err:
             fail(err.message)
 

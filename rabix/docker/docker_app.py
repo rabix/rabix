@@ -28,6 +28,7 @@ DEFAULT_CONFIG = {
     "timeout": DOCKER_DEFAULT_TIMEOUT,
 }
 
+
 def set_env():
     docker_host = os.environ.get('DOCKER_HOST', None)
     if not docker_host:

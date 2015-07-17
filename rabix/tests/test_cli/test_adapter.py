@@ -18,6 +18,6 @@ def test_meta():
 
 
 def test_secondary_files():
-    eval = AdapterEvaluator({})
+    eval = ExpressionEvaluator({})
     sf = secondary_files("main_path", {"secondaryFiles": [".bai"]}, eval)
     assert_equal(os.path.basename(sf[0]['path']), 'main_path.bai')

@@ -25,6 +25,5 @@ def test_simple_avro_schema():
         assert_equal(to_dict[k], v)
 
 
-
 if __name__ == '__main__':
     nose.run()

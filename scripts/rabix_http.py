@@ -19,7 +19,8 @@ def strip_prefix(input_id):
 def get_command_line():
     data = request.get_json(force=True)
     tool = process_builder(ctx, data['tool_cfg'])
-    inputs = {strip_prefix(k): construct_files(v, tool._inputs[k].validator) for k, v in data['input_map'].iteritems()}
+    inputs = {strip_prefix(k): construct_files(v, tool._inputs[k].validator)
+              for k, v in data['input_map'].iteritems()}
     job = Job('Fake job ID', tool, inputs,  {'cpu': 1, 'mem': 1024}, ctx)
     cli_job = CLIJob(job)
     return json.dumps({
@@ -33,10 +34,12 @@ def get_command_line():
 def get_outputs():
     data = request.get_json(force=True)
     tool = process_builder(ctx, data['tool_cfg'])
-    inputs = {strip_prefix(k): construct_files(v, tool._inputs[k].validator) for k, v in data['input_map'].iteritems()}
+    inputs = {strip_prefix(k): construct_files(v, tool._inputs[k].validator)
+              for k, v in data['input_map'].iteritems()}
     job = Job('Fake job ID', tool, inputs,  {'cpu': 1, 'mem': 1024}, ctx)
     cli_job = CLIJob(job)
-    status = 'SUCCESS' if data['exit_code'] in data['tool_cfg'].get('successCodes', [0]) else 'FAILURE'
+    status = 'SUCCESS' if data['exit_code'] in data['tool_cfg'].get('successCodes', [0])\
+        else 'FAILURE'
     return json.dumps({
         'status': status,
         'outputs': cli_job.get_outputs(data['job_dir'], job),

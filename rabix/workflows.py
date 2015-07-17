@@ -128,6 +128,7 @@ class WorkflowOutput(OutputParameter):
         instance.connect = wrap_in_list(connect) if connect is not None else []
         return instance
 
+
 class Workflow(Process):
 
     def __init__(self, process_id, inputs, outputs, requirements, hints, label,
