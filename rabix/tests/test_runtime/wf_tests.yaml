@@ -213,10 +213,10 @@ tests:
       result: [4, 6, 8]
     requiresFeatures: [map]
 
-  add_mul_sum:
-    class: Test
-    job:
-      import: "#jobs/add_mul_sum"
-    outputs:
-      result: 18
-    requiresFeatures: [map, nested]
+#  add_mul_sum:
+#    class: Test
+#    job:
+#      import: "#jobs/add_mul_sum"
+#    outputs:
+#      result: 18
+#    requiresFeatures: [map, nested]
