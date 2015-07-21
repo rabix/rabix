@@ -5,16 +5,15 @@ import six
 import json
 import shutil
 
-from nose.tools import raises
+from nose.tools import raises, nottest
 
 from rabix.tests import mock_app_bad_repo, mock_app_good_repo, \
     result_parallel_workflow, result_nested_workflow
 from rabix.main import main
 from rabix.docker import docker_client, get_image
 
-__test__ = False
 
-
+@nottest
 @raises(Exception)
 def test_provide_image_bad_repo():
     uri = mock_app_bad_repo["tool"]["requirements"]["environment"][
@@ -24,7 +23,7 @@ def test_provide_image_bad_repo():
     docker = docker_client()
     get_image(docker, image_id=imageId, repo=uri)
 
-
+@nottest
 def test_provide_image_good_repo():
     uri = mock_app_good_repo["tool"]["requirements"]["environment"][
         "container"]["uri"]
@@ -55,7 +54,7 @@ def test_expr_and_meta():
 
 def test_fetch_remote_files():
     sys.argv = ['rabix', '--dir', 'test_fetch_remote',
-                './rabix/tests/test-cmdline/bwa-mem.json#tool', '--',
+                './rabix/tests/test-expr/bwa-mem.json', '--',
                 '--reads',
                 'https://s3.amazonaws.com/rabix/rabix-test/'
                 'example_human_Illumina.pe_1.fastq', '--reads',
@@ -63,7 +62,7 @@ def test_fetch_remote_files():
                 'example_human_Illumina.pe_2.fastq', '--reference',
                 './rabix/tests/test-files/chr20.fa']
     main()
-    assert os.path.exists(os.path.abspath('./test_fetch_remote') + '/output.sam')
+    assert os.path.exists(os.path.abspath('./test_fetch_remote') + '/aligned.sam')
     shutil.rmtree(os.path.abspath('./test_fetch_remote'))
 
 
@@ -110,6 +109,7 @@ def check_result(dir, res):
             compare_output(v, res.get(k))
 
 
+@nottest
 def test_parallelization():
     '''
     Testing implicit parallelization in workflows
@@ -130,6 +130,7 @@ def test_parallelization():
         shutil.rmtree(os.path.abspath('./test_parralelization'))
 
 
+@nottest
 def test_nested_workflow():
     '''
     Testing nested workflows, inputs type directory and

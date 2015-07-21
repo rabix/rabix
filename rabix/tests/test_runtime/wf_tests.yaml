@@ -49,11 +49,14 @@ tools:
         type: int
     engine: javascript
     script: |
-      {var result = 0;
-      for (var i = 0; i < $job.inputs.arr.length; i++) {
-        result += $job.inputs.arr[i];
+      {
+        var result = 0;
+
+        for (var i = 0; i < $job.inputs.arr.length; i++) {
+          result += $job.inputs.arr[i];
+        }
+        return {sum: result};
       }
-      return {sum: result};}
 
 
 workflows:
