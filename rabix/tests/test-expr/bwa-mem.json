@@ -112,7 +112,12 @@
             "outputBinding": {
                 "glob": "*.sam",
                 "metadata": {
-                    "file_type": "sam"
+                    "file_type": "sam",
+                    "expr_test": {
+                        "script": "{if($job.inputs.minimum_seed_length > 2) { return 'successful'} else {return 'unsuccessful'}}",
+                        "class": "Expression",
+                        "engine": "#cwl-js-engine"
+                    }
                 }
             }
         }

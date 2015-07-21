@@ -38,7 +38,7 @@ def test_expr_and_meta():
                 '-i', './rabix/tests/test-cmdline/inputs.json',
                 '--dir', 'test1', '--']
     main()
-    with open(os.path.abspath('./test1') + '/output.sam.rbx.json') as m:
+    with open(os.path.abspath('./test1') + '/aligned.sam.rbx.json') as m:
         meta = json.load(m)
         assert meta['metadata']['expr_test'] == 'successful'
     shutil.rmtree(os.path.abspath('./test1'))
@@ -46,7 +46,7 @@ def test_expr_and_meta():
                 './rabix/tests/test-expr/bwa-mem.json',
                 '--dir', 'test2']
     main()
-    with open(os.path.abspath('./test2') + '/output.sam.rbx.json') as m:
+    with open(os.path.abspath('./test2') + '/aligned.sam.rbx.json') as m:
         meta = json.load(m)
         assert meta['metadata']['expr_test'] == 'successful'
     shutil.rmtree(os.path.abspath('./test2'))
@@ -71,7 +71,7 @@ def test_params_from_input_file():
                 'rabix/tests/test-expr/bwa-mem.json',
                 '-d', 'test_from_input_file']
     main()
-    assert os.path.exists(os.path.abspath('./test_from_input_file') + '/output.sam')
+    assert os.path.exists(os.path.abspath('./test_from_input_file') + '/aligned.sam')
     shutil.rmtree(os.path.abspath('./test_from_input_file'))
 
 
@@ -80,7 +80,7 @@ def test_override_input():
                 'test_override_input', 'rabix/tests/test-expr/bwa-mem.json', '--',
                 '--reference', 'rabix/tests/test-files/chr20.fa']
     main()
-    assert os.path.exists(os.path.abspath('./test_override_input') + '/output.sam')
+    assert os.path.exists(os.path.abspath('./test_override_input') + '/aligned.sam')
     shutil.rmtree(os.path.abspath('./test_override_input'))
 
 
