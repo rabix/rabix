@@ -272,9 +272,9 @@ def main():
         job_dict = copy.deepcopy(TEMPLATE_JOB)
         logging.root.setLevel(log_level(dry_run_args['--verbose']))
 
-        if args.get('<inp>'):
-            basedir = os.path.dirname(args.get('<inp>'))
-            input_file = from_url(args.get('<inp>'))
+        if args.get('--inp-file'):
+            basedir = os.path.dirname(args.get('--inp-file'))
+            input_file = from_url(args.get('--inp-file'))
             inputs = get_inputs(input_file, app.inputs, basedir)
             job_dict['inputs'].update(inputs)
 
