@@ -23,6 +23,7 @@ def test_provide_image_bad_repo():
     docker = docker_client()
     get_image(docker, image_id=imageId, repo=uri)
 
+
 @nottest
 def test_provide_image_good_repo():
     uri = mock_app_good_repo["tool"]["requirements"]["environment"][
