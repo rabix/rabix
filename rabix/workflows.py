@@ -163,6 +163,10 @@ class Workflow(Process):
             self.move_connect_to_datalink(out)
             self.add_node(out.id, out)
 
+        # dedupe links
+        s = {tuple(dl.items()) for dl in self.data_links}
+        self.data_links = [dict(dl) for dl in s]
+
         for dl in self.data_links:
             dst = dl['destination'].lstrip('#')
             src = dl['source'].lstrip('#')
@@ -325,6 +329,7 @@ class ExecutionGraph(object):
         self.outputs = {}
 
         graph = workflow.graph
+
 
         for node_id in graph.back_topo_sort()[1]:
             executable = self.make_executable(node_id)
