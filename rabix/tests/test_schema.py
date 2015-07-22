@@ -18,7 +18,7 @@ def test_simple_avro_schema():
     cons = make_avro(schema, []).schemas[0]
     a = next(iter(cons.fields))
     assert_equal(a.name, 'a')
-    assert_equal(a.type.name, 'int')
+    assert_equal(a.type.type, 'int')
 
     to_dict = cons.to_json()
     for k, v in six.iteritems(schema):
