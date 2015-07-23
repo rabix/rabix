@@ -330,7 +330,6 @@ class ExecutionGraph(object):
 
         graph = workflow.graph
 
-
         for node_id in graph.back_topo_sort()[1]:
             executable = self.make_executable(node_id)
             if executable:
