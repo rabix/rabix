@@ -36,7 +36,7 @@ def meta(path, inputs, eval, outputBinding):
             result = src.meta
     result.update(**meta)
     for k, v in six.iteritems(result):
-        result[k] = eval.resolve(v, context=path)
+        result[k] = eval.resolve(v, context={"class": "File", "path": path})
     return result
 
 
@@ -203,11 +203,12 @@ class CLIJob(object):
 
     def get_outputs(self, job_dir, job):
         result, outs = {}, self.app.outputs
+        eval = ExpressionEvaluator(job)
         for out in outs:
             out_binding = out.output_binding
             ret = os.getcwd()
             os.chdir(job_dir)
-            pattern = self.eval.resolve(out_binding.get('glob')) or ""
+            pattern = eval.resolve(out_binding.get('glob')) or ""
             files = glob.glob(pattern)
 
             result[out.id] = [
@@ -216,8 +217,8 @@ class CLIJob(object):
                     'size': os.stat(p).st_size,
                     # 'checksum': 'sha1$' +
                     # hashlib.sha1(open(os.path.abspath(p)).read()).hexdigest(),
-                    'metadata': meta(p, job.inputs, self.eval, out_binding),
-                    'secondaryFiles': secondary_files(p, out_binding, self.eval)
+                    'metadata': meta(p, job.inputs, eval, out_binding),
+                    'secondaryFiles': secondary_files(p, out_binding, eval)
                 } for p in files]
             os.chdir(ret)
             if out.depth == 0:

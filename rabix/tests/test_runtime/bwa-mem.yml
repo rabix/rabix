@@ -2,7 +2,7 @@
 $job:
   "@type": Job
   app:
-    $ref: "#tool"
+    import: "#tool"
   inputs: # dict that matches the schema defined in tool
     reference:
       path: ./rabix/tests/test-files/chr20.fa
@@ -17,7 +17,6 @@ $job:
       - path: ./rabix/tests/test-files/example_human_Illumina.pe_2.fastq
         meta:
           sample: NewSample
-  platform: "http://example.org/my_platform/v1"
   allocatedResources:
     cpu: 4
     mem: 5000
@@ -29,76 +28,88 @@ $job:
 
 # Tool
 tool:
-  "@type": Docker
-  softwareDescription: {}
-  documentAuthor: boysha
-  requirements:
-    environment:
-      container:
-        type: docker
-        uri: "docker://images.sbgenomics.com/rabix/bwa#9d3b9b0359cf"  # or docker:user/repo#tag for main index
-        imageId: "9d3b9b0359cf"
-    resources:
-      cpu: 0
-      mem: 5000
-      network: No
-    platformFeatures:
-      - "http://example.org/transforms#strip_ext"
+  arguments: []
+  baseCommand:
+    - bwa
+    - mem
+  class: CommandLineTool
+  contributor: []
+  description: ""
+  id: "#"
   inputs:
-    type: object
-    required: [reference, reads]
-    properties:
-      reference:
-        type: file
-        required: Yes
-        adapter:
-          order: 2
-  #        transform: self.path.split('.').reverse().splice(1).reverse().join('.')
-      reads:
-        type: array
-        required: Yes
-        minItems: 1
-        maxItems: 2
-        adapter:
-          streamable: Yes
-        items:
-          type: file
-      minimum_seed_length:
-        type: integer
-        adapter:
-          order: 1
-          prefix: "-m"
-          separator: " " # default, separate args
-      min_std_max_min:
-        type: array
-        minItems: 1
-        maxItems: 4
-        items:
-          type: number
-        adapter:
-          order: 1
-          prefix: "-I"
-          itemSeparator: ","
+    -
+      description: ""
+      id: "#reference"
+      inputBinding:
+        position: 2
+        separate: true
+        valueFrom:
+          class: Expression
+          engine: "#cwl-js-engine"
+          script: "$self.path.split('.').slice(0, -1).join('.')"
+      label: Reference
+      type:
+        - File
+    -
+      description: ""
+      id: "#reads"
+      inputBinding:
+        position: 3
+        separate: true
+      label: Reads
+      type:
+        -
+          items: File
+          type: array
+    -
+      description: ""
+      id: "#minimum_seed_length"
+      inputBinding:
+        position: 1
+        prefix: "-k"
+        separate: true
+      label: "Minimum seed lengts (-m)"
+      type:
+        - "null"
+        - int
+    -
+      description: "Specify the mean, standard deviation (10% of the mean if absent), max (4 sigma from the mean if absent) and min of the insert size distribution. FR orientation only."
+      id: "#mean_std_max_min"
+      inputBinding:
+        itemSeparator: ","
+        position: 1
+        prefix: "-I"
+        separate: true
+      label: Mean/std/max/min
+      type:
+        - "null"
+        -
+          items: float
+          type: array
+  label: "BWA mem"
   outputs:
-    type: object
-    required: [sam]
-    properties:
-      sam:
-        type: file
-        adapter:
-          meta:
-            __inherit__: reads
-            file_type: sam
-          stdout: Yes
-          glob: output.sam
-          streamable: Yes
-  adapter:
-    baseCmd: [bwa, mem]
-    stdout: output.sam
-    args:
-      - order: 1
-        prefix: "-t"
-        value:
-          expr:
-            lang: javascript
-            value: $job['allocatedResources']['cpu']
+    -
+      id: "#sam"
+      outputBinding:
+        glob: "*.sam"
+        metadata:
+          file_type: sam
+      type:
+        - "null"
+        - File
+  owner: []
+  requirements:
+    -
+      class: DockerRequirement
+      dockerImageId: ""
+      dockerPull: "images.sbgenomics.com/rabix/bwa:9d3b9b0359cf"
+    -
+      class: CPURequirement
+      value: 1
+    -
+      class: MemRequirement
+      value: 1000
+  stdin: ""
+  stdout: aligned.sam
+  successCodes: []
+  temporaryFailCodes: []

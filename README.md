@@ -8,8 +8,8 @@ that have an interest in portability of bioinformatics workflows.
 The goal is to specify a way to describe bioinformatics tools and workflows that is powerful,
 easy to use and allows for portability of tools/workflows and reproducibility of runs.
 
-Version 0.5 should be compatible with
-[draft1](https://github.com/common-workflow-language/common-workflow-language/blob/draft-1/specification/tool-description.md)
+Version 0.7 is approaching full compatibility to
+[draft2](http://common-workflow-language.github.io/draft-2)
 specification.
 To play with describing tools and making workflows visit [rabix.org](http://rabix.org).
 
@@ -24,9 +24,10 @@ We've pre-installed rabix and dependencies on a VirtualBox machine image.
 If you install VirtualBox and Vagrant, you can run the machine using the vagrantfile:
 
 ```
-curl https://s3.amazonaws.com/rabix/Vagrantfile > Vagrantfile
+wget https://s3.amazonaws.com/rabix/Vagrantfile
 vagrant up && vagrant ssh
 # Example BWA run with local files
+sudo pip install -U rabix
 cd rabix/examples
 rabix https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json -- --reads test-data/example_human_Illumina.pe_1.fastq --reads test-data/example_human_Illumina.pe_2.fastq --reference test-data/chr20.fa
 ```
@@ -38,6 +39,7 @@ If you launch an instance on AWS in the us-east region, you can use the public A
 To run the BWA example:
 
 ```
+sudo pip install -U rabix
 cd examples
 rabix https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json -- --reads test-data/example_human_Illumina.pe_1.fastq --reads test-data/example_human_Illumina.pe_2.fastq --reference test-data/chr20.fa
 ```
