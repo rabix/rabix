@@ -28,7 +28,7 @@ curl https://s3.amazonaws.com/rabix/Vagrantfile > Vagrantfile
 vagrant up && vagrant ssh
 # Example BWA run with local files
 cd rabix/examples
-rabix bwa-mem.json -- --reads test-data/example_human_Illumina.pe_1.fastq --reads test-data/example_human_Illumina.pe_2.fastq --reference test-data/chr20.fa
+rabix https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json -- --reads test-data/example_human_Illumina.pe_1.fastq --reads test-data/example_human_Illumina.pe_2.fastq --reference test-data/chr20.fa
 ```
 
 #### On an EC2 instance
@@ -39,7 +39,7 @@ To run the BWA example:
 
 ```
 cd examples
-rabix bwa-mem.json -- --reads test-data/example_human_Illumina.pe_1.fastq --reads test-data/example_human_Illumina.pe_2.fastq --reference test-data/chr20.fa
+rabix https://s3.amazonaws.com/rabix/rabix-test/bwa-mem.json -- --reads test-data/example_human_Illumina.pe_1.fastq --reads test-data/example_human_Illumina.pe_2.fastq --reference test-data/chr20.fa
 ```
 
 #### Linux

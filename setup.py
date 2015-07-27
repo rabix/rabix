@@ -24,6 +24,7 @@ setup(
     install_requires=requires,
     package_data={'': ['*.expr-plugin']},
     long_description=io.open('README.md').read(),
+    description='Reproducible Analyses for Bioinformatics',
     zip_safe=False,
     test_suite='tests',
     license='AGPLv3',
