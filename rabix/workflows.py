@@ -26,25 +26,25 @@ Relation.to_dict = Relation._asdict
 class WorkflowStepInput(InputParameter):
 
     def __init__(self, id, validator=None, required=False, label=None,
-                 description=None, depth=0, input_binding=None, connect=None,
+                 description=None, depth=0, input_binding=None, source=None,
                  value=None):
         super(WorkflowStepInput, self).__init__(
             id, validator, required, label, description, depth, input_binding
         )
 
-        self.connect = wrap_in_list(connect) if connect is not None else []
+        self.source = wrap_in_list(source) if source is not None else []
         self.value = value
 
     def to_dict(self, ctx=None):
         d = super(WorkflowStepInput, self).to_dict(ctx)
-        d['connect'] = ctx.to_primitive(self.connect)
+        d['source'] = ctx.to_primitive(self.source)
         return d
 
     @classmethod
     def from_dict(cls, context, d):
         instance = super(WorkflowStepInput, cls).from_dict(context, d)
-        connect = d.get('connect')
-        instance.connect = wrap_in_list(connect) if connect is not None else []
+        source = d.get('source')
+        instance.source = wrap_in_list(source) if source is not None else []
         instance.value = d.get('default')
         return instance
 
@@ -111,22 +111,22 @@ class Step(Process):
 class WorkflowOutput(OutputParameter):
 
     def __init__(self, id, validator=None, required=False, label=None,
-                 description=None, depth=0, output_binding=None, connect=None):
+                 description=None, depth=0, output_binding=None, source=None):
         super(WorkflowOutput, self).__init__(
             id, validator, required, label, description, depth, output_binding
         )
-        self.connect = wrap_in_list(connect) if connect is not None else []
+        self.source = wrap_in_list(source) if source is not None else []
 
     def to_dict(self, ctx=None):
         d = super(WorkflowOutput, self).to_dict(ctx)
-        d['connect'] = ctx.to_primitive(self.output_binding)
+        d['source'] = ctx.to_primitive(self.source)
         return d
 
     @classmethod
     def from_dict(cls, context, d):
         instance = super(OutputParameter, cls).from_dict(context, d)
-        connect = d.get('connect')
-        instance.connect = wrap_in_list(connect) if connect is not None else []
+        source = d.get('source')
+        instance.source = wrap_in_list(source) if source is not None else []
         return instance
 
 
@@ -192,10 +192,9 @@ class Workflow(Process):
             # raise ValidationError('Graph is not connected')
 
     def move_connect_to_datalink(self, port):
-        for dl in port.connect:
-            dl['destination'] = '#'+port.id
-            self.data_links.append(dl)
-        del port.connect[:]
+        for src in port.source:
+            self.data_links.append({'source': src, 'destination': '#'+port.id})
+        del port.source[:]
 
     # Graph.add_node silently fails if node already exists
     def add_node(self, node_id, node):
