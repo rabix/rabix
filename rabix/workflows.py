@@ -1,6 +1,7 @@
 import six
 import logging
 
+from copy import deepcopy
 from collections import namedtuple, defaultdict
 from altgraph.Graph import Graph
 
@@ -202,12 +203,6 @@ class Workflow(Process):
             raise ValidationError('Duplicate node ID: %s' % node_id)
         self.graph.add_node(node_id, node)
 
-    def hide_nodes(self, type):
-        for node_id in self.graph.node_list():
-            node = self.graph.node_data(node_id)
-            if isinstance(node, type):
-                self.graph.hide_node(node_id)
-
     def run(self, job):
         eg = ExecutionGraph(self, job)
         while eg.has_next():
@@ -271,7 +266,6 @@ class PartialJob(object):
         return True
 
     def resolve_input(self, input_port, results):
-        log.debug("Resolving input '%s' with value %s" % (input_port, results))
         input_count = self.input_counts[input_port]
         if input_count <= 0:
             raise RabixError("Input already satisfied")
@@ -287,10 +281,8 @@ class PartialJob(object):
         return self.resolved
 
     def propagate_result(self, result):
-        log.debug("Propagating result: %s" % result)
         self.result = result
         for k, v in six.iteritems(result):
-            log.debug("Propagating result: %s, %s" % (k, v))
             if self.outputs.get(k):
                 for out in self.outputs[k]:
                     out.resolve_input(v)
@@ -328,20 +320,31 @@ class ExecutionGraph(object):
         self.job = job
         self.outputs = {}
 
-        graph = workflow.graph
-
-        for node_id in graph.back_topo_sort()[1]:
+        for node_id in workflow.graph.back_topo_sort()[1]:
             executable = self.make_executable(node_id)
             if executable:
                 self.executables[node_id] = executable
 
-        workflow.hide_nodes(Parameter)
+        self.order = self.calc_order()
 
-        self.order = graph.back_topo_sort()[1]
+    def calc_order(self):
+        params = []
+        for node_id in self.graph.node_list():
+            node = self.graph.node_data(node_id)
+            if isinstance(node, Parameter):
+                params.append(node_id)
+
+        for p in params:
+            self.graph.hide_node(p)
+
+        order = self.graph.back_topo_sort()[1]
+
+        for p in params:
+            self.graph.restore_node(p)
+
+        return order
 
     def add_output(self, outputs, port, relation):
-        log.debug("add_output: outputs(%s), port(%s), relation(%s)",
-                  outputs, port, relation)
         if not outputs.get(port):
             outputs[port] = [relation]
         else:
@@ -369,7 +372,7 @@ class ExecutionGraph(object):
                     self, tail))
 
         executable = PartialJob(
-            node_id, node.app, node.inputs,
+            node_id, node.app, deepcopy(node.inputs),
             input_counts, outputs, self.workflow.context
         )
 

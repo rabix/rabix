@@ -115,14 +115,14 @@ workflows:
           - id: arr
             connect: { source: add_mul.result }
         outputs:
-          - id: sum.result
+          - id: sum.sum
     inputs:
       - id: a
         type: int
     outputs:
       - id: result
         type: int
-        connect: { source: sum.result }
+        connect: { source: sum.sum }
 
   multi_link_sum:
     id: multi_link_sum
@@ -216,10 +216,10 @@ tests:
       result: [4, 6, 8]
     requiresFeatures: [map]
 
-#  add_mul_sum:
-#    class: Test
-#    job:
-#      import: "#jobs/add_mul_sum"
-#    outputs:
-#      result: 18
-#    requiresFeatures: [map, nested]
+  add_mul_sum:
+    class: Test
+    job:
+      import: "#jobs/add_mul_sum"
+    outputs:
+      result: 18
+    requiresFeatures: [map, nested]
