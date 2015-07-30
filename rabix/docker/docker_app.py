@@ -15,7 +15,7 @@ from rabix.common.errors import RabixError
 
 log = logging.getLogger(__name__)
 
-DOCKER_DEFAULT_API_VERSION = "1.16"
+DOCKER_DEFAULT_API_VERSION = "1.14"
 DOCKER_DEFAULT_TIMEOUT = 60
 
 DEFAULT_DOCKER_HOST = 'tcp://192.168.59.103:2376'
