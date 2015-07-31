@@ -65,7 +65,9 @@ class InputAdapter(object):
                 if validate(opt, value):
                     self.schema = opt
                     break
-        self.value = evaluator.resolve(value)
+        expr = self.adapter.get('valueFrom')
+        json = value.to_dict() if hasattr(value, 'to_dict') else value
+        self.value = evaluator.resolve(expr, json) if expr else value
 
     __str__ = lambda self: six.text_type(self.value)
     __repr__ = lambda self: 'InputAdapter(%s)' % self
