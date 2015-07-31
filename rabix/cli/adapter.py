@@ -118,7 +118,9 @@ class InputAdapter(object):
 
         res = reduce(
             operator.add,
-            [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)],
+            [a.arg_list()
+             for a in sorted(adapters, key=lambda x: x.position)
+             if a.has_adapter],
             []
         )
         return res
