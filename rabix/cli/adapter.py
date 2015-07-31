@@ -69,7 +69,7 @@ class InputAdapter(object):
 
     __str__ = lambda self: six.text_type(self.value)
     __repr__ = lambda self: 'InputAdapter(%s)' % self
-    position = property(lambda self: (self.adapter.get('position', 9999999), self.key))
+    position = property(lambda self: (self.adapter.get('position', 0), self.key))
     prefix = property(lambda self: self.adapter.get('prefix'))
     item_separator = property(lambda self: self.adapter.get('itemSeparator', ','))
     separate = property(lambda self: self.adapter.get('separate', True))
