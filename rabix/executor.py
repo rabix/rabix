@@ -1,8 +1,11 @@
 import copy
 import six
+import logging
 
 from rabix.common.errors import RabixError
 from rabix.common.models import Job
+
+log = logging.getLogger(__name__)
 
 
 class Executor(object):
@@ -51,6 +54,7 @@ class Executor(object):
 
     def execute(self, job, callback=None, callback_id=None):
         # TODO: resources, instances, scheduling, yada yada...
+        log.debug('executing job(%s), callback(%s)', job.id, callback_id)
         jobs = self.split_job(job)
         result = None
         if isinstance(jobs, list):

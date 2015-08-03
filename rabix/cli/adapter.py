@@ -65,11 +65,13 @@ class InputAdapter(object):
                 if validate(opt, value):
                     self.schema = opt
                     break
-        self.value = evaluator.resolve(value)
+        expr = self.adapter.get('valueFrom')
+        json = value.to_dict() if hasattr(value, 'to_dict') else value
+        self.value = evaluator.resolve(expr, json) if expr else value
 
     __str__ = lambda self: six.text_type(self.value)
     __repr__ = lambda self: 'InputAdapter(%s)' % self
-    position = property(lambda self: (self.adapter.get('position', 9999999), self.key))
+    position = property(lambda self: (self.adapter.get('position', 0), self.key))
     prefix = property(lambda self: self.adapter.get('prefix'))
     item_separator = property(lambda self: self.adapter.get('itemSeparator', ','))
     separate = property(lambda self: self.adapter.get('separate', True))
@@ -118,7 +120,9 @@ class InputAdapter(object):
 
         res = reduce(
             operator.add,
-            [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)],
+            [a.arg_list()
+             for a in sorted(adapters, key=lambda x: x.position)
+             if a.has_adapter],
             []
         )
         return res
