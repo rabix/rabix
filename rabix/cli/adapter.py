@@ -232,7 +232,7 @@ class CLIJob(object):
             os.chdir(job_dir)
             pattern = eval.resolve(out_binding.get('glob')) or ""
             patterns = chain(*[self.glob_or(p) for p in wrap_in_list(pattern)])
-            files = [glob.glob(p) for p in patterns]
+            files = chain(*[glob.glob(p) for p in patterns])
 
             result[out.id] = [
                 {
