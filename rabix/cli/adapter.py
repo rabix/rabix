@@ -3,6 +3,7 @@ import six
 import logging
 import os
 import glob
+import re
 import hashlib
 
 # noinspection PyUnresolvedReferences
@@ -205,6 +206,22 @@ class CLIJob(object):
             a += ['>', self.eval.resolve(self.stdout)]
         return ' '.join(a)  # TODO: escape
 
+    @staticmethod
+    def glob_or(pattern):
+        """
+        >>> CLIJob.glob_or("simple")
+        'simple'
+
+        >>> CLIJob.glob_or("{option1,option2}")
+        ['option1', 'option2']
+
+        :param pattern:
+        :return:
+        """
+        if re.match('^\{[^,]+(,[^,]+)*\}$', pattern):
+            return pattern.strip('{}').split(',')
+        return pattern
+
     def get_outputs(self, job_dir, job):
         result, outs = {}, self.app.outputs
         eval = ExpressionEvaluator(job)
@@ -213,7 +230,8 @@ class CLIJob(object):
             ret = os.getcwd()
             os.chdir(job_dir)
             pattern = eval.resolve(out_binding.get('glob')) or ""
-            files = glob.glob(pattern)
+            pattern = wrap_in_list(self.glob_or(pattern))
+            files = [glob.glob(p) for p in pattern]
 
             result[out.id] = [
                 {
