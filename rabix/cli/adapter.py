@@ -8,6 +8,7 @@ import hashlib
 
 # noinspection PyUnresolvedReferences
 from six.moves import reduce
+from itertools import chain
 from avro.schema import UnionSchema, Schema, ArraySchema
 
 if six.PY2:
@@ -210,7 +211,7 @@ class CLIJob(object):
     def glob_or(pattern):
         """
         >>> CLIJob.glob_or("simple")
-        'simple'
+        ['simple']
 
         >>> CLIJob.glob_or("{option1,option2}")
         ['option1', 'option2']
@@ -220,7 +221,7 @@ class CLIJob(object):
         """
         if re.match('^\{[^,]+(,[^,]+)*\}$', pattern):
             return pattern.strip('{}').split(',')
-        return pattern
+        return [pattern]
 
     def get_outputs(self, job_dir, job):
         result, outs = {}, self.app.outputs
@@ -230,8 +231,8 @@ class CLIJob(object):
             ret = os.getcwd()
             os.chdir(job_dir)
             pattern = eval.resolve(out_binding.get('glob')) or ""
-            pattern = wrap_in_list(self.glob_or(pattern))
-            files = [glob.glob(p) for p in pattern]
+            patterns = chain(*[self.glob_or(p) for p in wrap_in_list(pattern)])
+            files = [glob.glob(p) for p in patterns]
 
             result[out.id] = [
                 {
