@@ -32,7 +32,7 @@ def collect_prefixes(paths):
     container, such that only directories actually containing files are
     bound (otherwise trivial minimal set would be '/').
 
-    >>> list(collect_prefixes(['/a/b', '/a/b/c']))
+    >>> list(collect_prefixes(['/a/b/c', '/a/b']))
     ['/a/b/']
     >>> sorted(list(collect_prefixes(['/a/b/c', '/a/b/d'])))
     ['/a/b/c/', '/a/b/d/']
@@ -53,6 +53,8 @@ def collect_prefixes(paths):
         for idx, part in enumerate(path):
             if part not in cur:
                 cur[part] = (idx == last, {})
+            elif idx == last:
+                cur[part] = (True, cur[part][1])
             term, cur = cur[part]
             if term:
                 break
