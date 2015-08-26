@@ -3,6 +3,7 @@ import six
 import json
 import stat
 import copy
+import logging
 
 from avro.schema import NamedSchema
 
@@ -12,6 +13,9 @@ from rabix.common.models import (
     Job)
 from rabix.common.io import InputCollector
 from rabix.common.util import map_or_apply, map_rec_collection
+
+
+log = logging.getLogger(__name__)
 
 
 def flatten_files(files):
@@ -161,6 +165,9 @@ class CommandLineTool(Process):
             self.install(job=job)
 
             cmd_line = self.command_line(job, job_dir)
+
+            log.info("Running: %s" % cmd_line)
+
             self.job_dump(job, job_dir)
             self.container.run(cmd_line, job_dir)
             result_path = os.path.abspath(job_dir) + '/result.cwl.json'
