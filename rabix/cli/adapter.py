@@ -17,7 +17,7 @@ else:
     from avro.io import Validate as validate
 
 from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath
-from rabix.expressions.evaluator import ExpressionEvaluator
+from rabix.expressions import ExpressionEvaluator
 
 log = logging.getLogger(__name__)
 

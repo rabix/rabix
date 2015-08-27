@@ -4,6 +4,7 @@ import json
 import stat
 import copy
 import logging
+import shutil
 
 from avro.schema import NamedSchema
 
@@ -13,6 +14,7 @@ from rabix.common.models import (
     Job)
 from rabix.common.io import InputCollector
 from rabix.common.util import map_or_apply, map_rec_collection
+from rabix.expressions import ExpressionEvaluator
 
 
 log = logging.getLogger(__name__)
@@ -158,6 +160,10 @@ class CommandLineTool(Process):
                  stat.S_IWOTH)
         self.cli_job = CLIJob(job)
 
+        cfr = self.get_requirement_or_hint(CreateFileRequirement)
+        if cfr:
+            cfr.create_files(job_dir, ExpressionEvaluator(job))
+
         if self.container:
             self.ensure_files(job, job_dir)
             abspath_job = Job(
@@ -250,6 +256,38 @@ class CommandLineTool(Process):
                         for inp in converted.get('outputs', [])]
         })
         return cls(**kwargs)
+
+
+class CreateFileRequirement(object):
+
+    def __init__(self, file_defs):
+        self.file_defs = file_defs
+
+    def to_dict(self, context=None):
+        return {
+            "class": "CreateFileRequirement",
+            "fileDef": self.file_defs
+        }
+
+    def create_files(self, dir, eval):
+        for f in self.file_defs:
+            name = eval.resolve(f['filename'])
+            content = eval.resolve(f['fileContent'])
+            dst = os.path.join(dir, name)
+            if isinstance(content, dict) and content.get('class') == 'File':
+                shutil.copyfile(content['path'], dst)
+            else:
+                with open(dst, 'w') as out:
+                    out.write(content)
+
+    @classmethod
+    def from_dict(cls, context, d):
+        return cls(d['fileDef'])
+
+
+class EnvVarRequirement(object):
+    pass
+
 
 if __name__ == '__main__':
     import doctest
