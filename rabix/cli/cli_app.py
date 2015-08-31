@@ -160,9 +160,16 @@ class CommandLineTool(Process):
                  stat.S_IWOTH)
         self.cli_job = CLIJob(job)
 
+        eval = ExpressionEvaluator(job)
+
         cfr = self.get_requirement_or_hint(CreateFileRequirement)
         if cfr:
-            cfr.create_files(job_dir, ExpressionEvaluator(job))
+            cfr.create_files(job_dir, eval)
+
+        env = None
+        evr = self.get_requirement_or_hint(EnvVarRequirement)
+        if evr:
+            env = evr.var_map(eval)
 
         if self.container:
             self.ensure_files(job, job_dir)
@@ -177,7 +184,7 @@ class CommandLineTool(Process):
             log.info("Running: %s" % cmd_line)
 
             self.job_dump(job, job_dir)
-            self.container.run(cmd_line, job_dir)
+            self.container.run(cmd_line, job_dir, env)
             result_path = os.path.abspath(job_dir) + '/result.cwl.json'
             if os.path.exists(result_path):
                 with open(result_path, 'r') as res:
@@ -286,7 +293,22 @@ class CreateFileRequirement(object):
 
 
 class EnvVarRequirement(object):
-    pass
+    def __init__(self, env_defs):
+        self.env_defs = env_defs
+
+    def to_dict(self, context=None):
+        return {
+            "class": "EnvVarRequirement",
+            "envDef": self.env_defs
+        }
+
+    def var_map(self, eval):
+        return ["{}={}".format(e['envName'], eval.resolve(e['envValue']))
+                for e in self.env_defs]
+
+    @classmethod
+    def from_dict(cls, context, d):
+        return cls(d['envDef'])
 
 
 if __name__ == '__main__':
