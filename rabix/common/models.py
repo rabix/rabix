@@ -191,7 +191,7 @@ class URL(object):
         for k, v in six.iteritems(mappings):
             if self.path.startswith(k):
                 ls = self.path[len(k):]
-                return URL(urljoin(v, ls))
+                return URL(v + ls)
 
         return self
 
