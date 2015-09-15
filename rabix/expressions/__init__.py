@@ -1,5 +1,5 @@
 from .expression_tool import ExpressionTool
-from .evaluator import Evaluator
+from .evaluator import Evaluator, ExpressionEvaluator
 
 
 def init(context):

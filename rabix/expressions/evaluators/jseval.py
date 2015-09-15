@@ -32,5 +32,5 @@ class JSEval(evaluator.ExpressionEvalPlugin):
         # log.debug("exec code: %s" % exp)
 
         result = execjs.eval(exp)
-        log.debug("result: %s" % result)
+        log.debug("Expression result: %s" % result)
         return result

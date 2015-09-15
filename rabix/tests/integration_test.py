@@ -104,7 +104,7 @@ def check_result(dir, res):
         else:
             compare_file(myoutput, resoutput)
 
-    with open('/'.join([dir, 'result.cwl.json']), 'r') as f:
+    with open('/'.join([dir, 'cwl.output.json']), 'r') as f:
         dct = json.load(f)
         for k, v in six.iteritems(dct):
             compare_output(v, res.get(k))

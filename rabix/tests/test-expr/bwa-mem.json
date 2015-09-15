@@ -30,11 +30,6 @@
             "label": "Reference",
             "inputBinding": {
                 "sbg:cmdInclude": "true",
-                "valueFrom": {
-                    "engine": "#cwl-js-engine",
-                    "script": "$self.path.split('.').slice(0, -1).join('.')",
-                    "class": "Expression"
-                },
                 "separate": true,
                 "position": 2
             },

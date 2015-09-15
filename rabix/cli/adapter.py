@@ -3,10 +3,12 @@ import six
 import logging
 import os
 import glob
+import re
 import hashlib
 
 # noinspection PyUnresolvedReferences
 from six.moves import reduce
+from itertools import chain
 from avro.schema import UnionSchema, Schema, ArraySchema
 
 if six.PY2:
@@ -15,7 +17,7 @@ else:
     from avro.io import Validate as validate
 
 from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath
-from rabix.expressions.evaluator import ExpressionEvaluator
+from rabix.expressions import ExpressionEvaluator
 
 log = logging.getLogger(__name__)
 
@@ -205,6 +207,22 @@ class CLIJob(object):
             a += ['>', self.eval.resolve(self.stdout)]
         return ' '.join(a)  # TODO: escape
 
+    @staticmethod
+    def glob_or(pattern):
+        """
+        >>> CLIJob.glob_or("simple")
+        ['simple']
+
+        >>> CLIJob.glob_or("{option1,option2}")
+        ['option1', 'option2']
+
+        :param pattern:
+        :return:
+        """
+        if re.match('^\{[^,]+(,[^,]+)*\}$', pattern):
+            return pattern.strip('{}').split(',')
+        return [pattern]
+
     def get_outputs(self, job_dir, job):
         result, outs = {}, self.app.outputs
         eval = ExpressionEvaluator(job)
@@ -213,7 +231,8 @@ class CLIJob(object):
             ret = os.getcwd()
             os.chdir(job_dir)
             pattern = eval.resolve(out_binding.get('glob')) or ""
-            files = glob.glob(pattern)
+            patterns = chain(*[self.glob_or(p) for p in wrap_in_list(pattern)])
+            files = chain(*[glob.glob(p) for p in patterns])
 
             result[out.id] = [
                 {
