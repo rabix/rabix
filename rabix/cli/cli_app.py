@@ -185,7 +185,7 @@ class CommandLineTool(Process):
 
             self.job_dump(job, job_dir)
             self.container.run(cmd_line, job_dir, env)
-            result_path = os.path.abspath(job_dir) + '/result.cwl.json'
+            result_path = os.path.abspath(job_dir) + '/cwl.output.json'
             if os.path.exists(result_path):
                 with open(result_path, 'r') as res:
                     outputs = json.load(res)
