@@ -23,7 +23,7 @@ else:
 
 
 from rabix.common.errors import ValidationError, RabixError
-from rabix.common.util import wrap_in_list, map_or_apply
+from rabix.common.util import wrap_in_list, map_rec_list
 
 
 log = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ def construct_files(val, schema):
 
     if schema.type == 'record':
         if schema.name == 'File':
-            return map_or_apply(File, val) if val else val
+            return map_rec_list(File, val) if val else val
         else:
             ret = {}
             for fld in schema.fields:
