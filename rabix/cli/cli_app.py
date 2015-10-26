@@ -3,6 +3,8 @@ import six
 import json
 import stat
 import copy
+import logging
+import shutil
 
 from avro.schema import NamedSchema
 
@@ -12,6 +14,10 @@ from rabix.common.models import (
     Job)
 from rabix.common.io import InputCollector
 from rabix.common.util import map_or_apply, map_rec_collection
+from rabix.expressions import ExpressionEvaluator
+
+
+log = logging.getLogger(__name__)
 
 
 def flatten_files(files):
@@ -28,7 +34,7 @@ def collect_prefixes(paths):
     container, such that only directories actually containing files are
     bound (otherwise trivial minimal set would be '/').
 
-    >>> list(collect_prefixes(['/a/b', '/a/b/c']))
+    >>> list(collect_prefixes(['/a/b/c', '/a/b']))
     ['/a/b/']
     >>> sorted(list(collect_prefixes(['/a/b/c', '/a/b/d'])))
     ['/a/b/c/', '/a/b/d/']
@@ -49,6 +55,8 @@ def collect_prefixes(paths):
         for idx, part in enumerate(path):
             if part not in cur:
                 cur[part] = (idx == last, {})
+            elif idx == last:
+                cur[part] = (True, cur[part][1])
             term, cur = cur[part]
             if term:
                 break
@@ -152,6 +160,17 @@ class CommandLineTool(Process):
                  stat.S_IWOTH)
         self.cli_job = CLIJob(job)
 
+        eval = ExpressionEvaluator(job)
+
+        cfr = self.get_requirement_or_hint(CreateFileRequirement)
+        if cfr:
+            cfr.create_files(job_dir, eval)
+
+        env = None
+        evr = self.get_requirement_or_hint(EnvVarRequirement)
+        if evr:
+            env = evr.var_map(eval)
+
         if self.container:
             self.ensure_files(job, job_dir)
             abspath_job = Job(
@@ -161,9 +180,12 @@ class CommandLineTool(Process):
             self.install(job=job)
 
             cmd_line = self.command_line(job, job_dir)
+
+            log.info("Running: %s" % cmd_line)
+
             self.job_dump(job, job_dir)
-            self.container.run(cmd_line, job_dir)
-            result_path = os.path.abspath(job_dir) + '/result.cwl.json'
+            self.container.run(cmd_line, job_dir, env)
+            result_path = os.path.abspath(job_dir) + '/cwl.output.json'
             if os.path.exists(result_path):
                 with open(result_path, 'r') as res:
                     outputs = json.load(res)
@@ -241,6 +263,53 @@ class CommandLineTool(Process):
                         for inp in converted.get('outputs', [])]
         })
         return cls(**kwargs)
+
+
+class CreateFileRequirement(object):
+
+    def __init__(self, file_defs):
+        self.file_defs = file_defs
+
+    def to_dict(self, context=None):
+        return {
+            "class": "CreateFileRequirement",
+            "fileDef": self.file_defs
+        }
+
+    def create_files(self, dir, eval):
+        for f in self.file_defs:
+            name = eval.resolve(f['filename'])
+            content = eval.resolve(f['fileContent'])
+            dst = os.path.join(dir, name)
+            if isinstance(content, dict) and content.get('class') == 'File':
+                shutil.copyfile(content['path'], dst)
+            else:
+                with open(dst, 'w') as out:
+                    out.write(content)
+
+    @classmethod
+    def from_dict(cls, context, d):
+        return cls(d['fileDef'])
+
+
+class EnvVarRequirement(object):
+    def __init__(self, env_defs):
+        self.env_defs = env_defs
+
+    def to_dict(self, context=None):
+        return {
+            "class": "EnvVarRequirement",
+            "envDef": self.env_defs
+        }
+
+    def var_map(self, eval):
+        return ["{}={}".format(e['envName'], eval.resolve(e['envValue']))
+                for e in self.env_defs]
+
+    @classmethod
+    def from_dict(cls, context, d):
+        return cls(d['envDef'])
+
 
 if __name__ == '__main__':
     import doctest

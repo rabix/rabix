@@ -8,14 +8,14 @@ from docker.client import Client
 from docker.utils import kwargs_from_env
 from docker.errors import APIError
 
-from rabix.cli.cli_app import Container
+from rabix.cli import Container
 from .container import get_image
 from rabix.common.errors import RabixError
 
 
 log = logging.getLogger(__name__)
 
-DOCKER_DEFAULT_API_VERSION = "1.16"
+DOCKER_DEFAULT_API_VERSION = "1.14"
 DOCKER_DEFAULT_TIMEOUT = 60
 
 DEFAULT_DOCKER_HOST = 'tcp://192.168.59.103:2376'
@@ -27,6 +27,7 @@ DEFAULT_CONFIG = {
     "version": DOCKER_DEFAULT_API_VERSION,
     "timeout": DOCKER_DEFAULT_TIMEOUT,
 }
+
 
 def set_env():
     docker_host = os.environ.get('DOCKER_HOST', None)
@@ -153,7 +154,7 @@ class DockerContainer(Container):
             raise RuntimeError('Unable to run container from image %s:'
                                % self.image_id)
 
-    def run(self, cmd, job_dir):
+    def run(self, cmd, job_dir, env=None):
 
         if not os.path.isabs(job_dir):
             raise RabixError('job_dir must be an abslute path.')
@@ -169,7 +170,8 @@ class DockerContainer(Container):
             "Image": self.image_id,
             "User": self.user,
             "Volumes": self.volumes,
-            "WorkingDir": working_dir
+            "WorkingDir": working_dir,
+            "Env": env
         }
         self.config = make_config(**cfg)
         self._start(cmd)

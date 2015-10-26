@@ -8,7 +8,3 @@ Yapsy==1.10.423
 pyxdg==0.25
 altgraph==0.12
 python-slugify==0.1.0
-
-nose
-pep8==1.5.7
-mock==1.0.1

@@ -49,11 +49,14 @@ tools:
         type: int
     engine: javascript
     script: |
-      {var result = 0;
-      for (var i = 0; i < $job.inputs.arr.length; i++) {
-        result += $job.inputs.arr[i];
+      {
+        var result = 0;
+
+        for (var i = 0; i < $job.inputs.arr.length; i++) {
+          result += $job.inputs.arr[i];
+        }
+        return {sum: result};
       }
-      return {sum: result};}
 
 
 workflows:
@@ -66,8 +69,7 @@ workflows:
           import: "#tools/add"
         inputs:
           - id: add_one.a
-            connect:
-              source: a
+            source: a
           - id: add_one.b
             default: 1
         outputs:
@@ -77,8 +79,7 @@ workflows:
           import: "#tools/mul"
         inputs:
           - id: times_two.a
-            connect:
-              source: add_one.c
+            source: add_one.c
           - id: times_two.b
             default: 2
         outputs:
@@ -89,8 +90,7 @@ workflows:
     outputs:
       - id: result
         type: int
-        connect:
-          source: times_two.c
+        source: times_two.c
 
   add_mul_sum:
     id: add_mul_sum
@@ -101,7 +101,7 @@ workflows:
           import: "#workflows/add_one_mul_two"
         inputs:
           - id: add_mul.a
-            connect: { source: a }
+            source: a
         outputs:
           - id: add_mul.result
 
@@ -110,16 +110,16 @@ workflows:
           import: "#/tools/sum"
         inputs:
           - id: arr
-            connect: { source: add_mul.result }
+            source: add_mul.result
         outputs:
-          - id: sum.result
+          - id: sum.sum
     inputs:
       - id: a
         type: int
     outputs:
       - id: result
         type: int
-        connect: { source: sum.result }
+        source: sum.sum
 
   multi_link_sum:
     id: multi_link_sum
@@ -130,9 +130,7 @@ workflows:
           import: "#tools/sum"
         inputs:
           - id: sum.arr
-            connect:
-              - source: a
-              - source: b
+            source: [a, b]
         outputs:
           - id: sum.sum
     inputs:
@@ -143,7 +141,7 @@ workflows:
     outputs:
       - id: result
         type: int
-        connect: { source: sum.sum }
+        source: sum.sum
 
 jobs:
   simple_sum:

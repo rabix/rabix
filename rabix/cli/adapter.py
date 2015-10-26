@@ -3,10 +3,12 @@ import six
 import logging
 import os
 import glob
+import re
 import hashlib
 
 # noinspection PyUnresolvedReferences
 from six.moves import reduce
+from itertools import chain
 from avro.schema import UnionSchema, Schema, ArraySchema
 
 if six.PY2:
@@ -15,7 +17,7 @@ else:
     from avro.io import Validate as validate
 
 from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath
-from rabix.expressions.evaluator import ExpressionEvaluator
+from rabix.expressions import ExpressionEvaluator
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ def meta(path, inputs, eval, outputBinding):
             result = src.meta
     result.update(**meta)
     for k, v in six.iteritems(result):
-        result[k] = eval.resolve(v, context=path)
+        result[k] = eval.resolve(v, context={"class": "File", "path": path})
     return result
 
 
@@ -65,11 +67,13 @@ class InputAdapter(object):
                 if validate(opt, value):
                     self.schema = opt
                     break
-        self.value = evaluator.resolve(value)
+        expr = self.adapter.get('valueFrom')
+        json = value.to_dict() if hasattr(value, 'to_dict') else value
+        self.value = evaluator.resolve(expr, json) if expr else value
 
     __str__ = lambda self: six.text_type(self.value)
     __repr__ = lambda self: 'InputAdapter(%s)' % self
-    position = property(lambda self: (self.adapter.get('position', 9999999), self.key))
+    position = property(lambda self: (self.adapter.get('position', 0), self.key))
     prefix = property(lambda self: self.adapter.get('prefix'))
     item_separator = property(lambda self: self.adapter.get('itemSeparator', ','))
     separate = property(lambda self: self.adapter.get('separate', True))
@@ -118,7 +122,9 @@ class InputAdapter(object):
 
         res = reduce(
             operator.add,
-            [a.arg_list() for a in sorted(adapters, key=lambda x: x.position)],
+            [a.arg_list()
+             for a in sorted(adapters, key=lambda x: x.position)
+             if a.has_adapter],
             []
         )
         return res
@@ -201,22 +207,41 @@ class CLIJob(object):
             a += ['>', self.eval.resolve(self.stdout)]
         return ' '.join(a)  # TODO: escape
 
+    @staticmethod
+    def glob_or(pattern):
+        """
+        >>> CLIJob.glob_or("simple")
+        ['simple']
+
+        >>> CLIJob.glob_or("{option1,option2}")
+        ['option1', 'option2']
+
+        :param pattern:
+        :return:
+        """
+        if re.match('^\{[^,]+(,[^,]+)*\}$', pattern):
+            return pattern.strip('{}').split(',')
+        return [pattern]
+
     def get_outputs(self, job_dir, job):
         result, outs = {}, self.app.outputs
+        eval = ExpressionEvaluator(job)
         for out in outs:
             out_binding = out.output_binding
             ret = os.getcwd()
             os.chdir(job_dir)
-            pattern = self.eval.resolve(out_binding.get('glob')) or ""
-            files = glob.glob(pattern)
+            pattern = eval.resolve(out_binding.get('glob')) or ""
+            patterns = chain(*[self.glob_or(p) for p in wrap_in_list(pattern)])
+            files = chain(*[glob.glob(p) for p in patterns])
 
             result[out.id] = [
                 {
                     'path': os.path.abspath(p),
                     'size': os.stat(p).st_size,
-                    'checksum': 'sha1$' + hashlib.sha1(open(os.path.abspath(p)).read()).hexdigest(),
-                    'metadata': meta(p, job.inputs, self.eval, out_binding),
-                    'secondaryFiles': secondary_files(p, out_binding, self.eval)
+                    # 'checksum': 'sha1$' +
+                    # hashlib.sha1(open(os.path.abspath(p)).read()).hexdigest(),
+                    'metadata': meta(p, job.inputs, eval, out_binding),
+                    'secondaryFiles': secondary_files(p, out_binding, eval)
                 } for p in files]
             os.chdir(ret)
             if out.depth == 0:

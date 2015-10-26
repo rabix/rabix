@@ -23,7 +23,7 @@ else:
 
 
 from rabix.common.errors import ValidationError, RabixError
-from rabix.common.util import wrap_in_list
+from rabix.common.util import wrap_in_list, map_rec_list
 
 
 log = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ def construct_files(val, schema):
 
     if schema.type == 'record':
         if schema.name == 'File':
-            return File(val) if val else val
+            return map_rec_list(File, val) if val else val
         else:
             ret = {}
             for fld in schema.fields:
@@ -98,6 +98,15 @@ class Process(object):
 
     def get_output(self, name):
         return self._outputs.get(name)
+
+    def get_requirement(self, t):
+        return next((r for r in self.requirements if isinstance(r, t)), None)
+
+    def get_hint(self, t):
+        return next((r for r in self.hints if isinstance(r, t)), None)
+
+    def get_requirement_or_hint(self, t):
+        return self.get_requirement(t) or self.get_hint(t)
 
     def validate_inputs(self, input_values):
         for inp in self.inputs:
@@ -182,7 +191,7 @@ class URL(object):
         for k, v in six.iteritems(mappings):
             if self.path.startswith(k):
                 ls = self.path[len(k):]
-                return URL(urljoin(v, ls))
+                return URL(v + ls)
 
         return self
 
@@ -484,20 +493,6 @@ class Job(object):
             d.get('allocatedResources'),
             context
         )
-
-
-class CreateFileRequirement(object):
-
-    def __init__(self, file_defs):
-        pass
-
-
-class EnvVarRequirement(object):
-    pass
-
-
-class ExpressionEngineRequirement(object):
-    pass
 
 
 class SchemaDefRequirement(object):

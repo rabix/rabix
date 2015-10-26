@@ -1,105 +1,194 @@
-{   "name": "BWA_MEM",
-    "schema": "https://github.com/common-workflow-language/common-workflow-language/blob/draft-1/specification/tool-description.md",
+{
+    "id": "https://rabix-vayu.sbgenomics.com:11180/v1/apps/luka_stage/bwa/bwa-mem/3/",
+    "class": "CommandLineTool",
+    "@context": "https://github.com/common-workflow-language/common-workflow-language/blob/draft-1/specification/tool-description.md",
+    "label": "BWA mem",
     "description": "",
-    "documentAuthor": "sinisa88",
-    "requirements": {
-        "environment": {
-            "container": {
-                "type": "docker",
-                "uri": "images.sbgenomics.com/rabix/bwa:9d3b9b0359cf",
-                "imageId": "9d3b9b0359cf"
-            }
+    "owner": [],
+    "contributor": [],
+    "requirements": [
+        {
+            "dockerPull": "images.sbgenomics.com/rabix/bwa:9d3b9b0359cf",
+            "class": "DockerRequirement",
+            "dockerImageId": ""
         },
-        "resources": {
-            "cpu": 0,
-            "mem": 5000,
-            "ports": [],
-            "diskSpace": 0,
-            "network": false
+        {
+            "value": 1,
+            "class": "CPURequirement"
+        },
+        {
+            "value": 1000,
+            "class": "MemRequirement"
+        }
+    ],
+    "inputs": [
+        {
+            "type": [
+                "File"
+            ],
+            "description": "",
+            "label": "Reference",
+            "inputBinding": {
+                "sbg:cmdInclude": "true",
+                "separate": true,
+                "position": 2
+            },
+            "sbg:category": "",
+            "id": "#reference"
+        },
+        {
+            "type": [
+                {
+                    "items": "File",
+                    "type": "array"
+                }
+            ],
+            "description": "",
+            "label": "Reads",
+            "inputBinding": {
+                "sbg:cmdInclude": "true",
+                "separate": true,
+                "position": 3
+            },
+            "sbg:category": "",
+            "id": "#reads"
+        },
+        {
+            "type": [
+                "null",
+                "int"
+            ],
+            "description": "",
+            "label": "Minimum seed lengts (-m)",
+            "inputBinding": {
+                "prefix": "-k",
+                "sbg:cmdInclude": "true",
+                "separate": true,
+                "position": 1
+            },
+            "sbg:category": "",
+            "id": "#minimum_seed_length"
+        },
+        {
+            "type": [
+                "null",
+                {
+                    "items": "float",
+                    "type": "array"
+                }
+            ],
+            "description": "Specify the mean, standard deviation (10% of the mean if absent), max (4 sigma from the mean if absent) and min of the insert size distribution. FR orientation only.",
+            "label": "Mean/std/max/min",
+            "inputBinding": {
+                "prefix": "-I",
+                "sbg:cmdInclude": "true",
+                "separate": true,
+                "position": 1,
+                "itemSeparator": ","
+            },
+            "sbg:category": "",
+            "id": "#mean_std_max_min",
+            "schema": [
+                "null",
+                {
+                    "items": "float",
+                    "type": "array"
+                }
+            ]
+        }
+    ],
+    "outputs": [
+        {
+            "type": [
+                "null",
+                "File"
+            ],
+            "id": "#sam",
+            "outputBinding": {
+                "glob": "*.sam",
+                "metadata": {
+                    "file_type": "sam",
+                    "expr_test": {
+                        "script": "{if($job.inputs.minimum_seed_length > 2) { return 'successful'} else {return 'unsuccessful'}}",
+                        "class": "Expression",
+                        "engine": "#cwl-js-engine"
+                    }
+                }
+            }
+        }
+    ],
+    "baseCommand": [
+        "bwa",
+        "mem"
+    ],
+    "stdin": "",
+    "stdout": "aligned.sam",
+    "successCodes": [],
+    "temporaryFailCodes": [],
+    "arguments": [],
+    "sbg:modifiedBy": "luka_stage",
+    "sbg:job": {
+        "inputs": {
+            "mean_std_max_min": [
+                0,
+                1
+            ],
+            "reads": [
+                {
+                    "path": "read_pe1"
+                },
+                {
+                    "path": "read_pe2"
+                }
+            ],
+            "reference": {
+                "path": "reference.ext"
+            },
+            "minimum_seed_length": 0
+        },
+        "allocatedResources": {
+            "mem": 1000,
+            "cpu": 1
         }
     },
-    "inputs": {
-        "type": "object",
-        "required": ["reference", "reads"],
-        "properties": {
-            "reference": {
-                "type": "file",
-                "adapter": {
-                    "order": 2,
-                    "secondaryFiles": [
-                        ".amb",
-                        ".ann",
-                        ".bwt",
-                        ".pac",
-                        ".sa"
-                    ]
-                }
-            },
-            "reads": {
-                "type": "array",
-                "minItems": 1,
-                "maxItems": 2,
-                "items": {
-                    "type": "file"
-                },
-                "adapter": {
-                    "order": 3,
-                    "streamable": true
-                }
-            },
-            "minimum_seed_length": {
-                "type": "integer",
-                "adapter": {
-                    "order": 1,
-                    "prefix": "-m",
-                    "separator": " "
-                }
-            },
-            "min_std_max_min": {
-                "type": "array",
-                "minItems": 1,
-                "maxItems": 4,
-                "items": {
-                    "type": "number"
-                },
-                "adapter": {
-                    "order": 1,
-                    "prefix": "-I",
-                    "itemSeparator": ","
-                }
-            }
+    "sbg:sbgMaintained": false,
+    "sbg:revisionsInfo": [
+        {
+            "sbg:modifiedOn": 1437405763,
+            "sbg:revision": 0,
+            "sbg:modifiedBy": "luka_stage"
+        },
+        {
+            "sbg:modifiedOn": 1437408370,
+            "sbg:revision": 1,
+            "sbg:modifiedBy": "luka_stage"
+        },
+        {
+            "sbg:modifiedOn": 1437408427,
+            "sbg:revision": 2,
+            "sbg:modifiedBy": "luka_stage"
+        },
+        {
+            "sbg:modifiedOn": 1437461694,
+            "sbg:revision": 3,
+            "sbg:modifiedBy": "luka_stage"
         }
-    }, "outputs": {
-        "type": "object",
-        "required": ["sam"],
-        "properties": {
-            "sam": {
-                "type": "file",
-                "adapter": {
-                    "streamable": true,
-                    "glob": "output.sam",
-                    "metadata": {
-                        "file_type": "sam",
-                        "expr_test": {
-                            "$expr": "{if($job.inputs.minimum_seed_length > 2) { return 'successful'} else {return 'unsuccessful'}}"
-                        },
-                        "__inherit__": "reads"
-                    },
-                    "secondaryFiles": []
-                }
-            }
-        }
-    }, "adapter": {
-        "baseCmd": ["bwa", "mem"],
-        "stdout": "output.sam",
-        "args": [
-            {
-                "separator": " ",
-                "prefix": "-t",
-                "order": 1,
-                "value": {
-                    "expr": "$job['allocatedResources']['cpu']"
-                }
-            }
-        ]
-    }, "script": ""}
+    ],
+    "sbg:categories": [
+        "Aligner"
+    ],
+    "sbg:revision": 3,
+    "sbg:projectSlug": "luka_stage/bwa",
+    "sbg:createdBy": "luka_stage",
+    "sbg:name": "bwa-mem",
+    "sbg:validationErrors": [],
+    "sbg:projectId": "c02da650-8d36-4957-a8e5-2d496caa78d2",
+    "sbg:toolkitVersion": "0.7.10",
+    "sbg:contributors": [
+        "luka_stage"
+    ],
+    "sbg:createdOn": 1437405763,
+    "sbg:modifiedOn": 1437461694,
+    "sbg:latestRevision": 3,
+    "sbg:toolkit": "BWA"
+}

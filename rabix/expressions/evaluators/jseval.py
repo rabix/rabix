@@ -15,7 +15,7 @@ class JSEval(evaluator.ExpressionEvalPlugin):
 
     def evaluate(self, expression=None, job=None, context=None, *args,
                  **kwargs):
-        log.debug("expression: %s" % expression)
+        # log.debug("expression: %s" % expression)
         if expression.startswith('{'):
             exp_tpl = '''function () {
             $job = %s;
@@ -29,8 +29,8 @@ class JSEval(evaluator.ExpressionEvalPlugin):
             return %s;}()
             '''
         exp = exp_tpl % (json.dumps(job), json.dumps(context), expression)
-        log.debug("exec code: %s" % exp)
+        # log.debug("exec code: %s" % exp)
 
         result = execjs.eval(exp)
-        log.debug("result: %s" % result)
+        log.debug("Expression result: %s" % result)
         return result

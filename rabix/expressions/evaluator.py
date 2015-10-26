@@ -1,10 +1,13 @@
 import os
+
+# noinspection PyUnresolvedReferences
+from six.moves.configparser import ConfigParser
 from xdg.BaseDirectory import save_config_path, xdg_data_dirs
 from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
 from yapsy.VersionedPluginManager import VersionedPluginManager
 from yapsy.PluginManager import PluginManagerSingleton
 from yapsy.IPlugin import IPlugin
-from six.moves.configparser import SafeConfigParser
+
 from rabix.common.ref_resolver import resolve_pointer
 
 
@@ -24,7 +27,7 @@ class Evaluator(object):
     _default_dir = 'evaluators'
 
     def __init__(self, plugin_dir=None):
-        self.config = SafeConfigParser()
+        self.config = ConfigParser()
         config_path = save_config_path(self.APP_NAME)
         self.config_file = os.path.join(config_path, self.APP_NAME + ".conf")
         self.config.read(self.config_file)
