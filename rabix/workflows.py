@@ -38,6 +38,7 @@ class WorkflowStepInput(InputParameter):
     def to_dict(self, ctx=None):
         d = super(WorkflowStepInput, self).to_dict(ctx)
         d['source'] = ctx.to_primitive(self.source)
+        d['value'] = self.value
         return d
 
     @classmethod
