@@ -1,4 +1,5 @@
 import os
+import subprocess
 import six
 import json
 import stat
@@ -155,7 +156,9 @@ class CommandLineTool(Process):
         if not job_dir.endswith('/'):
             job_dir += '/'
 
-        os.mkdir(job_dir)
+        if not os.path.exists(job_dir):
+            os.mkdir(job_dir)
+
         os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
                  stat.S_IWOTH)
         self.cli_job = CLIJob(job)
@@ -171,43 +174,46 @@ class CommandLineTool(Process):
         if evr:
             env = evr.var_map(eval)
 
+        self.ensure_files(job, job_dir)
+        self.install(job=job)
+
+        abspath_job = Job(
+            job.id, job.app, copy.deepcopy(job.inputs),
+            job.allocated_resources, job.context
+        )
+
+        cmd_line = self.command_line(job, job_dir)
+        log.info("Running: %s" % cmd_line)
+        self.job_dump(job, job_dir)
+
         if self.container:
-            self.ensure_files(job, job_dir)
-            abspath_job = Job(
-                job.id, job.app, copy.deepcopy(job.inputs),
-                job.allocated_resources, job.context
-            )
-            self.install(job=job)
-
-            cmd_line = self.command_line(job, job_dir)
-
-            log.info("Running: %s" % cmd_line)
-
-            self.job_dump(job, job_dir)
             self.container.run(cmd_line, job_dir, env)
-            result_path = os.path.abspath(job_dir) + '/cwl.output.json'
-            if os.path.exists(result_path):
-                with open(result_path, 'r') as res:
-                    outputs = json.load(res)
-            else:
-                with open(result_path, 'w') as res:
-                    outputs = self.cli_job.get_outputs(
-                        os.path.abspath(job_dir), abspath_job)
-                    json.dump(outputs, res)
+        else:
+            subprocess.call(['bash', '-c', cmd_line], cwd=job_dir)
 
-            outputs = {o.id: construct_files(outputs.get(o.id), o.validator)
-                       for o in job.app.outputs}
+        result_path = os.path.abspath(job_dir) + '/cwl.output.json'
+        if os.path.exists(result_path):
+            with open(result_path, 'r') as res:
+                outputs = json.load(res)
+        else:
+            with open(result_path, 'w') as res:
+                outputs = self.cli_job.get_outputs(
+                    os.path.abspath(job_dir), abspath_job)
+                json.dump(outputs, res)
 
-            self.unmap_paths(outputs)
+        outputs = {o.id: construct_files(outputs.get(o.id), o.validator)
+                   for o in job.app.outputs}
 
-            def write_rbx(f):
-                if isinstance(f, File):
-                    with open(f.path + '.rbx.json', 'w') as rbx:
-                        json.dump(f.to_dict(), rbx)
+        self.unmap_paths(outputs)
 
-            map_rec_collection(write_rbx, outputs)
+        def write_rbx(f):
+            if isinstance(f, File):
+                with open(f.path + '.rbx.json', 'w') as rbx:
+                    json.dump(f.to_dict(), rbx)
 
-            return outputs
+        map_rec_collection(write_rbx, outputs)
+
+        return outputs
 
     def command_line(self, job, job_dir=None):
         self.remap_paths(job.inputs, job_dir)
