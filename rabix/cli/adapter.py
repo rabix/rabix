@@ -16,7 +16,8 @@ if six.PY2:
 else:
     from avro.io import Validate as validate
 
-from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath
+from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath, \
+    checksum
 from rabix.expressions import ExpressionEvaluator
 
 log = logging.getLogger(__name__)
@@ -238,8 +239,7 @@ class CLIJob(object):
                 {
                     'path': os.path.abspath(p),
                     'size': os.stat(p).st_size,
-                    # 'checksum': 'sha1$' +
-                    # hashlib.sha1(open(os.path.abspath(p)).read()).hexdigest(),
+                    'checksum': 'sha1$' + checksum(os.path.abspath(p)),
                     'metadata': meta(p, job.inputs, eval, out_binding),
                     'secondaryFiles': secondary_files(p, out_binding, eval)
                 } for p in files]
