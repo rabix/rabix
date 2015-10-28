@@ -243,15 +243,27 @@ class File(object):
         self.checksum = val.get('checksum')
 
     def to_dict(self, context=None):
-        return {
+        d = {
             "class": "File",
-            "path": self.path,
-            "size": self.size,
-            "metadata": self.meta,
-            "checksum": self.checksum,
-            "secondaryFiles": [sf.to_dict(context)
-                               for sf in self.secondary_files]
+            "path": self.path
         }
+
+        if self.size:
+            d["size"] = self.size
+
+        if self.meta:
+            d["metadata"] = self.meta
+
+        if self.checksum:
+            d["checksum"] = self.checksum
+
+        if self.secondary_files:
+            d["secondaryFiles"] = [
+                sf.to_dict(context)
+                for sf in self.secondary_files
+            ]
+
+        return d
 
     @property
     def path(self):
