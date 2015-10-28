@@ -8,6 +8,7 @@ import json
 import copy
 
 from avro.schema import NamedSchema
+from functools import partial
 
 # prevent naming collision with docker package when running directly as script
 script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -42,30 +43,32 @@ TEMPLATE_JOB = {
     'allocatedResources': TEMPLATE_RESOURCES
 }
 
-USAGE = '''
+USAGE = """
 Usage:
-    rabix <tool> [-v...] [-hcI] [-t <type>] [-d <dir>] [-i <inp>]  [{resources}] [-- {inputs}...]
-    rabix --conformance-test [--basedir=<basedir>] [--no-container]  <tool> <job> [-- <input>...]
+    rabix [-v...] [-hcpI] [-t <type>] [-d <dir>] [-i <inp>] [{resources}] <tool> [-- {inputs}...]
+    rabix [--outdir=<outdir>] [--quiet] <tool> <inp>
+    rabix --conformance-test [--basedir=<basedir>] [--no-container] [--quiet] <tool> <job>
     rabix --version
 
-    Options:
-  -d --dir=<dir>       Working directory for the task. If not provided one will
-                       be auto generated in the current dir.
-  -h --help            Show this help message. In conjunction with tool,
-                       it will print inputs you can provide for the job.
+Options:
+  -d --dir=<dir>  Working directory for the task. If not provided one will
+                        be auto generated in the current dir.
+  -h --help             Show this help message. In conjunction with tool,
+                        it will print inputs you can provide for the job.
 
-  -I --install         Only install referenced tools. Do not run anything.
-  -i --inp-file=<inp>  Inputs
-  -c --print-cli       Only print calculated command line. Do not run anything.
-  -t --type=<type>     Interpret given tool json as <type>.
-  -v --verbose         Verbosity. More Vs more output.
-     --version         Print version and exit.
-'''
+  -I --install          Only install referenced tools. Do not run anything.
+  -i --inp-file=<inp>   Inputs
+  -c --print-cli        Only print calculated command line. Do not run anything.
+  -p --pretty-print     Print human readable result instead of JSON.
+  -t --type=<type>      Interpret given tool json as <type>.
+  -v --verbose          Verbosity. More Vs more output.
+     --version          Print version and exit.
+"""
 
-TOOL_TEMPLATE = '''
+TOOL_TEMPLATE = """
 Usage:
   tool {inputs}
-'''
+"""
 
 
 def disable_warnings():
@@ -178,7 +181,9 @@ def get_tool(args):
 
 def dry_run_parse(args=None):
     args = args or sys.argv[1:]
-    args += ['an_input']
+    if '--' in args:
+        args = args[:args.index('--')]
+
     usage = USAGE.format(resources=make_resources_usage_string(),
                          inputs='<inputs>')
     try:
@@ -272,9 +277,10 @@ def main():
         job_dict = copy.deepcopy(TEMPLATE_JOB)
         logging.root.setLevel(log_level(dry_run_args['--verbose']))
 
-        if args.get('--inp-file'):
-            basedir = os.path.dirname(args.get('--inp-file'))
-            input_file = from_url(args.get('--inp-file'))
+        input_file_path = args.get('<inp>') or args.get('--inp-file')
+        if input_file_path:
+            basedir = os.path.dirname(os.path.abspath(input_file_path))
+            input_file = from_url(input_file_path)
             inputs = get_inputs(input_file, app.inputs, basedir)
             job_dict['inputs'].update(inputs)
 
@@ -312,7 +318,7 @@ def main():
 
         inp = get_inputs(app_inputs, app.inputs)
         if not job:
-            job_dict['id'] = args.get('--dir')
+            job_dict['id'] = args.get('--outdir') or args.get('--dir')
             job_dict['app'] = app
             job = Job.from_dict(context, job_dict)
 
@@ -325,12 +331,17 @@ def main():
             print(CLIJob(job).cmd_line())
             return
 
+        if args['--pretty-print']:
+            fmt = partial(result_str, job.id)
+        else:
+            fmt = lambda result: json.dumps(context.to_primitive(result))
+
         if not job.inputs and not args['--']:
             print(app_usage)
             return
 
         try:
-            context.executor.execute(job, lambda _, result: result_str(job.id, result))
+            context.executor.execute(job, lambda _, result: print(fmt(result)))
         except RabixError as err:
             fail(err.message)
 
