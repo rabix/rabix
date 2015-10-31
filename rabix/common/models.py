@@ -29,6 +29,7 @@ from rabix.common.util import wrap_in_list, map_rec_list
 log = logging.getLogger(__name__)
 MAX_CONTENT_SIZE = 64 * 1024
 
+
 def process_builder(context, d):
     if not isinstance(d, dict):
         return d

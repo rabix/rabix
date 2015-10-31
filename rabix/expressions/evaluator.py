@@ -8,6 +8,7 @@ from rabix.common.ref_resolver import resolve_pointer
 
 log = logging.getLogger(__name__)
 
+
 class ExpressionEngine(object):
 
     def __init__(self, image, ids, f, engine_config=None):
@@ -42,7 +43,7 @@ class Evaluator(object):
 
 
 def evaluate_rabix_js(expression, job, context=None,
-                     engine_config=None, outdir=None, tmpdir=None):
+                      engine_config=None, outdir=None, tmpdir=None):
     # log.debug("expression: %s" % expression)
     if expression.startswith('{'):
         exp_tpl = '''function () {
@@ -64,7 +65,7 @@ def evaluate_rabix_js(expression, job, context=None,
 
 
 def evaluate_cwl_js(expression, job, context=None,
-                     engine_config=None, outdir=None, tmpdir=None):
+                    engine_config=None, outdir=None, tmpdir=None):
     # log.debug("expression: %s" % expression)
     if expression.startswith('{'):
         exp_tpl = '''
@@ -166,6 +167,7 @@ class ValueResolver(object):
             return val
         engine, script = val['engine'], val['script']
         return ExpressionEvaluator.evaluate(engine, script, self.job.to_dict(), context)
+
 
 def update_engines(process):
     eer = process.get_requirement(ExpressionEngineRequirement)

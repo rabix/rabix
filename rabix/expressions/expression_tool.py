@@ -20,7 +20,9 @@ class ExpressionTool(Process):
 
     def run(self, job):
         self.add_content(job)
-        result = ExpressionEvaluator.evaluate(self.engine, self.script, job.to_dict(self.context), None)
+        result = ExpressionEvaluator.evaluate(
+            self.engine, self.script, job.to_dict(self.context), None
+        )
         return result
 
     def to_dict(self, context):

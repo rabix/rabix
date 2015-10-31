@@ -63,7 +63,7 @@ class InputAdapter(object):
         self.has_adapter = input_binding is not None
         self.adapter = input_binding or {}
         self.key = key
-        
+
         if isinstance(self.schema, UnionSchema):
             for opt in self.schema.schemas:
                 if validate(opt, value):
