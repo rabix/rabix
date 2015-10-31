@@ -27,7 +27,7 @@ from rabix.common.util import wrap_in_list, map_rec_list
 
 
 log = logging.getLogger(__name__)
-
+MAX_CONTENT_SIZE = 64 * 1024
 
 def process_builder(context, d):
     if not isinstance(d, dict):
@@ -92,6 +92,15 @@ class Process(object):
         raise NotImplementedError(
             "Method 'run' is not implemented in the App class"
         )
+
+    def add_content(self, job):
+        for i in self.inputs:
+            val = job.inputs.get(i.id)
+            binding = i.input_binding
+            load = binding and binding.get('loadContents')
+            if isinstance(val, File) and load:
+                with open(val.path, 'rb') as f:
+                    val.contents = f.read(MAX_CONTENT_SIZE).decode('utf-8')
 
     def get_input(self, name):
         return self._inputs.get(name)
@@ -209,12 +218,14 @@ class File(object):
 
     name = 'File'
 
-    def __init__(self, path, size=None, meta=None, secondary_files=None, checksum=None):
+    def __init__(self, path, size=None, meta=None, secondary_files=None,
+                 checksum=None, contents=None):
         self.size = size
         self.meta = meta or {}
         self.secondary_files = secondary_files or []
         self.url = None
         self.checksum = None
+        self.contents = contents
 
         if isinstance(path, dict):
             self.from_dict(path)
@@ -241,6 +252,7 @@ class File(object):
             [File(sf) for sf in val.get('secondaryFiles', [])]
         self.path = path
         self.checksum = val.get('checksum')
+        self.contents = val.get('contents')
 
     def to_dict(self, context=None):
         d = {
@@ -262,6 +274,9 @@ class File(object):
                 sf.to_dict(context)
                 for sf in self.secondary_files
             ]
+
+        if self.contents is not None:
+            d['contents'] = self.contents
 
         return d
 

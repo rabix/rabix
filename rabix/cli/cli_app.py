@@ -152,6 +152,7 @@ class CommandLineTool(Process):
         )
 
     def run(self, job, job_dir=None):
+        self.add_content(job)
         job_dir = os.path.abspath(job_dir or job.id)
         if not job_dir.endswith('/'):
             job_dir += '/'
