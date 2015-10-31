@@ -56,13 +56,14 @@ class InputAdapter(object):
     def __init__(self, value, evaluator, schema, input_binding=None, key=''):
         self.evaluator = evaluator
         self.schema = schema
-        self.adapter = input_binding or (
-            isinstance(self.schema, Schema) and
-            self.schema.props.get('inputBinding')
-        )
-        self.has_adapter = self.adapter is not None
-        self.adapter = self.adapter or {}
+
+        if input_binding is None and isinstance(self.schema, Schema):
+            input_binding = self.schema.props.get('inputBinding')
+
+        self.has_adapter = input_binding is not None
+        self.adapter = input_binding or {}
         self.key = key
+        
         if isinstance(self.schema, UnionSchema):
             for opt in self.schema.schemas:
                 if validate(opt, value):

@@ -6,10 +6,13 @@ import glob
 import six
 
 from copy import copy
+
+# noinspection PyUnresolvedReferences
 from six.moves.urllib.parse import urlparse, urlunparse
+# noinspection PyUnresolvedReferences
 from six.moves import input as raw_input
 from os import mkdir
-from os.path import basename, dirname, abspath, join, exists, isfile
+from os.path import basename, dirname, join, exists, isfile
 
 from rabix.common.errors import ResourceUnavailable
 from rabix.common.util import sec_files_naming_conv, to_json, to_abspath
