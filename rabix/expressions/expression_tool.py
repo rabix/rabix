@@ -1,7 +1,6 @@
 import six
-from rabix.common.errors import RabixError
 from rabix.common.models import Process, InputParameter, OutputParameter
-from rabix.expressions.evaluator import Evaluator
+from rabix.expressions.evaluator import ExpressionEvaluator
 
 
 class ExpressionTool(Process):
@@ -16,12 +15,12 @@ class ExpressionTool(Process):
             description=description
         )
         self.script = script
-        self.evaluator = Evaluator()
         self.context = context
         self.engine = engine
 
     def run(self, job):
-        result = self.evaluator.evaluate("javascript", self.script, job.to_dict(self.context), None)
+        self.add_content(job)
+        result = ExpressionEvaluator.evaluate(self.engine, self.script, job.to_dict(self.context), None)
         return result
 
     def to_dict(self, context):

@@ -4,7 +4,5 @@ requests==2.7.0
 PyYaml==3.11
 six==1.9.0
 PyExecJS==1.1.0
-Yapsy==1.10.423
-pyxdg==0.25
 altgraph==0.12
 python-slugify==0.1.0

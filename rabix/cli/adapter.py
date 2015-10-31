@@ -18,7 +18,7 @@ else:
 
 from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath, \
     checksum
-from rabix.expressions import ExpressionEvaluator
+from rabix.expressions import ValueResolver
 
 log = logging.getLogger(__name__)
 
@@ -178,7 +178,7 @@ class CLIJob(object):
         if isinstance(self.base_cmd, six.string_types):
             self.base_cmd = self.base_cmd.split(' ')
         self.args = self.app.arguments
-        self.eval = ExpressionEvaluator(job)
+        self.eval = ValueResolver(job)
 
     @property
     def stdin(self):
@@ -226,7 +226,7 @@ class CLIJob(object):
 
     def get_outputs(self, job_dir, job):
         result, outs = {}, self.app.outputs
-        eval = ExpressionEvaluator(job)
+        eval = ValueResolver(job)
         for out in outs:
             out_binding = out.output_binding
             ret = os.getcwd()

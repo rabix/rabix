@@ -51,7 +51,7 @@ Usage:
     rabix --version
 
 Options:
-  -d --dir=<dir>  Working directory for the task. If not provided one will
+  -d --dir=<dir>        Working directory for the task. If not provided one will
                         be auto generated in the current dir.
   -h --help             Show this help message. In conjunction with tool,
                         it will print inputs you can provide for the job.
@@ -261,6 +261,8 @@ def main():
     if isinstance(app, Job):
         job = app
         app = job.app
+
+    rabix.expressions.update_engines(app)
 
     if dry_run_args['--install']:
         app.install()

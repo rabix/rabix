@@ -15,7 +15,7 @@ from rabix.common.models import (
     Job)
 from rabix.common.io import InputCollector
 from rabix.common.util import map_or_apply, map_rec_collection
-from rabix.expressions import ExpressionEvaluator
+from rabix.expressions import ValueResolver
 
 
 log = logging.getLogger(__name__)
@@ -163,7 +163,7 @@ class CommandLineTool(Process):
                  stat.S_IWOTH)
         self.cli_job = CLIJob(job)
 
-        eval = ExpressionEvaluator(job)
+        eval = ValueResolver(job)
 
         cfr = self.get_requirement_or_hint(CreateFileRequirement)
         if cfr:
