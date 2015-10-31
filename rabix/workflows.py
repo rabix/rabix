@@ -240,8 +240,28 @@ class Workflow(Process):
         return cls(**kwargs)
 
 
+class ScatterFeatureRequirement(object):
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def to_dict(self, context=None):
+        return {'class': 'ScatterFeatureRequirement'}
+
+
+class SubworkflowFeatureRequirement(object):
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def to_dict(self, context=None):
+        return {'class': 'SubworkflowFeatureRequirement'}
+
+
 def init(context):
     context.add_type('Workflow', Workflow.from_dict)
+    context.add_type('ScatterFeatureRequirement', ScatterFeatureRequirement)
+    context.add_type('SubworkflowFeatureRequirement', SubworkflowFeatureRequirement)
 
 
 class PartialJob(object):

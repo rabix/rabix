@@ -46,7 +46,12 @@ def process_builder(context, d):
     for o in outputs:
         o['type'] = make_avro(o['type'], schemas)
 
-    return context.from_dict(d)
+    process = context.from_dict(d)
+    for req in process.requirements:
+        if isinstance(req, dict):
+            raise RabixError("Can't fulfill requirement: " + req.get('class'))
+
+    return process
 
 
 def construct_files(val, schema):

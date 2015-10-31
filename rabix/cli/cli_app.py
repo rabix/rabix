@@ -318,6 +318,32 @@ class EnvVarRequirement(object):
         return cls(d['envDef'])
 
 
+class MemRequirement(object):
+
+    def __init__(self, val):
+        self.value = val
+
+    @classmethod
+    def from_dict(cls, context, d):
+        return cls(d.get('value'))
+
+    def to_dict(self, context):
+        return {'class': 'MemRequirement', 'value': self.value}
+
+
+class CpuRequirement(object):
+
+    def __init__(self, val):
+        self.value = val
+
+    @classmethod
+    def from_dict(cls, context, d):
+        return cls(d.get('value'))
+
+    def to_dict(self, context):
+        return {'class': 'CPURequirement', 'value': self.value}
+
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
