@@ -24,9 +24,10 @@ class ExpressionEngine(object):
 
 class Evaluator(object):
 
-    def __init__(self):
-        self.engines = []
-        self.default = None
+    def __init__(self, ctx=None, engines=None, default=None):
+        self.ctx = ctx
+        self.engines = engines or []
+        self.default = default
 
     def get_engine_by_id(self, id):
         return next((e for e in self.engines if id in e.ids), self.default)
@@ -38,8 +39,11 @@ class Evaluator(object):
         pl = self.get_engine_by_id(engine)
         if not pl:
             raise Exception('No expression evaluator %s' % id)
-
-        return pl.evaluate(expression, job, context)
+        res = pl.evaluate(expression, job, context)
+        if self.ctx:
+            return self.ctx.from_dict(res)
+        else:
+            return res
 
 
 def evaluate_rabix_js(expression, job, context=None,

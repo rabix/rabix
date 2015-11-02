@@ -1,7 +1,7 @@
 from .expression_tool import ExpressionTool
 from .evaluator import (
     ExpressionEvaluator, ExpressionEngine, ValueResolver,
-    ExpressionEngineRequirement, update_engines
+    ExpressionEngineRequirement, update_engines, Evaluator
 )
 
 
@@ -11,3 +11,4 @@ def init(context):
         'ExpressionEngineRequirement',
         ExpressionEngineRequirement.from_dict
     )
+    ExpressionEvaluator.ctx = context
