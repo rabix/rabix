@@ -10,6 +10,7 @@ import shutil
 from avro.schema import NamedSchema
 
 from rabix.cli.adapter import CLIJob
+from rabix.common.errors import RabixError
 from rabix.common.models import (
     Process, File, InputParameter, OutputParameter, construct_files,
     Job)
@@ -191,7 +192,9 @@ class CommandLineTool(Process):
         if self.container:
             self.container.run(cmd_line, job_dir, env)
         else:
-            subprocess.call(['bash', '-c', cmd_line], cwd=job_dir)
+            ret = subprocess.call(['bash', '-c', cmd_line], cwd=job_dir)
+            if ret != 0:
+                raise RabixError("Command failed with exit status %s" % ret)
 
         result_path = os.path.abspath(job_dir) + '/cwl.output.json'
         if os.path.exists(result_path):

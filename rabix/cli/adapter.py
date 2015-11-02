@@ -105,6 +105,7 @@ class InputAdapter(object):
                                if field.name == key)
         adapters = [InputAdapter(v, self.evaluator, sch(k), key=k)
                     for k, v in six.iteritems(self.value)]
+
         adapters = [adp for adp in adapters if adp.has_adapter]
         res = reduce(
             operator.add,
