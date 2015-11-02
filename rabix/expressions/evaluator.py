@@ -70,18 +70,18 @@ def evaluate_cwl_js(expression, job, context=None,
     if expression.startswith('{'):
         exp_tpl = '''
         {config}
-        function () {{
+        (function () {{
         $job = {job};
         $self = {context};
-        return function(){f}();}}()
+        return function(){f}();}})()
         '''
     else:
         exp_tpl = '''
         {config}
-        function () {{
+        (function () {{
         $job = {job};
         $self = {context};
-        return {f};}}()
+        return {f};}})()
         '''
     config = ''
     if engine_config:
@@ -95,7 +95,8 @@ def evaluate_cwl_js(expression, job, context=None,
         job=json.dumps(j),
         context=json.dumps(context),
         f=expression)
-    result = execjs.eval(exp)
+    exp_escaped = json.dumps(exp)
+    result = execjs.eval("require('vm').runInNewContext(%s, {})" % exp_escaped)
     log.debug("Expression result: %s" % result)
     return result
 
@@ -152,7 +153,7 @@ class ExpressionEngineRequirement(object):
         docker_image = None
         for r in d.get('requirements', []):
             if r.get('class') == 'DockerRequirement':
-                docker_image = r.get('dockerImageId')
+                docker_image = r.get('dockerImageId', r.get('dockerPull'))
 
         return cls(id, docker_image, engine_config)
 
@@ -182,8 +183,8 @@ def update_engines(process):
         engine = ExpressionEvaluator.get_engine_by_image(eer.docker_image)
 
     if not engine:
-        raise RabixError("Unsupported expression engine: " +
-                         (eer.id or eer.docer_image))
+        raise RabixError("Unsupported expression engine: {}".format(
+                         eer.id or eer.docker_image))
 
     engine.ids.add(eer.id)
     if eer.engine_config:
