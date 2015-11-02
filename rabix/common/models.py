@@ -23,8 +23,7 @@ else:
 
 
 from rabix.common.errors import ValidationError, RabixError
-from rabix.common.util import wrap_in_list, map_rec_list
-
+from rabix.common.util import wrap_in_list, map_rec_list, map_rec_collection
 
 log = logging.getLogger(__name__)
 MAX_CONTENT_SIZE = 64 * 1024
@@ -73,6 +72,30 @@ def construct_files(val, schema):
             if validate(s, val):
                 return construct_files(val, s)
     return val
+
+
+def rebase_path(val, base):
+    if isinstance(val, File):
+        return val.rebase(base)
+    return val
+
+
+def get_inputs(args, inputs, basedir=None):
+
+    basedir = basedir or os.path.abspath('.')
+    constructed = {}
+    for i in inputs:
+        val = args.get(i.id)
+        if i.depth == 0:
+            cons = construct_files(val, i.validator)
+        else:
+            cons = [construct_files(e, i.validator) for e in val] if val else []
+        if cons:
+            constructed[i.id] = cons
+    return map_rec_collection(
+        lambda v: rebase_path(v, basedir),
+        constructed
+    )
 
 
 class Process(object):
@@ -546,3 +569,5 @@ class SchemaDefRequirement(object):
 
 def init(ctx):
     ctx.add_type('SchemaDefRequirement', SchemaDefRequirement.from_dict)
+    ctx.add_type('File', lambda ctx, d: File(d))
+

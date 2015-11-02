@@ -11,13 +11,15 @@ from avro.schema import NamedSchema
 from functools import partial
 
 # prevent naming collision with docker package when running directly as script
+from rabix.conformance import conformance_test
+
 script_dir = os.path.dirname(os.path.realpath(__file__))
 if script_dir in sys.path:
     sys.path.remove(script_dir)
 
 from rabix import __version__ as version
-from rabix.common.util import log_level, map_rec_collection, result_str
-from rabix.common.models import Job, File, process_builder, construct_files
+from rabix.common.util import log_level, result_str
+from rabix.common.models import Job, process_builder, get_inputs
 from rabix.common.context import Context
 from rabix.common.ref_resolver import from_url
 from rabix.common.errors import RabixError
@@ -150,30 +152,6 @@ def make_app_usage_string(app, template=TOOL_TEMPLATE, inp=None):
                            inputs=' '.join(usage_str))
 
 
-def rebase_path(val, base):
-    if isinstance(val, File):
-        return val.rebase(base)
-    return val
-
-
-def get_inputs(args, inputs, basedir=None):
-
-    basedir = basedir or os.path.abspath('.')
-    constructed = {}
-    for i in inputs:
-        val = args.get(i.id)
-        if i.depth == 0:
-            cons = construct_files(val, i.validator)
-        else:
-            cons = [construct_files(e, i.validator) for e in val] if val else []
-        if cons:
-            constructed[i.id] = cons
-    return map_rec_collection(
-        lambda v: rebase_path(v, basedir),
-        constructed
-    )
-
-
 def get_tool(args):
     if args['<tool>']:
         return from_url(args['<tool>'])
@@ -190,26 +168,6 @@ def dry_run_parse(args=None):
         return docopt.docopt(usage, args, version=version, help=False)
     except docopt.DocoptExit:
         return
-
-
-def conformance_test(context, app, job_dict, basedir):
-    job_dict['class'] = 'Job'
-    job_dict['id'] = basedir
-    job_dict['app'] = app
-
-    if not app.outputs:
-        app.outputs = []
-
-    job_dict['inputs'] = get_inputs(job_dict, app.inputs, basedir)
-    job = Job.from_dict(context, job_dict)
-
-    adapter = CLIJob(job)
-
-    print(json.dumps({
-        'args': adapter.make_arg_list(),
-        'stdin': adapter.stdin,
-        'stdout': adapter.stdout,
-    }))
 
 
 def fail(message):

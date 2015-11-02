@@ -284,13 +284,15 @@ class CreateFileRequirement(object):
             "fileDef": self.file_defs
         }
 
+    def resolve_file_defs(self, eval):
+        return [(eval.resolve(f['filename']), eval.resolve(f['fileContent']))
+                for f in self.file_defs]
+
     def create_files(self, dir, eval):
-        for f in self.file_defs:
-            name = eval.resolve(f['filename'])
-            content = eval.resolve(f['fileContent'])
+        for name, content in self.resolve_file_defs(eval):
             dst = os.path.join(dir, name)
-            if isinstance(content, dict) and content.get('class') == 'File':
-                shutil.copyfile(content['path'], dst)
+            if isinstance(content, File):
+                shutil.copyfile(content.path, dst)
             else:
                 with open(dst, 'w') as out:
                     out.write(content)
