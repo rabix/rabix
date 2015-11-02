@@ -42,18 +42,24 @@ class Loader(object):
 
     def resolve_ref(self, obj, base_url):
         ref = obj.pop('import', None)
+        txt = obj.pop('include', None)
 
-        url = urlparse.urljoin(base_url, ref)
+        parse = txt is None
+
+        url = urlparse.urljoin(base_url, ref or txt)
         if url in self.resolved:
             return self.resolved[url]
         if url in self.resolving:
             raise RuntimeError('Circular reference for url %s' % url)
         self.resolving[url] = True
         doc_url, pointer = urlparse.urldefrag(url)
-        document = self.fetch(doc_url)
-        fragment = copy.deepcopy(resolve_pointer(document, pointer))
         try:
-            result = self.resolve_all(fragment, doc_url)
+            document = self.fetch(doc_url, parse)
+            if parse:
+                fragment = copy.deepcopy(resolve_pointer(document, pointer))
+                result = self.resolve_all(fragment, doc_url)
+            else:
+                result = document
         finally:
             del self.resolving[url]
         return result
@@ -62,7 +68,7 @@ class Loader(object):
         if isinstance(document, list):
             iterator = enumerate(document)
         elif isinstance(document, dict):
-            if 'import' in document:
+            if 'import' in document or 'include' in document:
                 return self.resolve_ref(document, base_url)
             iterator = six.iteritems(document)
         else:
@@ -71,29 +77,31 @@ class Loader(object):
             document[key] = self.resolve_all(val, base_url)
         return document
 
-    def fetch(self, url):
+    def fetch(self, url, parse=True):
         if url in self.fetched:
-            return self.fetched[url]
-        split = urlparse.urlsplit(url)
-        scheme, path = split.scheme, split.path
-
-        if scheme in ['http', 'https'] and requests:
-            resp = requests.get(url)
-            try:
-                resp.raise_for_status()
-            except Exception as e:
-                raise RuntimeError(url, cause=e)
-            result = resp.json()
-        elif scheme == 'file':
-            try:
-                with open(path) as fp:
-                    result = yaml.load(fp)
-            except (OSError, IOError) as e:
-                raise RuntimeError('Failed for %s: %s' % (url, e))
+            result = self.fetched[url]
         else:
-            raise ValueError('Unsupported scheme: %s' % scheme)
-        self.fetched[url] = result
-        return result
+            split = urlparse.urlsplit(url)
+            scheme, path = split.scheme, split.path
+
+            if scheme in ['http', 'https'] and requests:
+                resp = requests.get(url)
+                try:
+                    resp.raise_for_status()
+                except Exception as e:
+                    raise RuntimeError(url, cause=e)
+                result = resp.text
+            elif scheme == 'file':
+                try:
+                    with open(path) as fp:
+                        result = fp.read()
+                except (OSError, IOError) as e:
+                    raise RuntimeError('Failed for %s: %s' % (url, e))
+            else:
+                raise ValueError('Unsupported scheme: %s' % scheme)
+            self.fetched[url] = result
+
+        return result if not parse else yaml.safe_load(result)
 
     def verify_checksum(self, checksum, document):
         if not checksum:
