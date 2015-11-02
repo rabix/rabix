@@ -140,7 +140,8 @@ class CommandLineTool(Process):
             description=description
         )
         self.base_command = base_command
-        self.arguments = arguments or []
+        self.arguments = [a if isinstance(a, dict) else {'valueFrom': a}
+                          for a in (arguments or [])]
         self.stdin = stdin
         self.stdout = stdout
         self.mappings = {}
