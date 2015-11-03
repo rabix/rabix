@@ -122,14 +122,25 @@ class Process(object):
             "Method 'run' is not implemented in the App class"
         )
 
-    def add_content(self, job):
+    def load_input_content(self, job):
         for i in self.inputs:
             val = job.inputs.get(i.id)
             binding = i.input_binding
-            load = binding and binding.get('loadContents')
-            if isinstance(val, File) and load:
-                with open(val.path, 'rb') as f:
-                    val.contents = f.read(MAX_CONTENT_SIZE).decode('utf-8')
+            self.load_file_content(binding, val)
+
+    def load_output_content(self, result):
+        for o in self.outputs:
+            val = result.get(o.id)
+            binding = o.output_binding
+            self.load_file_content(binding, val)
+
+    def load_file_content(self, binding, val):
+        load = binding and binding.get('loadContents')
+        if load:
+            map_rec_collection(
+                lambda x: x.load_content() if isinstance(x, File) else None,
+                val
+            )
 
     def get_input(self, name):
         return self._inputs.get(name)
@@ -263,6 +274,10 @@ class File(object):
                 path.size, path.meta, path.secondary_files, path.url
         else:
             self.path = path
+
+    def load_content(self):
+        with open(self.path, 'rb') as f:
+            self.contents = f.read(MAX_CONTENT_SIZE).decode('utf-8')
 
     def from_dict(self, val):
         size = val.get('size')

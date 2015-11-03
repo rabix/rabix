@@ -154,7 +154,7 @@ class CommandLineTool(Process):
         )
 
     def run(self, job, job_dir=None):
-        self.add_content(job)
+        self.load_input_content(job)
         job_dir = os.path.abspath(job_dir or job.id)
         if not job_dir.endswith('/'):
             job_dir += '/'
@@ -204,10 +204,7 @@ class CommandLineTool(Process):
             with open(result_path, 'w') as res:
                 outputs = self.cli_job.get_outputs(
                     os.path.abspath(job_dir), abspath_job)
-                json.dump(outputs, res)
-
-        outputs = {o.id: construct_files(outputs.get(o.id), o.validator)
-                   for o in job.app.outputs}
+                json.dump(job.context.to_primitive(outputs), res)
 
         self.unmap_paths(outputs)
 

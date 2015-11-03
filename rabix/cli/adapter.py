@@ -10,6 +10,7 @@ import hashlib
 from six.moves import reduce
 from itertools import chain
 from avro.schema import UnionSchema, Schema, ArraySchema
+from rabix.common.models import File
 
 if six.PY2:
     from avro.io import validate
@@ -236,16 +237,21 @@ class CLIJob(object):
             pattern = eval.resolve(out_binding.get('glob')) or ""
             patterns = chain(*[self.glob_or(p) for p in wrap_in_list(pattern)])
             files = chain(*[glob.glob(p) for p in patterns])
-
-            result[out.id] = [
-                {
+            res = [File({
+                    'class': 'File',
                     'path': os.path.abspath(p),
                     'size': os.stat(p).st_size,
                     'checksum': 'sha1$' + checksum(os.path.abspath(p)),
                     'metadata': meta(p, job.inputs, eval, out_binding),
                     'secondaryFiles': secondary_files(p, out_binding, eval)
-                } for p in files]
+                }) for p in files]
+            if out_binding.get('outputEval'):
+                self.app.load_file_content(out_binding, res)
+                result[out.id] = eval.resolve(out_binding.get('outputEval'), [r.to_dict() for r in res])
+            else:
+                result[out.id] = res
             os.chdir(ret)
             if out.depth == 0:
-                result[out.id] = result[out.id][0] if result[out.id] else None
+                res = result[out.id]
+                result[out.id] = res[0] if res and isinstance(res, list) else res
         return result

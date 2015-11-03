@@ -99,6 +99,7 @@ def evaluate_cwl_js(expression, job, context=None,
         job=json.dumps(j),
         context=json.dumps(context),
         f=expression)
+
     exp_escaped = json.dumps(exp)
     result = execjs.eval("require('vm').runInNewContext(%s, {})" % exp_escaped)
     log.debug("Expression result: %s" % result)
