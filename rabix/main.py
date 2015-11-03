@@ -21,7 +21,7 @@ from rabix import __version__ as version
 from rabix.common.util import log_level, result_str
 from rabix.common.models import Job, process_builder, get_inputs
 from rabix.common.context import Context
-from rabix.common.ref_resolver import from_url
+from rabix.common.ref_resolver import from_url, loader
 from rabix.common.errors import RabixError
 from rabix.executor import Executor
 from rabix.cli import CommandLineTool, CLIJob
@@ -205,6 +205,9 @@ def main():
     if not tool:
         fail("Couldn't find tool.")
 
+    if isinstance(tool, list):
+        tool = loader.index.get('#main')
+
     if 'class' not in tool:
         fail("Document must have a 'class' field")
 
@@ -296,7 +299,7 @@ def main():
         else:
             fmt = lambda result: json.dumps(context.to_primitive(result))
 
-        if not job.inputs and not args['--']:
+        if not job.inputs and not args['--'] and not args['--quiet']:
             print(app_usage)
             return
 

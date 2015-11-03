@@ -30,11 +30,13 @@ class NormDict(dict):
 
 
 class Loader(object):
+
     def __init__(self):
         normalize = lambda url: urlparse.urlsplit(url).geturl()
         self.fetched = NormDict(normalize)
         self.resolved = NormDict(normalize)
         self.resolving = NormDict(normalize)
+        self.index = NormDict()
 
     def load(self, url, base_url=None):
         base_url = base_url or 'file://%s/' % os.path.abspath('.')
@@ -56,7 +58,7 @@ class Loader(object):
         try:
             document = self.fetch(doc_url, parse)
             if parse:
-                fragment = copy.deepcopy(resolve_pointer(document, pointer))
+                fragment = copy.deepcopy(self.index.get("#" + pointer)) or resolve_pointer(document, pointer)
                 result = self.resolve_all(fragment, doc_url)
             else:
                 result = document
@@ -68,6 +70,8 @@ class Loader(object):
         if isinstance(document, list):
             iterator = enumerate(document)
         elif isinstance(document, dict):
+            if 'id' in document:
+                self.index[document['id']] = document
             if 'import' in document or 'include' in document:
                 return self.resolve_ref(document, base_url)
             iterator = six.iteritems(document)
