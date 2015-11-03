@@ -585,4 +585,3 @@ class SchemaDefRequirement(object):
 def init(ctx):
     ctx.add_type('SchemaDefRequirement', SchemaDefRequirement.from_dict)
     ctx.add_type('File', lambda ctx, d: File(d))
-

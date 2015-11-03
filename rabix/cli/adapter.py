@@ -238,16 +238,19 @@ class CLIJob(object):
             patterns = chain(*[self.glob_or(p) for p in wrap_in_list(pattern)])
             files = chain(*[glob.glob(p) for p in patterns])
             res = [File({
-                    'class': 'File',
-                    'path': os.path.abspath(p),
-                    'size': os.stat(p).st_size,
-                    'checksum': 'sha1$' + checksum(os.path.abspath(p)),
-                    'metadata': meta(p, job.inputs, eval, out_binding),
-                    'secondaryFiles': secondary_files(p, out_binding, eval)
-                }) for p in files]
+                   'class': 'File',
+                   'path': os.path.abspath(p),
+                   'size': os.stat(p).st_size,
+                   'checksum': 'sha1$' + checksum(os.path.abspath(p)),
+                   'metadata': meta(p, job.inputs, eval, out_binding),
+                   'secondaryFiles': secondary_files(p, out_binding, eval)
+                   }) for p in files]
             if out_binding.get('outputEval'):
                 self.app.load_file_content(out_binding, res)
-                result[out.id] = eval.resolve(out_binding.get('outputEval'), [r.to_dict() for r in res])
+                result[out.id] = eval.resolve(
+                    out_binding.get('outputEval'),
+                    [r.to_dict() for r in res]
+                )
             else:
                 result[out.id] = res
             os.chdir(ret)

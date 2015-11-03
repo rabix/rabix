@@ -58,7 +58,8 @@ class Loader(object):
         try:
             document = self.fetch(doc_url, parse)
             if parse:
-                fragment = copy.deepcopy(self.index.get("#" + pointer)) or resolve_pointer(document, pointer)
+                fragment = (copy.deepcopy(self.index.get("#" + pointer))
+                            or resolve_pointer(document, pointer))
                 result = self.resolve_all(fragment, doc_url)
             else:
                 result = document
