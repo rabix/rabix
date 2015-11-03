@@ -10,14 +10,16 @@ import hashlib
 from six.moves import reduce
 from itertools import chain
 from avro.schema import UnionSchema, Schema, ArraySchema
+from rabix.common.models import File
 
 if six.PY2:
     from avro.io import validate
 else:
     from avro.io import Validate as validate
 
-from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath
-from rabix.expressions import ExpressionEvaluator
+from rabix.common.util import sec_files_naming_conv, wrap_in_list, to_abspath, \
+    checksum
+from rabix.expressions import ValueResolver
 
 log = logging.getLogger(__name__)
 
@@ -55,13 +57,14 @@ class InputAdapter(object):
     def __init__(self, value, evaluator, schema, input_binding=None, key=''):
         self.evaluator = evaluator
         self.schema = schema
-        self.adapter = input_binding or (
-            isinstance(self.schema, Schema) and
-            self.schema.props.get('inputBinding')
-        )
-        self.has_adapter = self.adapter is not None
-        self.adapter = self.adapter or {}
+
+        if input_binding is None and isinstance(self.schema, Schema):
+            input_binding = self.schema.props.get('inputBinding')
+
+        self.has_adapter = input_binding is not None
+        self.adapter = input_binding or {}
         self.key = key
+
         if isinstance(self.schema, UnionSchema):
             for opt in self.schema.schemas:
                 if validate(opt, value):
@@ -103,6 +106,7 @@ class InputAdapter(object):
                                if field.name == key)
         adapters = [InputAdapter(v, self.evaluator, sch(k), key=k)
                     for k, v in six.iteritems(self.value)]
+
         adapters = [adp for adp in adapters if adp.has_adapter]
         res = reduce(
             operator.add,
@@ -177,7 +181,7 @@ class CLIJob(object):
         if isinstance(self.base_cmd, six.string_types):
             self.base_cmd = self.base_cmd.split(' ')
         self.args = self.app.arguments
-        self.eval = ExpressionEvaluator(job)
+        self.eval = ValueResolver(job)
 
     @property
     def stdin(self):
@@ -225,7 +229,7 @@ class CLIJob(object):
 
     def get_outputs(self, job_dir, job):
         result, outs = {}, self.app.outputs
-        eval = ExpressionEvaluator(job)
+        eval = ValueResolver(job)
         for out in outs:
             out_binding = out.output_binding
             ret = os.getcwd()
@@ -233,17 +237,24 @@ class CLIJob(object):
             pattern = eval.resolve(out_binding.get('glob')) or ""
             patterns = chain(*[self.glob_or(p) for p in wrap_in_list(pattern)])
             files = chain(*[glob.glob(p) for p in patterns])
-
-            result[out.id] = [
-                {
-                    'path': os.path.abspath(p),
-                    'size': os.stat(p).st_size,
-                    # 'checksum': 'sha1$' +
-                    # hashlib.sha1(open(os.path.abspath(p)).read()).hexdigest(),
-                    'metadata': meta(p, job.inputs, eval, out_binding),
-                    'secondaryFiles': secondary_files(p, out_binding, eval)
-                } for p in files]
+            res = [File({
+                   'class': 'File',
+                   'path': os.path.abspath(p),
+                   'size': os.stat(p).st_size,
+                   'checksum': 'sha1$' + checksum(os.path.abspath(p)),
+                   'metadata': meta(p, job.inputs, eval, out_binding),
+                   'secondaryFiles': secondary_files(p, out_binding, eval)
+                   }) for p in files]
+            if out_binding.get('outputEval'):
+                self.app.load_file_content(out_binding, res)
+                result[out.id] = eval.resolve(
+                    out_binding.get('outputEval'),
+                    [r.to_dict() for r in res]
+                )
+            else:
+                result[out.id] = res
             os.chdir(ret)
             if out.depth == 0:
-                result[out.id] = result[out.id][0] if result[out.id] else None
+                res = result[out.id]
+                result[out.id] = res[0] if res and isinstance(res, list) else res
         return result

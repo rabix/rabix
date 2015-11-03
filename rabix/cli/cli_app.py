@@ -1,4 +1,5 @@
 import os
+import subprocess
 import six
 import json
 import stat
@@ -9,12 +10,13 @@ import shutil
 from avro.schema import NamedSchema
 
 from rabix.cli.adapter import CLIJob
+from rabix.common.errors import RabixError
 from rabix.common.models import (
     Process, File, InputParameter, OutputParameter, construct_files,
     Job)
 from rabix.common.io import InputCollector
 from rabix.common.util import map_or_apply, map_rec_collection
-from rabix.expressions import ExpressionEvaluator
+from rabix.expressions import ValueResolver
 
 
 log = logging.getLogger(__name__)
@@ -139,7 +141,8 @@ class CommandLineTool(Process):
             description=description
         )
         self.base_command = base_command
-        self.arguments = arguments or []
+        self.arguments = [a if isinstance(a, dict) else {'valueFrom': a}
+                          for a in (arguments or [])]
         self.stdin = stdin
         self.stdout = stdout
         self.mappings = {}
@@ -151,16 +154,19 @@ class CommandLineTool(Process):
         )
 
     def run(self, job, job_dir=None):
+        self.load_input_content(job)
         job_dir = os.path.abspath(job_dir or job.id)
         if not job_dir.endswith('/'):
             job_dir += '/'
 
-        os.mkdir(job_dir)
+        if not os.path.exists(job_dir):
+            os.mkdir(job_dir)
+
         os.chmod(job_dir, os.stat(job_dir).st_mode | stat.S_IROTH |
                  stat.S_IWOTH)
         self.cli_job = CLIJob(job)
 
-        eval = ExpressionEvaluator(job)
+        eval = ValueResolver(job)
 
         cfr = self.get_requirement_or_hint(CreateFileRequirement)
         if cfr:
@@ -171,43 +177,45 @@ class CommandLineTool(Process):
         if evr:
             env = evr.var_map(eval)
 
+        self.ensure_files(job, job_dir)
+        self.install(job=job)
+
+        abspath_job = Job(
+            job.id, job.app, copy.deepcopy(job.inputs),
+            job.allocated_resources, job.context
+        )
+
+        cmd_line = self.command_line(job, job_dir)
+        log.info("Running: %s" % cmd_line)
+        self.job_dump(job, job_dir)
+
         if self.container:
-            self.ensure_files(job, job_dir)
-            abspath_job = Job(
-                job.id, job.app, copy.deepcopy(job.inputs),
-                job.allocated_resources, job.context
-            )
-            self.install(job=job)
-
-            cmd_line = self.command_line(job, job_dir)
-
-            log.info("Running: %s" % cmd_line)
-
-            self.job_dump(job, job_dir)
             self.container.run(cmd_line, job_dir, env)
-            result_path = os.path.abspath(job_dir) + '/cwl.output.json'
-            if os.path.exists(result_path):
-                with open(result_path, 'r') as res:
-                    outputs = json.load(res)
-            else:
-                with open(result_path, 'w') as res:
-                    outputs = self.cli_job.get_outputs(
-                        os.path.abspath(job_dir), abspath_job)
-                    json.dump(outputs, res)
+        else:
+            ret = subprocess.call(['bash', '-c', cmd_line], cwd=job_dir)
+            if ret != 0:
+                raise RabixError("Command failed with exit status %s" % ret)
 
-            outputs = {o.id: construct_files(outputs.get(o.id), o.validator)
-                       for o in job.app.outputs}
+        result_path = os.path.abspath(job_dir) + '/cwl.output.json'
+        if os.path.exists(result_path):
+            with open(result_path, 'r') as res:
+                outputs = json.load(res)
+        else:
+            with open(result_path, 'w') as res:
+                outputs = self.cli_job.get_outputs(
+                    os.path.abspath(job_dir), abspath_job)
+                json.dump(job.context.to_primitive(outputs), res)
 
-            self.unmap_paths(outputs)
+        self.unmap_paths(outputs)
 
-            def write_rbx(f):
-                if isinstance(f, File):
-                    with open(f.path + '.rbx.json', 'w') as rbx:
-                        json.dump(f.to_dict(), rbx)
+        def write_rbx(f):
+            if isinstance(f, File):
+                with open(f.path + '.rbx.json', 'w') as rbx:
+                    json.dump(f.to_dict(), rbx)
 
-            map_rec_collection(write_rbx, outputs)
+        map_rec_collection(write_rbx, outputs)
 
-            return outputs
+        return outputs
 
     def command_line(self, job, job_dir=None):
         self.remap_paths(job.inputs, job_dir)
@@ -276,13 +284,15 @@ class CreateFileRequirement(object):
             "fileDef": self.file_defs
         }
 
+    def resolve_file_defs(self, eval):
+        return [(eval.resolve(f['filename']), eval.resolve(f['fileContent']))
+                for f in self.file_defs]
+
     def create_files(self, dir, eval):
-        for f in self.file_defs:
-            name = eval.resolve(f['filename'])
-            content = eval.resolve(f['fileContent'])
+        for name, content in self.resolve_file_defs(eval):
             dst = os.path.join(dir, name)
-            if isinstance(content, dict) and content.get('class') == 'File':
-                shutil.copyfile(content['path'], dst)
+            if isinstance(content, File):
+                shutil.copyfile(content.path, dst)
             else:
                 with open(dst, 'w') as out:
                     out.write(content)
@@ -309,6 +319,32 @@ class EnvVarRequirement(object):
     @classmethod
     def from_dict(cls, context, d):
         return cls(d['envDef'])
+
+
+class MemRequirement(object):
+
+    def __init__(self, val):
+        self.value = val
+
+    @classmethod
+    def from_dict(cls, context, d):
+        return cls(d.get('value'))
+
+    def to_dict(self, context):
+        return {'class': 'MemRequirement', 'value': self.value}
+
+
+class CpuRequirement(object):
+
+    def __init__(self, val):
+        self.value = val
+
+    @classmethod
+    def from_dict(cls, context, d):
+        return cls(d.get('value'))
+
+    def to_dict(self, context):
+        return {'class': 'CPURequirement', 'value': self.value}
 
 
 if __name__ == '__main__':

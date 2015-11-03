@@ -1,11 +1,7 @@
 {
-    "id": "https://rabix-vayu.sbgenomics.com:11180/v1/apps/luka_stage/bwa/bwa-mem/3/",
     "class": "CommandLineTool",
-    "@context": "https://github.com/common-workflow-language/common-workflow-language/blob/draft-1/specification/tool-description.md",
     "label": "BWA mem",
     "description": "",
-    "owner": [],
-    "contributor": [],
     "requirements": [
         {
             "dockerPull": "images.sbgenomics.com/rabix/bwa:9d3b9b0359cf",
@@ -125,70 +121,5 @@
     "stdout": "aligned.sam",
     "successCodes": [],
     "temporaryFailCodes": [],
-    "arguments": [],
-    "sbg:modifiedBy": "luka_stage",
-    "sbg:job": {
-        "inputs": {
-            "mean_std_max_min": [
-                0,
-                1
-            ],
-            "reads": [
-                {
-                    "path": "read_pe1"
-                },
-                {
-                    "path": "read_pe2"
-                }
-            ],
-            "reference": {
-                "path": "reference.ext"
-            },
-            "minimum_seed_length": 0
-        },
-        "allocatedResources": {
-            "mem": 1000,
-            "cpu": 1
-        }
-    },
-    "sbg:sbgMaintained": false,
-    "sbg:revisionsInfo": [
-        {
-            "sbg:modifiedOn": 1437405763,
-            "sbg:revision": 0,
-            "sbg:modifiedBy": "luka_stage"
-        },
-        {
-            "sbg:modifiedOn": 1437408370,
-            "sbg:revision": 1,
-            "sbg:modifiedBy": "luka_stage"
-        },
-        {
-            "sbg:modifiedOn": 1437408427,
-            "sbg:revision": 2,
-            "sbg:modifiedBy": "luka_stage"
-        },
-        {
-            "sbg:modifiedOn": 1437461694,
-            "sbg:revision": 3,
-            "sbg:modifiedBy": "luka_stage"
-        }
-    ],
-    "sbg:categories": [
-        "Aligner"
-    ],
-    "sbg:revision": 3,
-    "sbg:projectSlug": "luka_stage/bwa",
-    "sbg:createdBy": "luka_stage",
-    "sbg:name": "bwa-mem",
-    "sbg:validationErrors": [],
-    "sbg:projectId": "c02da650-8d36-4957-a8e5-2d496caa78d2",
-    "sbg:toolkitVersion": "0.7.10",
-    "sbg:contributors": [
-        "luka_stage"
-    ],
-    "sbg:createdOn": 1437405763,
-    "sbg:modifiedOn": 1437461694,
-    "sbg:latestRevision": 3,
-    "sbg:toolkit": "BWA"
+    "arguments": []
 }

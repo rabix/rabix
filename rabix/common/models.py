@@ -23,10 +23,10 @@ else:
 
 
 from rabix.common.errors import ValidationError, RabixError
-from rabix.common.util import wrap_in_list, map_or_apply
-
+from rabix.common.util import wrap_in_list, map_rec_list, map_rec_collection
 
 log = logging.getLogger(__name__)
+MAX_CONTENT_SIZE = 64 * 1024
 
 
 def process_builder(context, d):
@@ -46,7 +46,12 @@ def process_builder(context, d):
     for o in outputs:
         o['type'] = make_avro(o['type'], schemas)
 
-    return context.from_dict(d)
+    process = context.from_dict(d)
+    for req in process.requirements:
+        if isinstance(req, dict):
+            raise RabixError("Can't fulfill requirement: " + req.get('class'))
+
+    return process
 
 
 def construct_files(val, schema):
@@ -55,7 +60,7 @@ def construct_files(val, schema):
 
     if schema.type == 'record':
         if schema.name == 'File':
-            return map_or_apply(File, val) if val else val
+            return map_rec_list(File, val) if val else val
         else:
             ret = {}
             for fld in schema.fields:
@@ -67,6 +72,30 @@ def construct_files(val, schema):
             if validate(s, val):
                 return construct_files(val, s)
     return val
+
+
+def rebase_path(val, base):
+    if isinstance(val, File):
+        return val.rebase(base)
+    return val
+
+
+def get_inputs(args, inputs, basedir=None):
+
+    basedir = basedir or os.path.abspath('.')
+    constructed = {}
+    for i in inputs:
+        val = args.get(i.id)
+        if i.depth == 0:
+            cons = construct_files(val, i.validator)
+        else:
+            cons = [construct_files(e, i.validator) for e in val] if val else []
+        if cons:
+            constructed[i.id] = cons
+    return map_rec_collection(
+        lambda v: rebase_path(v, basedir),
+        constructed
+    )
 
 
 class Process(object):
@@ -92,6 +121,26 @@ class Process(object):
         raise NotImplementedError(
             "Method 'run' is not implemented in the App class"
         )
+
+    def load_input_content(self, job):
+        for i in self.inputs:
+            val = job.inputs.get(i.id)
+            binding = i.input_binding
+            self.load_file_content(binding, val)
+
+    def load_output_content(self, result):
+        for o in self.outputs:
+            val = result.get(o.id)
+            binding = o.output_binding
+            self.load_file_content(binding, val)
+
+    def load_file_content(self, binding, val):
+        load = binding and binding.get('loadContents')
+        if load:
+            map_rec_collection(
+                lambda x: x.load_content() if isinstance(x, File) else None,
+                val
+            )
 
     def get_input(self, name):
         return self._inputs.get(name)
@@ -209,12 +258,14 @@ class File(object):
 
     name = 'File'
 
-    def __init__(self, path, size=None, meta=None, secondary_files=None, checksum=None):
+    def __init__(self, path, size=None, meta=None, secondary_files=None,
+                 checksum=None, contents=None):
         self.size = size
         self.meta = meta or {}
         self.secondary_files = secondary_files or []
         self.url = None
         self.checksum = None
+        self.contents = contents
 
         if isinstance(path, dict):
             self.from_dict(path)
@@ -223,6 +274,10 @@ class File(object):
                 path.size, path.meta, path.secondary_files, path.url
         else:
             self.path = path
+
+    def load_content(self):
+        with open(self.path, 'rb') as f:
+            self.contents = f.read(MAX_CONTENT_SIZE).decode('utf-8')
 
     def from_dict(self, val):
         size = val.get('size')
@@ -241,17 +296,33 @@ class File(object):
             [File(sf) for sf in val.get('secondaryFiles', [])]
         self.path = path
         self.checksum = val.get('checksum')
+        self.contents = val.get('contents')
 
     def to_dict(self, context=None):
-        return {
+        d = {
             "class": "File",
-            "path": self.path,
-            "size": self.size,
-            "metadata": self.meta,
-            "checksum": self.checksum,
-            "secondaryFiles": [sf.to_dict(context)
-                               for sf in self.secondary_files]
+            "path": self.path
         }
+
+        if self.size:
+            d["size"] = self.size
+
+        if self.meta:
+            d["metadata"] = self.meta
+
+        if self.checksum:
+            d["checksum"] = self.checksum
+
+        if self.secondary_files:
+            d["secondaryFiles"] = [
+                sf.to_dict(context)
+                for sf in self.secondary_files
+            ]
+
+        if self.contents is not None:
+            d['contents'] = self.contents
+
+        return d
 
     @property
     def path(self):
@@ -513,3 +584,4 @@ class SchemaDefRequirement(object):
 
 def init(ctx):
     ctx.add_type('SchemaDefRequirement', SchemaDefRequirement.from_dict)
+    ctx.add_type('File', lambda ctx, d: File(d))

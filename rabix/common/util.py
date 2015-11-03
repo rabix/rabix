@@ -1,3 +1,4 @@
+import hashlib
 import random
 import itertools
 import collections
@@ -186,3 +187,13 @@ def result_str(job_id, outputs):
             files = ' '.join(['%s' % o for o in out])
         result_str = result_str + '%s: %s\n' % (name, files)
     return result_str
+
+
+def checksum(path):
+    sha = hashlib.sha1()
+    with open(path, "rb") as f:
+        contents = f.read(1024*1024)
+        while contents != six.b(""):
+            sha.update(contents)
+            contents = f.read(1024*1024)
+    return sha.hexdigest()

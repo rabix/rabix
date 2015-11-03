@@ -1,7 +1,6 @@
 import six
-from rabix.common.errors import RabixError
 from rabix.common.models import Process, InputParameter, OutputParameter
-from rabix.expressions.evaluator import Evaluator
+from rabix.expressions.evaluator import ExpressionEvaluator
 
 
 class ExpressionTool(Process):
@@ -16,20 +15,24 @@ class ExpressionTool(Process):
             description=description
         )
         self.script = script
-        self.evaluator = Evaluator()
         self.context = context
         self.engine = engine
 
     def run(self, job):
-        result = self.evaluator.evaluate(self.engine, self.script, job.to_dict(self.context), None)
+        self.load_input_content(job)
+        result = ExpressionEvaluator.evaluate(
+            self.engine, self.script, job.to_dict(self.context), None
+        )
         return result
 
     def to_dict(self, context):
         d = super(ExpressionTool, self).to_dict(context)
         d.update({
             "class": "ExpressionTool",
-            "script": self.script,
-            "engine": self.engine
+            "expression": {
+                "script": self.script,
+                "engine": self.engine
+            }
         })
         return d
 
@@ -38,8 +41,8 @@ class ExpressionTool(Process):
         converted = {k: context.from_dict(v) for k, v in six.iteritems(d)}
         kwargs = Process.kwarg_dict(converted)
         kwargs.update({
-            'script': d['script'],
-            'engine': d['engine'],
+            'script': d['expression']['script'],
+            'engine': d['expression']['engine'],
             'context': context,
             'inputs': [InputParameter.from_dict(context, inp)
                        for inp in converted.get('inputs', [])],

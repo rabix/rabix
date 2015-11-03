@@ -19,8 +19,9 @@ tools:
     outputs:
       - id: c
         type: int
-    engine: javascript
-    script: "{return {c: $job.inputs.a + $job.inputs.b}}"
+    expression:
+      engine: javascript
+      script: "{return {c: $job.inputs.a + $job.inputs.b}}"
 
   mul:
     id: mul
@@ -33,8 +34,9 @@ tools:
     outputs:
       - id: c
         type: int
-    engine: javascript
-    script: "{return {c: $job.inputs.a * $job.inputs.b}}"
+    expression:
+      engine: javascript
+      script: "{return {c: $job.inputs.a * $job.inputs.b}}"
 
   sum:
     id: sum
@@ -47,16 +49,17 @@ tools:
     outputs:
       - id: sum
         type: int
-    engine: javascript
-    script: |
-      {
-        var result = 0;
+    expression:
+      engine: javascript
+      script: |
+        {
+          var result = 0;
 
-        for (var i = 0; i < $job.inputs.arr.length; i++) {
-          result += $job.inputs.arr[i];
+          for (var i = 0; i < $job.inputs.arr.length; i++) {
+            result += $job.inputs.arr[i];
+          }
+          return {sum: result};
         }
-        return {sum: result};
-      }
 
 
 workflows:

@@ -4,9 +4,9 @@ import six
 from nose.tools import nottest, assert_equal
 
 from os.path import abspath, join
-from rabix.common.models import Job
+from rabix.common.models import Job, construct_files
 from rabix.common.ref_resolver import from_url
-from rabix.main import init_context, construct_files
+from rabix.main import init_context
 
 logging.basicConfig(level=logging.DEBUG)
 

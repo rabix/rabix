@@ -1,75 +1,169 @@
-import os
-
-# noinspection PyUnresolvedReferences
-from six.moves.configparser import ConfigParser
-from xdg.BaseDirectory import save_config_path, xdg_data_dirs
-from yapsy.ConfigurablePluginManager import ConfigurablePluginManager
-from yapsy.VersionedPluginManager import VersionedPluginManager
-from yapsy.PluginManager import PluginManagerSingleton
-from yapsy.IPlugin import IPlugin
+import json
+import execjs
+import logging
+from rabix.common.errors import RabixError
+from rabix.common.util import wrap_in_list
 
 from rabix.common.ref_resolver import resolve_pointer
 
+log = logging.getLogger(__name__)
 
-class ExpressionEvalPlugin(IPlugin):
 
-    def __init__(self):
-        super(ExpressionEvalPlugin, self).__init__()
+class ExpressionEngine(object):
 
-    def evaluate(self, expression=None, job=None, context=None,
-                 *args, **kwargs):
-        raise RuntimeError('Not implemented')
+    def __init__(self, image, ids, f, engine_config=None):
+        super(ExpressionEngine, self).__init__()
+        self.image = image
+        self.ids = ids
+        self.f = f
+        self.engine_config = engine_config
+
+    def evaluate(self, expression, job, context=None, outdir=None, tmpdir=None):
+        return self.f(expression, job, context, self.engine_config, outdir, tmpdir)
 
 
 class Evaluator(object):
 
-    APP_NAME = 'expression-evaluators'
-    _default_dir = 'evaluators'
+    def __init__(self, ctx=None, engines=None, default=None):
+        self.ctx = ctx
+        self.engines = engines or []
+        self.default = default
 
-    def __init__(self, plugin_dir=None):
-        self.config = ConfigParser()
-        config_path = save_config_path(self.APP_NAME)
-        self.config_file = os.path.join(config_path, self.APP_NAME + ".conf")
-        self.config.read(self.config_file)
+    def get_engine_by_id(self, id):
+        return next((e for e in self.engines if id in e.ids), self.default)
 
-        this_dir = os.path.abspath(os.path.dirname(__file__))
-        self.plugin_dir = plugin_dir or os.path.join(
-            this_dir, self._default_dir)
-        places = [self.plugin_dir, ]
-        [places.append(os.path.join(path, self.APP_NAME, "evaluators")) for
-         path in xdg_data_dirs]
+    def get_engine_by_image(self, image):
+        return next((e for e in self.engines if image == e.image), self.default)
 
-        PluginManagerSingleton.setBehaviour([
-            ConfigurablePluginManager,
-            VersionedPluginManager,
-        ])
-
-        self.manager = PluginManagerSingleton.get()
-        self.manager.setConfigParser(self.config, self.write_config)
-        self.manager.setPluginInfoExtension("expr-plugin")
-        self.manager.setPluginPlaces(places)
-        self.manager.collectPlugins()
-
-    def _get_all_evaluators(self):
-        return self.manager.getAllPlugins()
-
-    def _get_evaluator(self, name):
-        pl = self.manager.getPluginByName(name)
+    def evaluate(self, engine, expression, job, context=None):
+        pl = self.get_engine_by_id(engine)
         if not pl:
-            raise Exception('No expression evaluator %s' % name)
-        return pl.plugin_object
-
-    def write_config(self):
-        f = open(self.config_file, "w")
-        self.config.write(f)
-        f.close()
-
-    def evaluate(self, lang, expression, *args, **kwargs):
-        pl = self._get_evaluator(lang)
-        return pl.evaluate(expression, *args, **kwargs)
+            raise Exception('No expression evaluator %s' % id)
+        res = pl.evaluate(expression, job, context)
+        if self.ctx:
+            return self.ctx.from_dict(res)
+        else:
+            return res
 
 
-class ExpressionEvaluator(object):
+def evaluate_rabix_js(expression, job, context=None,
+                      engine_config=None, outdir=None, tmpdir=None):
+    # log.debug("expression: %s" % expression)
+    if expression.startswith('{'):
+        exp_tpl = '''function () {
+        $job = %s;
+        $self = %s;
+        return function()%s();}()
+        '''
+    else:
+        exp_tpl = '''function () {
+        $job = %s;
+        $self = %s;
+        return %s;}()
+        '''
+    exp = exp_tpl % (json.dumps(job), json.dumps(context), expression)
+
+    result = execjs.eval(exp)
+    log.debug("Expression result: %s" % result)
+    return result
+
+
+def evaluate_cwl_js(expression, job, context=None,
+                    engine_config=None, outdir=None, tmpdir=None):
+    # log.debug("expression: %s" % expression)
+    if expression.startswith('{'):
+        exp_tpl = '''
+        {config}
+        (function () {{
+        $job = {job};
+        $self = {context};
+        return function(){f}();}})()
+        '''
+    else:
+        exp_tpl = '''
+        {config}
+        (function () {{
+        $job = {job};
+        $self = {context};
+        return {f};}})()
+        '''
+    config = ''
+    if engine_config:
+        config = '\n'.join(engine_config)
+
+    j = {}
+    j.update(job['inputs'])
+    j['allocatedResources'] = job['allocatedResources']
+    exp = exp_tpl.format(
+        config=config,
+        job=json.dumps(j),
+        context=json.dumps(context),
+        f=expression)
+
+    exp_escaped = json.dumps(exp)
+    result = execjs.eval("require('vm').runInNewContext(%s, {})" % exp_escaped)
+    log.debug("Expression result: %s" % result)
+    return result
+
+
+def evaluate_json_ptr(expression, job, context=None,
+                      engine_config=None, outdir=None, tmpdir=None):
+    doc = {
+        'job': job.get('inputs', {}),
+    }
+    return resolve_pointer(doc, expression)
+
+
+ExpressionEvaluator = Evaluator()
+ExpressionEvaluator.engines.extend([
+    ExpressionEngine(
+        'rabix/js-engine',
+        {'#cwl-js-engine', 'javascript', 'cwl-js-engine'}, evaluate_rabix_js, []),
+    ExpressionEngine(
+        'commonworkflowlanguage/nodejs-engine',
+        {'node-engine.cwl'}, evaluate_cwl_js, []),
+    ExpressionEngine(
+        None,
+        {'cwl:JsonPointer'}, evaluate_json_ptr, [])
+])
+
+
+class ExpressionEngineRequirement(object):
+
+    def __init__(self, id=None, docker_image=None, engine_config=None):
+        self.id = id
+        self.docker_image = docker_image
+        self.engine_config = engine_config
+
+    def to_dict(self, context=None):
+        d = {
+            "class": "ExpressionEngineRequirement",
+            "id": self.id,
+            "engineConfig": self.engine_config
+        }
+
+        if self.docker_image:
+            d["requirements"] = [{
+                "class": "DockerRequirement",
+                "dockerImageId": self.docker_image
+            }]
+
+        return d
+
+    @classmethod
+    def from_dict(cls, context, d):
+        id = d.get('id')
+        ec = d.get('engineConfig')
+        engine_config = wrap_in_list(ec) if ec else None
+        docker_image = None
+        for r in d.get('requirements', []):
+            if r.get('class') == 'DockerRequirement':
+                docker_image = r.get('dockerImageId', r.get('dockerPull'))
+
+        return cls(id, docker_image, engine_config)
+
+
+class ValueResolver(object):
     def __init__(self, job):
         self.job = job
 
@@ -78,18 +172,25 @@ class ExpressionEvaluator(object):
         if not isinstance(val, dict) or ('engine' not in val and 'script' not in val):
             return val
         engine, script = val['engine'], val['script']
-        if engine == 'cwl:JsonPointer':
-            return self._evaluate_json_pointer(script)
-        else:
-            return self._evaluate_expression(engine, script, context)
+        return ExpressionEvaluator.evaluate(engine, script, self.job.to_dict(), context)
 
-    def _evaluate_expression(self, engine, script, context):
-        # TODO: Use ExpressionEngineRequirement
-        return Evaluator().evaluate('javascript', script, self.job.to_dict(), context)
 
-    def _evaluate_json_pointer(self, script):
-        job_dict = self.job.to_dict()
-        doc = {
-            'job': job_dict.get('inputs', {}),
-        }
-        return resolve_pointer(doc, script)
+def update_engines(process):
+    eer = process.get_requirement(ExpressionEngineRequirement)
+    if not eer:
+        return
+
+    engine = None
+    if eer.id:
+        engine = ExpressionEvaluator.get_engine_by_id(eer.id)
+
+    if not engine and eer.docker_image:
+        engine = ExpressionEvaluator.get_engine_by_image(eer.docker_image)
+
+    if not engine:
+        raise RabixError("Unsupported expression engine: {}".format(
+                         eer.id or eer.docker_image))
+
+    engine.ids.add(eer.id)
+    if eer.engine_config:
+        engine.engine_config = eer.engine_config
