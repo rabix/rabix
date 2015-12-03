@@ -110,6 +110,7 @@ def evaluate_json_ptr(expression, job, context=None,
                       engine_config=None, outdir=None, tmpdir=None):
     doc = {
         'job': job.get('inputs', {}),
+        'context': context
     }
     return resolve_pointer(doc, expression)
 
