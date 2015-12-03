@@ -47,7 +47,7 @@ TEMPLATE_JOB = {
 
 USAGE = """
 Usage:
-    rabix [-v...] [-hcpI] [-t <type>] [-d <dir>] [-i <inp>] [{resources}] <tool> [-- {inputs}...]
+    rabix [-v...] [-hcprI] [-t <type>] [-d <dir>] [-i <inp>] [{resources}] <tool> [-- {inputs}...]
     rabix [--outdir=<outdir>] [--quiet] <tool> <inp>
     rabix --conformance-test [--basedir=<basedir>] [--no-container] [--quiet] <tool> <job>
     rabix --version
@@ -62,6 +62,7 @@ Options:
   -i --inp-file=<inp>   Inputs
   -c --print-cli        Only print calculated command line. Do not run anything.
   -p --pretty-print     Print human readable result instead of JSON.
+  -r --resolve          Print json of an input tool with resolved references.
   -t --type=<type>      Interpret given tool json as <type>.
   -v --verbose          Verbosity. More Vs more output.
      --version          Print version and exit.
@@ -209,7 +210,7 @@ def main():
         tool = loader.index.get('#main')
 
     if 'class' not in tool:
-        fail("Document must have a 'class' field")
+        fail('Document must have a "class" field')
 
     if 'id' not in tool:
         tool['id'] = dry_run_args['<tool>']
@@ -224,6 +225,10 @@ def main():
         app = job.app
 
     rabix.expressions.update_engines(app)
+
+    if dry_run_args['--resolve']:
+        print(json.dumps(context.to_primitive(app), indent=2))
+        return
 
     if dry_run_args['--install']:
         app.install()
