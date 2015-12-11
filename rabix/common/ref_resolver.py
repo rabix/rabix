@@ -61,6 +61,8 @@ class Loader(object):
                 fragment = (copy.deepcopy(self.index.get("#" + pointer))
                             or resolve_pointer(document, pointer))
                 result = self.resolve_all(fragment, doc_url)
+                if isinstance(result, dict) and 'id' not in result:
+                    result['id'] = ref
             else:
                 result = document
         finally:
