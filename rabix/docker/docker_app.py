@@ -244,4 +244,4 @@ class DockerContainer(Container):
 
     @classmethod
     def from_dict(cls, context, d):
-        return cls(d.get('dockerPull'))
+        return cls(d.get('dockerPull', d.get('dockerImageId')))
