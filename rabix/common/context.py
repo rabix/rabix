@@ -1,4 +1,11 @@
 import six
+from avro.schema import Names
+from models import FILE_SCHEMA
+
+if six.PY2:
+    from avro.schema import make_avsc_object
+else:
+    from avro.schema import SchemaFromJSONData as make_avsc_object
 
 
 class Context(object):
@@ -8,6 +15,8 @@ class Context(object):
         self.executor = executor
         self.requirements = []
         self.hints = []
+        self.names = Names()
+        make_avsc_object(FILE_SCHEMA, self.names)
         self._index = {}
 
     def add_type(self, name, constructor):

@@ -10,7 +10,7 @@ import shutil
 from avro.schema import NamedSchema
 
 from rabix.cli.adapter import CLIJob
-from rabix.common.errors import RabixError
+from rabix.common.errors import RabixError, ValidationError
 from rabix.common.models import (
     Process, File, InputParameter, OutputParameter, construct_files,
     Job)
@@ -87,6 +87,25 @@ def collect_files(inputs):
 
     map_rec_collection(append_file, inputs)
     return files
+
+
+def file_or_val(val):
+    try:
+        return File(val)
+    except ValidationError:
+        return val
+
+
+def convert_to_files(outputs):
+
+    for k, v in outputs.iteritems():
+        if isinstance(v, dict):
+            try:
+                outputs[k] = File(v)
+            except ValidationError:
+                convert_to_files(v)
+        else:
+            outputs[k] = map_or_apply(file_or_val, v)
 
 
 class Container(object):
@@ -200,6 +219,7 @@ class CommandLineTool(Process):
         if os.path.exists(result_path):
             with open(result_path, 'r') as res:
                 outputs = json.load(res)
+                convert_to_files(outputs)
         else:
             with open(result_path, 'w') as res:
                 outputs = self.cli_job.get_outputs(

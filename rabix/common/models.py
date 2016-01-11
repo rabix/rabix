@@ -39,12 +39,13 @@ def process_builder(context, d):
     schemas = []
     for s in context.get_requirement(SchemaDefRequirement):
         schemas.extend(s.types)
+        make_avsc_object(s.types, context.names)
 
     for i in inputs:
-        i['type'] = make_avro(i['type'], schemas)
+        i['type'] = make_avro(i['type'], context)
 
     for o in outputs:
-        o['type'] = make_avro(o['type'], schemas)
+        o['type'] = make_avro(o['type'], context)
 
     process = context.from_dict(d)
     for req in process.requirements:
@@ -167,7 +168,7 @@ class Process(object):
         return True
 
     def job_dump(self, job, dirname):
-        with open(os.path.join(dirname, 'job.cwl.json'), 'w') as f:
+        with open(os.path.join(dirname, 'job.json'), 'w') as f:
             job_dict = job.to_dict()
             json.dump(job_dict, f)
             log.info('File %s created.', job.id)
@@ -384,14 +385,9 @@ def fix_file_type(d):
         return {k: fix_file_type(v) for k, v in six.iteritems(d)}
 
 
-def make_avro(schema, named_defs):
-    names = Names()
-    make_avsc_object(FILE_SCHEMA, names)
-    for d in named_defs:
-        make_avsc_object(d, names)
+def make_avro(schema, ctx):
+    return make_avsc_object(fix_file_type(wrap_in_list(schema)), ctx.names)
 
-    avsc = make_avsc_object(fix_file_type(wrap_in_list(schema)), names)
-    return avsc
 
 
 class Expression(object):
@@ -417,7 +413,7 @@ class Parameter(object):
     def to_dict(self, ctx=None):
         avro_schema = None
         if self.validator:
-            avro_schema = self.validator.to_json()
+            avro_schema = self.validator.to_json(ctx.names)
             for d in range(0, self.depth):
                 avro_schema = {'type': 'array', 'items': avro_schema}
             avro_schema = [avro_schema]
@@ -578,7 +574,7 @@ class SchemaDefRequirement(object):
     def to_dict(self, context=None):
         return {
             'type': 'SchemaDefRequirement',
-            'types': [t.to_json() for t in self.types]
+            'types': [t for t in self.types]
         }
 
 
