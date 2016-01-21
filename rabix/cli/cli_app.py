@@ -151,7 +151,7 @@ class CommandLineTool(Process):
     def __init__(
             self, process_id, inputs, outputs, requirements, hints,
             label, description, base_command, arguments=None,
-            stdin=None, stdout=None):
+            stdin="", stdout=""):
         super(CommandLineTool, self).__init__(
             process_id, inputs, outputs,
             requirements=requirements,
@@ -269,7 +269,7 @@ class CommandLineTool(Process):
         d = super(CommandLineTool, self).to_dict(context)
         d.update({
             'class': 'CommandLineTool',
-            'baseCommand': self.base_command,
+            'baseCommand': self.base_command if isinstance(self.base_command, list) else [self.base_command],
             'arguments': self.arguments,
             'stdin': self.stdin,
             'stdout': self.stdout
@@ -283,8 +283,8 @@ class CommandLineTool(Process):
         kwargs.update({
             'base_command': converted['baseCommand'],
             'arguments': converted.get('arguments'),
-            'stdin': converted.get('stdin'),
-            'stdout': converted.get('stdout'),
+            'stdin': converted.get('stdin', ""),
+            'stdout': converted.get('stdout', ""),
             'inputs': [InputParameter.from_dict(context, inp)
                        for inp in converted.get('inputs', [])],
             'outputs': [OutputParameter.from_dict(context, inp)

@@ -25,8 +25,8 @@ Relation.to_dict = Relation._asdict
 
 class WorkflowStepInput(InputParameter):
 
-    def __init__(self, id, validator=None, required=False, label=None,
-                 description=None, depth=0, input_binding=None, source=None,
+    def __init__(self, id, validator=None, required=False, label="",
+                 description="", depth=0, input_binding=None, source=None,
                  value=None):
         super(WorkflowStepInput, self).__init__(
             id, validator, required, label, description, depth, input_binding
@@ -111,8 +111,8 @@ class Step(Process):
 
 class WorkflowOutput(OutputParameter):
 
-    def __init__(self, id, validator=None, required=False, label=None,
-                 description=None, depth=0, output_binding=None, source=None):
+    def __init__(self, id, validator=None, required=False, label="",
+                 description="", depth=0, output_binding=None, source=None):
         super(WorkflowOutput, self).__init__(
             id, validator, required, label, description, depth, output_binding
         )
