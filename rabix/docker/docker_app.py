@@ -4,6 +4,7 @@ import shlex
 import logging
 import sys
 import six
+import subprocess
 from docker.client import Client
 from docker.utils import kwargs_from_env
 from docker.errors import APIError
@@ -18,10 +19,12 @@ log = logging.getLogger(__name__)
 DOCKER_DEFAULT_API_VERSION = "1.14"
 DOCKER_DEFAULT_TIMEOUT = 60
 
-DEFAULT_DOCKER_HOST = 'tcp://192.168.59.103:2376'
-DEFAULT_DOCKER_CERT_PATH = os.path.join(os.path.expanduser("~"),
+DEFAULT_DOCKER_HOST_BOOT2DOCKER = 'tcp://192.168.59.103:2376'
+DEFAULT_DOCKER_CERT_PATH_BOOT2DOCKER = os.path.join(os.path.expanduser("~"),
                                         '.boot2docker/certs/boot2docker-vm')
 DEFAULT_DOCKER_TLS_VERIFY = '1'
+DEFAULT_DOCKER_CERT_PATH_DOCKER_MACHINE = os.path.join(os.path.expanduser("~"),
+                                                       '.docker/machine/machines/default')
 
 DEFAULT_CONFIG = {
     "version": DOCKER_DEFAULT_API_VERSION,
@@ -29,18 +32,47 @@ DEFAULT_CONFIG = {
 }
 
 
-def set_env():
+def detect_docker_machine(docker_machine_name="default"):
+    # Check is it boot2docker or docker-machine
+    try:
+        host = subprocess.check_output(["docker-machine", "url", docker_machine_name]).rstrip()
+        return host
+    except Exception:
+        return None
+
+
+def set_env_boot2docker():
     docker_host = os.environ.get('DOCKER_HOST', None)
     if not docker_host:
-        os.environ['DOCKER_HOST'] = DEFAULT_DOCKER_HOST
+        os.environ['DOCKER_HOST'] = DEFAULT_DOCKER_HOST_BOOT2DOCKER
     docker_cert_path = os.environ.get('DOCKER_CERT_PATH', None)
     if not docker_cert_path:
-        os.environ['DOCKER_CERT_PATH'] = DEFAULT_DOCKER_CERT_PATH
+        os.environ['DOCKER_CERT_PATH'] = DEFAULT_DOCKER_CERT_PATH_BOOT2DOCKER
+    docker_tls_verify = os.environ.get('DOCKER_TLS_VERIFY', None)
+    if not docker_tls_verify:
+        os.environ['DOCKER_TLS_VERIFY'] = DEFAULT_DOCKER_TLS_VERIFY
+
+
+def set_env_docker_machine(docker_client_url):
+    docker_host = os.environ.get('DOCKER_HOST', None)
+    if not docker_host:
+        os.environ['DOCKER_HOST'] = docker_client_url
+    docker_cert_path = os.environ.get('DOCKER_CERT_PATH', None)
+    if not docker_cert_path:
+        os.environ['DOCKER_CERT_PATH'] = DEFAULT_DOCKER_CERT_PATH_DOCKER_MACHINE
     os.environ['DOCKER_TLS_VERIFY'] = DEFAULT_DOCKER_TLS_VERIFY
+    if not os.environ.get('DOCKER_MACHINE_NAME', None):
+        os.environ['DOCKER_MACHINE_NAME'] = 'default'
+    if not os.environ.get('DOCKER_CERT_PATH'):
+        os.environ['DOCKER_CERT_PATH'] = os.path.join(os.path.expanduser("~"), '/.docker/machine/certs/')
 
 
 def docker_client_osx(**kwargs):
-    set_env()
+    dm = detect_docker_machine()
+    if dm:
+        set_env_docker_machine(dm)
+    else:
+        set_env_boot2docker()
     env = kwargs_from_env()
     env['tls'].verify = False
     env.update(kwargs)
