@@ -191,10 +191,10 @@ class Process(object):
             'process_id': d['id'],
             'inputs': d['inputs'],
             'outputs': d.get('outputs'),
-            'requirements': d.get('requirements'),
-            'hints': d.get('hints'),
-            'label': d.get('label'),
-            'description': d.get('description')
+            'requirements': d.get('requirements', []),
+            'hints': d.get('hints', []),
+            'label': d.get('label', ''),
+            'description': d.get('description', '')
         }
 
 
@@ -397,8 +397,8 @@ class Expression(object):
 class Parameter(object):
 
     def __init__(
-            self, id, validator=None, required=False, label=None,
-            description=None, depth=0
+            self, id, validator=None, required=False, label="",
+            description="", depth=0
     ):
         self.id = id.lstrip('#')
         self.validator = validator
@@ -452,8 +452,8 @@ class Parameter(object):
         return cls(d.get('id', six.text_type(uuid4())),
                    validator=parameter_type,
                    required=required,
-                   label=d.get('label'),
-                   description=d.get('description'),
+                   label=d.get('label', ""),
+                   description=d.get('description', ""),
                    depth=depth)
 
     def __repr__(self):
@@ -462,8 +462,8 @@ class Parameter(object):
 
 class InputParameter(Parameter):
 
-    def __init__(self, id, validator=None, required=False, label=None,
-                 description=None, depth=0, input_binding=None):
+    def __init__(self, id, validator=None, required=False, label="",
+                 description="", depth=0, input_binding=None):
         super(InputParameter, self).__init__(
             id, validator, required, label, description, depth
         )
@@ -472,7 +472,9 @@ class InputParameter(Parameter):
 
     def to_dict(self, ctx=None):
         d = super(InputParameter, self).to_dict(ctx)
-        d['inputBinding'] = ctx.to_primitive(self.input_binding)
+        ib = ctx.to_primitive(self.input_binding)
+        if ib:
+            d['inputBinding'] = ib
         return d
 
     @classmethod
@@ -483,8 +485,8 @@ class InputParameter(Parameter):
 
 
 class OutputParameter(Parameter):
-    def __init__(self, id, validator=None, required=False, label=None,
-                 description=None, depth=0, output_binding=None):
+    def __init__(self, id, validator=None, required=False, label="",
+                 description="", depth=0, output_binding=None):
         super(OutputParameter, self).__init__(
             id, validator, required, label, description, depth
         )
@@ -493,7 +495,9 @@ class OutputParameter(Parameter):
 
     def to_dict(self, ctx=None):
         d = super(OutputParameter, self).to_dict(ctx)
-        d['outputBinding'] = ctx.to_primitive(self.output_binding)
+        ob = ctx.to_primitive(self.output_binding)
+        if ob:
+            d['outputBinding'] = ob
         return d
 
     @classmethod
