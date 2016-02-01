@@ -260,7 +260,7 @@ class File(object):
     name = 'File'
 
     def __init__(self, path, size=None, meta=None, secondary_files=None,
-                 checksum=None, contents=None):
+                 checksum=None, contents=None, **kwargs):
         self.size = size
         self.meta = meta or {}
         self.secondary_files = secondary_files or []
