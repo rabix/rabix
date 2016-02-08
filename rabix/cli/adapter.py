@@ -143,7 +143,7 @@ class InputAdapter(object):
         items = [InputAdapter(item, self.evaluator, schema)
                  for item in self.value]
 
-        if not self.prefix:
+        if not self.prefix and self.item_separator is None:
             return reduce(operator.add, [a.arg_list() for a in items], [])
 
         if self.separate and self.item_separator is None:
@@ -159,6 +159,8 @@ class InputAdapter(object):
         )
 
         if self.separate and self.item_separator is not None:
+            if not self.prefix:
+                return [joined]
             return [self.prefix, joined]
         return [self.prefix + joined]
 
