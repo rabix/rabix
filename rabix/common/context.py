@@ -1,6 +1,4 @@
 import six
-from avro.schema import Names
-from models import FILE_SCHEMA
 
 if six.PY2:
     from avro.schema import make_avsc_object
