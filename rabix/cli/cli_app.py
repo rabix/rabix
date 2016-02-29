@@ -269,7 +269,8 @@ class CommandLineTool(Process):
         d = super(CommandLineTool, self).to_dict(context)
         d.update({
             'class': 'CommandLineTool',
-            'baseCommand': self.base_command if isinstance(self.base_command, list) else [self.base_command],
+            'baseCommand': self.base_command if isinstance(
+                self.base_command, list) else [self.base_command],
             'arguments': self.arguments,
             'stdin': self.stdin,
             'stdout': self.stdout

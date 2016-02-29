@@ -399,7 +399,6 @@ def make_avro(schema, ctx):
     return make_avsc_object(fix_file_type(wrap_in_list(schema)), ctx)
 
 
-
 class Expression(object):
     pass
 

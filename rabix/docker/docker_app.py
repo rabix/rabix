@@ -11,7 +11,6 @@ from docker.errors import APIError
 
 from rabix.cli import Container
 from rabix.docker.container import get_image
-#from .container import get_image
 from rabix.common.errors import RabixError
 
 
@@ -21,8 +20,8 @@ DOCKER_DEFAULT_API_VERSION = "1.21"
 DOCKER_DEFAULT_TIMEOUT = 60
 
 DEFAULT_DOCKER_HOST_BOOT2DOCKER = 'tcp://192.168.59.103:2376'
-DEFAULT_DOCKER_CERT_PATH_BOOT2DOCKER = os.path.join(os.path.expanduser("~"),
-                                        '.boot2docker/certs/boot2docker-vm')
+DEFAULT_DOCKER_CERT_PATH_BOOT2DOCKER = os.path.join(
+    os.path.expanduser("~"), '.boot2docker/certs/boot2docker-vm')
 DEFAULT_DOCKER_TLS_VERIFY = '1'
 DEFAULT_DOCKER_CERT_PATH_DOCKER_MACHINE = os.path.join(os.path.expanduser("~"),
                                                        '.docker/machine/machines/default')
@@ -65,7 +64,8 @@ def set_env_docker_machine(docker_client_url):
     if not os.environ.get('DOCKER_MACHINE_NAME', None):
         os.environ['DOCKER_MACHINE_NAME'] = 'default'
     if not os.environ.get('DOCKER_CERT_PATH'):
-        os.environ['DOCKER_CERT_PATH'] = os.path.join(os.path.expanduser("~"), '/.docker/machine/certs/')
+        os.environ['DOCKER_CERT_PATH'] = os.path.join(
+            os.path.expanduser("~"), '/.docker/machine/certs/')
 
 
 def docker_client_osx(**kwargs):
