@@ -33,21 +33,25 @@ def process_builder(context, d):
     if not isinstance(d, dict):
         return d
 
+    context.names[d['id']] = Names()
+    make_avsc_object(FILE_SCHEMA, context.names[d['id']])
+
     inputs = d.get('inputs')
     outputs = d.get('outputs')
 
     schemas = []
     for s in context.get_requirement(SchemaDefRequirement):
         schemas.extend(s.types)
-        make_avsc_object(s.types, context.names)
+        make_avsc_object(s.types, context.names[d['id']])
 
     for i in inputs:
-        i['type'] = make_avro(i['type'], context)
+        i['type'] = make_avro(i['type'], context.names[d['id']])
 
     for o in outputs:
-        o['type'] = make_avro(o['type'], context)
+        o['type'] = make_avro(o['type'], context.names[d['id']])
 
     process = context.from_dict(d)
+    process.set_avro_names(context.names[d['id']])
     for req in process.requirements:
         if isinstance(req, dict):
             raise RabixError("Can't fulfill requirement: " + req.get('class'))
@@ -142,6 +146,12 @@ class Process(object):
                 lambda x: x.load_content() if isinstance(x, File) else None,
                 val
             )
+
+    def set_avro_names(self, names):
+        for inp in six.itervalues(self._inputs):
+            inp.names = names
+        for out in six.itervalues(self._outputs):
+            out.names = names
 
     def get_input(self, name):
         return self._inputs.get(name)
@@ -386,7 +396,7 @@ def fix_file_type(d):
 
 
 def make_avro(schema, ctx):
-    return make_avsc_object(fix_file_type(wrap_in_list(schema)), ctx.names)
+    return make_avsc_object(fix_file_type(wrap_in_list(schema)), ctx)
 
 
 
@@ -406,6 +416,7 @@ class Parameter(object):
         self.label = label
         self.description = description
         self.depth = depth
+        self.names = None
 
     def validate(self, value):
         return self.validator.validate(value)
@@ -413,7 +424,7 @@ class Parameter(object):
     def to_dict(self, ctx=None):
         avro_schema = None
         if self.validator:
-            avro_schema = self.validator.to_json(ctx.names)
+            avro_schema = self.validator.to_json(self.names)
             for d in range(0, self.depth):
                 avro_schema = {'type': 'array', 'items': avro_schema}
             avro_schema = [avro_schema]

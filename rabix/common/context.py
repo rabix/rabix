@@ -15,8 +15,7 @@ class Context(object):
         self.executor = executor
         self.requirements = []
         self.hints = []
-        self.names = Names()
-        make_avsc_object(FILE_SCHEMA, self.names)
+        self.names = {}
         self._index = {}
 
     def add_type(self, name, constructor):

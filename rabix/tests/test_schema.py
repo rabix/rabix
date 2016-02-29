@@ -3,6 +3,7 @@ import six
 
 from nose.tools import *
 
+from avro.schema import Names
 from rabix.common.models import make_avro
 
 
@@ -15,7 +16,8 @@ def test_simple_avro_schema():
             "type": "int"
         }]
     }
-    cons = make_avro(schema, []).schemas[0]
+    names = Names()
+    cons = make_avro(schema, names).schemas[0]
     a = next(iter(cons.fields))
     assert_equal(a.name, 'a')
     assert_equal(a.type.type, 'int')

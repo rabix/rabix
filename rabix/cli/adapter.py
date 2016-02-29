@@ -78,7 +78,7 @@ class InputAdapter(object):
     __repr__ = lambda self: 'InputAdapter(%s)' % self
     position = property(lambda self: (self.adapter.get('position', 0), self.key))
     prefix = property(lambda self: self.adapter.get('prefix'))
-    item_separator = property(lambda self: self.adapter.get('itemSeparator', ','))
+    item_separator = property(lambda self: self.adapter.get('itemSeparator', None))
     separate = property(lambda self: self.adapter.get('separate', True))
 
     def arg_list(self):

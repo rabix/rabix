@@ -5,8 +5,7 @@
     "requirements": [
         {
             "dockerPull": "images.sbgenomics.com/rabix/bwa:9d3b9b0359cf",
-            "class": "DockerRequirement",
-            "dockerImageId": ""
+            "class": "DockerRequirement"
         },
         {
             "value": 1,
@@ -44,7 +43,8 @@
             "inputBinding": {
                 "sbg:cmdInclude": "true",
                 "separate": true,
-                "position": 3
+                "position": 3,
+                "itemSeparator": null
             },
             "sbg:category": "",
             "id": "#reads"

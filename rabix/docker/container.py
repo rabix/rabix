@@ -155,16 +155,16 @@ def find_image(client, query):
     return next(it, None)
 
 
-def get_image(client, repo=None, tag=None, image_id=None):
+def get_image(client, repo=None, tag=None,):
     """Returns the image dict. Pulls from repo if not found locally."""
 
-    if not image_id and not repo:
-        raise ValueError('Need either repository or image ID.')
+    if not repo:
+        raise ValueError('Need repository')
 
     if repo and not tag:
         repo, tag = parse_repository_tag(repo)
 
-    queries = [image_id, repo]
+    queries = []
     if tag:
         queries.append((repo, tag))
 

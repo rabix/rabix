@@ -10,13 +10,14 @@ from docker.utils import kwargs_from_env
 from docker.errors import APIError
 
 from rabix.cli import Container
-from .container import get_image
+from rabix.docker.container import get_image
+#from .container import get_image
 from rabix.common.errors import RabixError
 
 
 log = logging.getLogger(__name__)
 
-DOCKER_DEFAULT_API_VERSION = "1.14"
+DOCKER_DEFAULT_API_VERSION = "1.21"
 DOCKER_DEFAULT_TIMEOUT = 60
 
 DEFAULT_DOCKER_HOST_BOOT2DOCKER = 'tcp://192.168.59.103:2376'
@@ -123,12 +124,11 @@ def make_config(**kwargs):
 
 class DockerContainer(Container):
 
-    def __init__(self, uri, image_id=None, user=None, dockr=None):
+    def __init__(self, uri, user=None, dockr=None):
         super(DockerContainer, self).__init__()
         self.uri = uri.lstrip("docker://")\
             if uri and uri.startswith('docker:/') else uri
 
-        self.image_id = image_id
         self.docker_client = dockr or docker_client()
         self.config = {}
         self.volumes = {}
@@ -141,7 +141,6 @@ class DockerContainer(Container):
 
         image = get_image(
             self.docker_client,
-            image_id=self.image_id,
             repo=self.uri
         )
 
@@ -271,7 +270,6 @@ class DockerContainer(Container):
         return {
             "class": "DockerRequirement",
             "dockerPull": self.uri,
-            "dockerImageId": self.image_id
         }
 
     @classmethod
