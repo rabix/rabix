@@ -1,3 +1,5 @@
+** This project is obsoleted by [rabix/bunny](https://github.com/rabix/bunny) **
+
 ## Reproducible Analyses for Bioinformatics
 
 Rabix is an open source implementation of the specification being developed on the
