@@ -1,4 +1,4 @@
-** This project is obsoleted by [rabix/bunny](https://github.com/rabix/bunny) **
+**This project is obsoleted by [rabix/bunny](https://github.com/rabix/bunny)**
 
 ## Reproducible Analyses for Bioinformatics
 
